@@ -179,6 +179,24 @@ def _split_pair(pair):
     return (_resolve_fid(a), _resolve_fid(b)) if a and b else (None, None)
 
 
+def _tfidf_scored(query, corpus, top_k):
+    """Rank one query with TF-IDF, keeping the cosine scores.
+
+    eval_crosswalk.rank_tfidf returns ids only (its callers just need an ordering), and its shape is
+    depended on by /eval and the paper's scripts — so /map gets its own scored variant rather than
+    changing that contract. Without this the fallback path returns no scores at all and the UI has
+    nothing to show but a rank.
+    """
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    cids = list(corpus)
+    texts = [corpus[c] for c in cids]
+    vec = TfidfVectorizer(stop_words="english").fit(texts + [query])
+    sims = cosine_similarity(vec.transform([query]), vec.transform(texts))[0]
+    order = sorted(range(len(cids)), key=lambda i: -sims[i])[:top_k]
+    return [(cids[i], float(sims[i])) for i in order]
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "version": VERSION, "embedder": bool(_model),
@@ -211,6 +229,18 @@ def frameworks():
                     "license_note": f.get("license_note", "")})
     return {"version": VERSION, "count": len(out),
             "populated": sum(1 for f in out if f["controls"]), "frameworks": out}
+
+
+@app.get("/frameworks/{fid}/controls")
+def framework_controls(fid: str, include_text: bool = False):
+    """Control ids + titles for one framework — powers the control picker and the practice exercises.
+    `include_text=true` adds the full control statement (much larger payload)."""
+    f = _require(fid, "")
+    ctl = _controls[f]
+    return {"framework": f, "name": _registry[f].get("name", f), "count": len(ctl),
+            "controls": [{"id": c["id"], "title": c["title"],
+                          **({"text": c["text"]} if include_text else {})}
+                         for c in ctl.values()]}
 
 
 @app.get("/pairs")
@@ -295,10 +325,10 @@ def map_control(req: MapReq):
                     "score": round(float(sims[i]), 4), "official": cids[i] in official_ids}
                    for i in order]
         method = "embed"
-    else:  # TF-IDF fallback
-        ranked = rank_tfidf({"_q": query}, {c: v["text"] for c, v in ctl.items()})["_q"][:req.top_k]
+    else:  # TF-IDF fallback — scored, so the UI behaves the same with or without the embedder
+        ranked = _tfidf_scored(query, {c: v["text"] for c, v in ctl.items()}, req.top_k)
         results = [{"id": c, "title": ctl[c]["title"], "text": ctl[c]["text"],
-                    "score": None, "official": c in official_ids} for c in ranked]
+                    "score": round(s, 4), "official": c in official_ids} for c, s in ranked]
         method = "tfidf"
 
     return {"source": src, "target": tgt,

@@ -100,11 +100,28 @@ The pair-per-directory format could not reach a full framework catalog. It is no
       self-labelled SAMPLE in its `meta.json`. Needs the CSF 2.0 OLIR export **downloaded** first
       (https://csrc.nist.gov/projects/olir) — not on disk, unlike the HIPAA CSV
 - [ ] **Add ISO 27001 ↔ 800-53** via OLIR (Phase 0 target in `product_roadmap.md` is 2–3 live pairs)
-- [ ] **UI that actually calls the engine** — `web/index.html:31-36` is a hardcoded fake result block
-      (invented scores IA-5 0.88 / IA-2 0.74 / AC-17 0.61). Replace with a real query box →
-      `POST /map` → ranked results + score + provenance badge. **This is what turns the brochure into a demo.**
-- [ ] **Stop advertising uncovered frameworks** — `web/index.html:59-61` lists ~20 frameworks; back them
-      with real pairs or gate them as "coming soon"
+- [x] **UI that actually calls the engine.** DONE 2026-08-02, rendered and screenshot-verified in headless
+      Chrome (not just contract-tested).
+      - **`web/crosswalk.html`** — the working tool: any→any framework pickers from `/frameworks`, a route
+        badge from `/pairs`, a searchable control picker from the new `GET /frameworks/{fid}/controls`, or
+        free text. Results render with score meters, `official` markers, and **live coverage tiles**
+        (official mappings · found in top-k · coverage % · route). Lands on a worked example rather than
+        an empty page.
+      - **`web/index.html`** — the fake result block is gone. The homepage demo now issues a real
+        `POST /map` on load. It returns **AC-17 Remote Access @ 0.343** for "multi-factor authentication
+        for remote access" — the correct answer. (The removed fake block claimed IA-5 @ 0.88; the invented
+        numbers were also misleadingly high.)
+      - **`web/assets/api.js`** — shared client that surfaces the engine's error *detail*, so a 403 shows
+        its reason rather than a bare status.
+      - Added `GET /frameworks/{fid}/controls` (licence-gated, verified 403 on HITRUST).
+      - **TF-IDF now returns real scores.** `rank_tfidf` discards its cosine scores, so the fallback path
+        rendered every score as "—". Added `_tfidf_scored` in `serve.py` for `/map` rather than changing
+        `rank_tfidf`, whose shape `/eval` and the paper's scripts depend on. Regression-checked: `/eval`
+        still returns R@1 0.223 · R@5 0.486 exactly.
+- [x] **Stopped advertising uncovered frameworks.** The coverage section is now driven by `/frameworks`:
+      "3 of 13 frameworks live · 205 controls indexed", grouped by family, with `coming soon` on
+      unimported frameworks and **`licence required`** on HITRUST/COBIT. It cannot overstate coverage
+      because it renders whatever the registry reports.
 - [ ] Serve a per-pair provenance/coverage indicator in the UI (the auditability selling point) —
       `as_pair()` already returns `route` and `provenance` per pair, so the data is there
 - [x] **`serve.py` now reads the catalog** (engine 0.2). DONE 2026-08-02, all endpoints run-tested
@@ -212,18 +229,25 @@ Nothing in Phases B–E started. **No git repository yet.**
 `*.safetensors` / `*.docx` / `*.pdf` — the 87 MB model is in LFS, because Tier-2 retraining would otherwise
 add ~87 MB to history per retrain and that needs a history rewrite to undo. No remote configured yet.
 
-**Next action: the real UI.** `web/index.html:31-36` is still a hardcoded fake result block. The API behind
-it is now ready and interesting: a framework picker from `GET /frameworks`, a pair route badge from
-`GET /pairs`, and `POST /map` returning ranked results with an `official` flag per result. Build:
-1. Framework picker (any → any), driven by `/frameworks` + `/pairs`; grey out `available: false`
-2. Query box → `POST /map` → ranked results with score, provenance badge, and the official/not marker
-3. Route badge — `direct`/`inverted` = authoritative, `derived via <hub>` = advisory
+**The product is now demoable.** A visitor can land on `/`, see a real ranked mapping, open
+`/crosswalk.html`, pick any two covered frameworks and any control, and see the model's ranking measured
+against the official crosswalk. Nothing on the site is fabricated any more.
+
+**Next action — first student exercise (`web/learn.html`).** Everything needed already exists: pick a
+random control from the source framework, hide the `official` flags, let the learner select which target
+provisions they think map, then score their selection against `official.target_ids` and reveal. That is
+**UI work only** — the answer key is already in the `/map` response, so there is no labelling and no
+modelling to do. This is the cheapest possible first lab and it is the student half of the product.
 
 **Then, in order:**
-1. **First student exercise** — "map this control", auto-graded against the official mappings. The API
-   already returns the answer key (`official.target_ids`), so this is UI work, not modelling work.
-2. **Bulk/gap view for GRC teams** — map a whole control set, report coverage and gaps.
+1. **Bulk / gap view for GRC teams** — map a whole control set in one pass, report coverage and gaps,
+   export. This is the teams half, and it needs a new endpoint (`POST /map/bulk`).
+2. **Install torch** and re-check both surfaces with the fine-tuned embedder rather than TF-IDF.
 3. Then Phase B (persistence → API keys → attributed metering → CU redesign → quotas).
+
+**Known cosmetic debt:** `crosswalks/` is now dead code for the API (kept as the migration source), and
+`docker/README.md` still documents the old `pair`-only `/map` shape (the shape still works, but the doc
+does not mention `source`/`source_id`/`target`).
 
 **Cheap breadth win when ready:** import any framework's official mapping *to 800-53 or CSF 2.0* (both
 flagged `hub: true`) and every framework already on that hub becomes reachable for free.

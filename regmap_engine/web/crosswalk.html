@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegMap — crosswalk any framework to any framework</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="crosswalk">
+
+<section class="section pad bleed" style="padding-top:34px">
+  <div class="eyebrow">Crosswalk</div>
+  <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Map a control to another framework</h1>
+  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 0;max-width:70ch">
+    Pick a control and a target framework. Results are ranked by semantic match; where an official
+    crosswalk exists, the authoritative mappings are marked so you can see the model against the record.
+  </p>
+</section>
+
+<section class="section tight pad bleed">
+  <!-- framework pickers -->
+  <div class="xwalk-bar">
+    <label class="fld">From framework
+      <select id="src"><option value="">Loading…</option></select>
+    </label>
+    <div class="arrow">→</div>
+    <label class="fld">To framework
+      <select id="tgt"><option value="">Loading…</option></select>
+    </label>
+  </div>
+
+  <div class="xwalk-meta" id="routeMeta"></div>
+
+  <!-- query: either a control from the source framework, or free text -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px" id="qGrid">
+    <label class="fld">Control in the source framework
+      <select id="ctl"><option value="">— choose a framework first —</option></select>
+    </label>
+    <label class="fld">…or describe the requirement
+      <textarea id="txt" placeholder="e.g. multi-factor authentication for remote access"></textarea>
+    </label>
+  </div>
+
+  <div style="display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap">
+    <button class="btn primary" id="go">Map it →</button>
+    <label class="fld" style="flex-direction:row;align-items:center;gap:8px;text-transform:none">
+      <span style="font-size:12px">Results</span>
+      <select id="topk" style="width:auto;padding:7px 10px">
+        <option>5</option><option selected>10</option><option>15</option><option>25</option>
+      </select>
+    </label>
+    <span id="status" style="font-size:13px;color:var(--muted)"></span>
+  </div>
+</section>
+
+<hr class="divider">
+
+<section class="section pad bleed" id="out" style="padding-top:22px"></section>
+
+<footer class="site-footer pad bleed">
+  RegMap · every mapping carries its provenance — official, inverted, or derived through a hub.
+</footer>
+
+<script src="assets/api.js"></script>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const src = $("src"), tgt = $("tgt"), ctl = $("ctl"), txt = $("txt"),
+        go = $("go"), out = $("out"), status = $("status"), routeMeta = $("routeMeta"), topk = $("topk");
+  let FRAMEWORKS = [], PAIRS = [];
+
+  const busy = (on, msg) => {
+    go.disabled = on;
+    status.innerHTML = on ? `<span class="spin"></span> ${RegMap.esc(msg || "working…")}` : "";
+  };
+  const fail = m => { out.innerHTML = `<div class="note err">${RegMap.esc(m)}</div>`; };
+
+  /* ---- boot: frameworks + the pair graph ---------------------------------- */
+  async function boot() {
+    try {
+      const [fw, pr] = await Promise.all([RegMap.frameworks(), RegMap.pairs()]);
+      FRAMEWORKS = fw.frameworks; PAIRS = pr.pairs;
+    } catch (e) { return fail(e.message); }
+
+    // Only frameworks with an imported catalog can be queried. Unavailable ones stay visible but
+    // disabled, so coverage gaps are honest instead of hidden.
+    const opts = sel => FRAMEWORKS.map(f => {
+      const label = f.controls
+        ? `${f.name} (${f.controls})`
+        : `${f.name} — coming soon`;
+      const why = f.access === "licence-required" && !f.available ? " — licence required" : "";
+      return `<option value="${RegMap.esc(f.id)}" ${f.available ? "" : "disabled"}>`
+           + `${RegMap.esc(label + why)}</option>`;
+    }).join("");
+
+    src.innerHTML = `<option value="">— select —</option>` + opts();
+    tgt.innerHTML = `<option value="">— select —</option>` + opts();
+
+    // default to the pair with the most authoritative content, so the page is useful on first load
+    const best = PAIRS.filter(p => p.authoritative)
+                      .sort((a, b) => b.source_controls - a.source_controls)[0];
+    if (best) { src.value = best.source; tgt.value = best.target; }
+    await onSource();
+    onPair();
+
+    // Land on a worked example rather than an empty page: pick the first control that actually has
+    // official targets, so the official markers and coverage tiles are visible on arrival.
+    if (src.value && tgt.value && ctl.options.length > 1) {
+      ctl.selectedIndex = 1;
+      run();
+    }
+  }
+
+  /* ---- source framework -> populate its control list ---------------------- */
+  async function onSource() {
+    const f = src.value;
+    if (!f) { ctl.innerHTML = `<option value="">— choose a framework first —</option>`; return; }
+    ctl.innerHTML = `<option value="">Loading controls…</option>`;
+    try {
+      const d = await RegMap.controls(f);
+      ctl.innerHTML = `<option value="">— free text instead —</option>` + d.controls.map(c =>
+        `<option value="${RegMap.esc(c.id)}">${RegMap.esc(c.id + (c.title ? " · " + c.title : ""))}</option>`
+      ).join("");
+    } catch (e) {
+      ctl.innerHTML = `<option value="">unavailable</option>`;
+      status.textContent = e.message;
+    }
+  }
+
+  /* ---- show how this pair resolves, before any query --------------------- */
+  function onPair() {
+    routeMeta.innerHTML = "";
+    const a = src.value, b = tgt.value;
+    if (!a || !b) return;
+    if (a === b) {
+      routeMeta.innerHTML = `<span class="pill warn">same framework</span>`;
+      return;
+    }
+    const p = PAIRS.find(p => p.source === a && p.target === b);
+    if (!p) {
+      routeMeta.innerHTML = `<span class="pill crit">no route</span>`
+        + `<span>No official mapping and no hub path — the model can still rank the target framework, `
+        + `but there is nothing authoritative to check it against.</span>`;
+      return;
+    }
+    const b2 = RegMap.routeBadge(p.route, p.authoritative);
+    routeMeta.innerHTML = `<span class="pill ${b2.cls}">${RegMap.esc(b2.label)}</span>`
+      + `<span>${p.source_controls} → ${p.target_controls} controls</span>`
+      + (p.authoritative ? "" : `<span>derived mappings are advisory, not authoritative</span>`);
+  }
+
+  /* ---- run the mapping --------------------------------------------------- */
+  async function run() {
+    const payload = { target: tgt.value, top_k: Number(topk.value) };
+    if (!payload.target) return fail("Choose a target framework.");
+    if (src.value) payload.source = src.value;
+    if (ctl.value) payload.source_id = ctl.value;
+    else if (txt.value.trim()) payload.text = txt.value.trim();
+    else return fail("Pick a control, or describe the requirement in your own words.");
+
+    busy(true, "mapping…");
+    let d;
+    try { d = await RegMap.map(payload); }
+    catch (e) { busy(false); return fail(e.message); }
+    busy(false);
+    render(d);
+  }
+
+  function render(d) {
+    const off = d.official;
+    const hits = d.results.filter(r => r.official).length;
+    const total = off && off.target_ids ? off.target_ids.length : 0;
+
+    // Live recall: of the authoritative mappings, how many surfaced in this top-k. This is the number
+    // an auditor cares about, and the one a learner is scored on.
+    let cov = "";
+    if (total) {
+      const pct = Math.round((hits / total) * 100);
+      const cls = pct >= 70 ? "good" : pct >= 40 ? "mid" : "bad";
+      cov = `<div class="cov">
+        <div><span class="k">official mappings</span><span class="v">${total}</span></div>
+        <div><span class="k">found in top ${d.results.length}</span><span class="v ${cls}">${hits}</span></div>
+        <div><span class="k">coverage</span><span class="v ${cls}">${pct}%</span></div>
+        <div><span class="k">route</span><span class="v" style="font-size:14px;padding-top:4px">${RegMap.esc(off.route)}</span></div>
+      </div>`;
+    } else if (off && d.query.source_id) {
+      cov = `<div class="note">An official mapping exists between these frameworks, but
+             <b>${RegMap.esc(d.query.source_id)}</b> has no target in it — the ranking below is the
+             model's suggestion only.</div>`;
+    } else if (off) {
+      cov = `<div class="note">Free-text queries can't be checked against the official mapping.
+             Pick a control from the source framework to see the authoritative answer alongside the
+             ranking.</div>`;
+    } else if (d.source) {
+      cov = `<div class="note">No official mapping between these frameworks, so nothing below is
+             confirmed — treat it as a starting point for review.</div>`;
+    }
+
+    const rows = d.results.map((r, i) => {
+      const pct = r.score == null ? null : Math.max(0, Math.min(100, Math.round(r.score * 100)));
+      return `<div class="res ${r.official ? "is-official" : ""}">
+        <div class="rank">${i + 1}</div>
+        <div>
+          <span class="cid">${RegMap.esc(r.id)}</span>
+          ${r.official ? `<span class="pill ok" style="margin-left:8px">official</span>` : ""}
+          ${r.title ? `<div class="ctitle">${RegMap.esc(r.title)}</div>` : ""}
+          <div class="ctext">${RegMap.esc(r.text)}</div>
+        </div>
+        <div class="right">
+          ${pct == null ? `<span class="score">—</span>`
+            : `<div class="meter"><i style="width:${pct}%"></i></div><span class="score">${r.score.toFixed(3)}</span>`}
+        </div>
+      </div>`;
+    }).join("");
+
+    const q = d.query.source_id
+      ? `${d.query.source_id} — ${d.source_framework}`
+      : `“${d.query.text}”`;
+
+    out.innerHTML = `
+      <div class="row-head">
+        <h2 style="font-size:20px">${RegMap.esc(d.target_framework)}</h2>
+        <span class="muted" style="font-size:13px;color:var(--muted)">
+          ${RegMap.esc(q)} · method ${RegMap.esc(d.method)}${d.method === "tfidf"
+            ? " (embedder unavailable — lexical fallback)" : ""}
+        </span>
+      </div>
+      ${cov}
+      <div class="res-list">${rows}</div>`;
+  }
+
+  src.addEventListener("change", async () => { await onSource(); onPair(); });
+  tgt.addEventListener("change", onPair);
+  // choosing a control and typing free text are mutually exclusive inputs
+  ctl.addEventListener("change", () => { if (ctl.value) txt.value = ""; });
+  txt.addEventListener("input",  () => { if (txt.value.trim()) ctl.value = ""; });
+  txt.addEventListener("keydown", e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) run(); });
+  go.addEventListener("click", run);
+
+  boot();
+})();
+</script>
+</body>
+</html>

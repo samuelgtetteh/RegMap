@@ -5,6 +5,7 @@
   // The site's pages. Add an app here and it appears in the nav on every page.
   const NAV = [
     { id: "home",       label: "Home",       href: "/" },
+    { id: "crosswalk",  label: "Crosswalk",  href: "/crosswalk.html" },
     { id: "frameworks", label: "Frameworks", href: "/#frameworks" },
     { id: "deploy",     label: "Deploy",     href: "/#deploy" },
     { id: "api",        label: "API",        href: "/docs" },
@@ -23,7 +24,7 @@
        <span class="nav-sp"></span>
        <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
        <a class="btn ghost sm" href="/docs">API docs</a>
-       <a class="btn primary sm" href="/docs">Try the API</a>
+       <a class="btn primary sm" href="/crosswalk.html">Open crosswalk</a>
      </div>`;
   document.body.prepend(header);
 
