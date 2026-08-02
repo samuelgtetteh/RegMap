@@ -1,0 +1,8 @@
+{
+  "source_framework": "NIST SP 800-53 Rev.5 (controls)",
+  "target_framework": "HIPAA Security Rule (45 CFR Part 164 Subpart C)",
+  "description": "Official crosswalk imported from nist_800_53_rev5_hipaa_crosswalk_full.csv.",
+  "provenance": "official (NIST OLIR / CSF reference)",
+  "direction": "source -> target",
+  "license_note": "NIST publications are U.S. Government works (public domain)."
+}

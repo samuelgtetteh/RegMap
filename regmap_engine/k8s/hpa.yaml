@@ -1,0 +1,21 @@
+# Horizontal autoscaling for the CPU tier. Needs metrics-server in the cluster
+# (Docker Desktop doesn't ship it — the HPA still applies, it just reports <unknown>
+# until metrics-server is installed). On a real cluster this scales replicas with load,
+# the CPU half of "pay for the hardware you use".
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: regmap-engine
+  namespace: regmap
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: regmap-engine
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }

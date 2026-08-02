@@ -1,0 +1,95 @@
+{
+  "nist_80053": {
+    "name": "NIST SP 800-53 Rev.5",
+    "family": "US federal",
+    "version": "Rev.5",
+    "access": "public",
+    "hub": true,
+    "license_note": "NIST publications are U.S. Government works (public domain)."
+  },
+  "hipaa_security": {
+    "name": "HIPAA Security Rule (45 CFR Part 164 Subpart C)",
+    "family": "Healthcare",
+    "version": "2013",
+    "access": "public",
+    "license_note": "US federal regulation (public domain)."
+  },
+  "nist_csf2": {
+    "name": "NIST CSF 2.0",
+    "family": "US federal",
+    "version": "2.0",
+    "access": "public",
+    "hub": true,
+    "license_note": "NIST publications are U.S. Government works (public domain)."
+  },
+  "nist_80171": {
+    "name": "NIST SP 800-171 Rev.3",
+    "family": "US federal",
+    "version": "Rev.3",
+    "access": "public",
+    "license_note": "NIST publications are U.S. Government works (public domain)."
+  },
+  "iso_27001": {
+    "name": "ISO/IEC 27001:2022",
+    "family": "International",
+    "version": "2022",
+    "access": "paraphrase-only",
+    "license_note": "ISO text is copyrighted: map control IDs + own paraphrase only."
+  },
+  "pci_dss4": {
+    "name": "PCI DSS 4.0",
+    "family": "Payments",
+    "version": "4.0",
+    "access": "paraphrase-only",
+    "license_note": "PCI SSC text is copyrighted: IDs + own paraphrase only."
+  },
+  "soc2": {
+    "name": "SOC 2 (Trust Services Criteria)",
+    "family": "International",
+    "version": "2017 TSC",
+    "access": "paraphrase-only",
+    "license_note": "AICPA TSC text is copyrighted: IDs + own paraphrase only."
+  },
+  "cis_v8": {
+    "name": "CIS Controls v8",
+    "family": "International",
+    "version": "8",
+    "access": "paraphrase-only",
+    "license_note": "CIS content requires attribution; check redistribution terms."
+  },
+  "hitrust_csf": {
+    "name": "HITRUST CSF",
+    "family": "Healthcare",
+    "version": "v11",
+    "access": "licence-required",
+    "license_note": "BLOCKED: proprietary. Acquire a HITRUST licence before shipping."
+  },
+  "cobit": {
+    "name": "COBIT 2019",
+    "family": "International",
+    "version": "2019",
+    "access": "licence-required",
+    "license_note": "BLOCKED: proprietary (ISACA). Acquire a licence before shipping."
+  },
+  "gdpr": {
+    "name": "GDPR",
+    "family": "Privacy",
+    "version": "2016/679",
+    "access": "public",
+    "license_note": "EU regulation text is publicly available."
+  },
+  "fedramp": {
+    "name": "FedRAMP",
+    "family": "US federal",
+    "version": "Rev.5 baselines",
+    "access": "public",
+    "license_note": "US Government work (public domain)."
+  },
+  "cmmc": {
+    "name": "CMMC 2.0",
+    "family": "US federal",
+    "version": "2.0",
+    "access": "public",
+    "license_note": "US Government work (public domain)."
+  }
+}

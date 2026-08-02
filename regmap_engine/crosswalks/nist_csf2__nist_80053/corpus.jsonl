@@ -1,0 +1,22 @@
+{"id": "AC-2", "text": "Account Management: manage system accounts, including establishment, activation, modification, review, disabling, and removal."}
+{"id": "AC-3", "text": "Access Enforcement: enforce approved authorizations for logical access to information and system resources."}
+{"id": "AC-6", "text": "Least Privilege: allow only authorized accesses necessary to accomplish assigned tasks."}
+{"id": "IA-2", "text": "Identification and Authentication (Organizational Users): uniquely identify and authenticate organizational users."}
+{"id": "IA-4", "text": "Identifier Management: manage system identifiers for users, devices, and services."}
+{"id": "IA-5", "text": "Authenticator Management: manage authenticators such as passwords, tokens, and certificates."}
+{"id": "CM-2", "text": "Baseline Configuration: develop, document, and maintain a current baseline configuration of the system."}
+{"id": "CM-6", "text": "Configuration Settings: establish and enforce secure configuration settings for system components."}
+{"id": "CM-8", "text": "System Component Inventory: develop and maintain an inventory of system components."}
+{"id": "SC-7", "text": "Boundary Protection: monitor and control communications at external and key internal boundaries."}
+{"id": "SC-8", "text": "Transmission Confidentiality and Integrity: protect the confidentiality and integrity of transmitted information."}
+{"id": "SC-28", "text": "Protection of Information at Rest: protect the confidentiality and integrity of information at rest."}
+{"id": "SI-4", "text": "System Monitoring: monitor the system to detect attacks, indicators of potential attacks, and unauthorized activity."}
+{"id": "AU-6", "text": "Audit Record Review, Analysis, and Reporting: review and analyze audit records for indications of inappropriate activity."}
+{"id": "RA-5", "text": "Vulnerability Monitoring and Scanning: monitor and scan for vulnerabilities in the system and applications."}
+{"id": "IR-4", "text": "Incident Handling: implement an incident handling capability for detection, analysis, containment, eradication, and recovery."}
+{"id": "IR-6", "text": "Incident Reporting: require personnel to report suspected incidents and report to relevant authorities."}
+{"id": "CP-9", "text": "System Backup: conduct backups of system-level and user-level information."}
+{"id": "CP-10", "text": "System Recovery and Reconstitution: provide for the recovery and reconstitution of the system to a known state after disruption."}
+{"id": "AT-2", "text": "Literacy Training and Awareness: provide security and privacy literacy training to system users."}
+{"id": "PE-3", "text": "Physical Access Control: enforce physical access authorizations at entry and exit points to facilities."}
+{"id": "PL-2", "text": "System Security and Privacy Plans: develop and maintain security and privacy plans for the system."}

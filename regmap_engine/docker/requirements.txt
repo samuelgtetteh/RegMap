@@ -1,0 +1,7 @@
+# Runtime deps for the RegMap crosswalk engine API.
+# torch is installed separately in the Dockerfile so the CPU/GPU variant is build-selectable.
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.29
+scikit-learn>=1.4
+sentence-transformers>=3.0
+numpy>=1.26,<3

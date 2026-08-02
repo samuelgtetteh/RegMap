@@ -1,0 +1,21 @@
+# OPT-IN — requires KEDA installed in the cluster (https://keda.sh). Scales the GPU deployment
+# 0 -> N based on HTTP request rate (Prometheus), then back to 0 when idle, so you pay for the
+# GPU only while requests are in flight. Apply after gpu-deployment.yaml:
+#   kubectl apply -f regmap_engine/k8s/keda-scaledobject.yaml
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: regmap-engine-gpu
+  namespace: regmap
+spec:
+  scaleTargetRef:
+    name: regmap-engine-gpu
+  minReplicaCount: 0          # scale to zero when idle -> zero GPU spend
+  maxReplicaCount: 4
+  cooldownPeriod: 120         # wait 2 min of no traffic before scaling back to 0
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus.monitoring.svc:9090
+        query: sum(rate(regmap_requests_total{path="/map"}[1m]))
+        threshold: "5"        # ~5 req/s per replica target

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegMap — map any framework to any framework</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="home">
+
+<!-- HERO -->
+<section class="hero pad bleed">
+  <div class="eyebrow reveal">Compliance crosswalk engine</div>
+  <h1 class="reveal">Map any control to any framework —<br>with the gaps, and the receipts.</h1>
+  <p class="lead reveal">RegMap retrieves the equivalent provisions across NIST, ISO 27001, PCI DSS, HIPAA,
+    SOC 2, CSF and more — ranked, scored, and tagged with provenance so every mapping is auditable.</p>
+  <div class="cta reveal">
+    <a class="btn primary" href="/docs">Try the API →</a>
+    <a class="btn ghost" href="#frameworks">See coverage</a>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- LIVE CROSSWALK SLICE -->
+<section class="section pad bleed">
+  <div class="row-head reveal"><h2>One query, ranked controls</h2><a href="/docs">/map endpoint →</a></div>
+  <div class="grid" style="grid-template-columns:1fr">
+    <div class="tile reveal">
+      <div class="body">
+        <p class="mono" style="color:var(--accent-2)">POST /map · “multi-factor authentication for remote access” → NIST SP 800-53</p>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+          <div style="display:flex;gap:12px;align-items:center"><b class="mono">IA-5</b><span class="muted">Authenticator Management</span><span style="flex:1"></span><span class="mono muted">0.88</span></div>
+          <div style="display:flex;gap:12px;align-items:center"><b class="mono">IA-2</b><span class="muted">Identification &amp; Authentication (Users)</span><span style="flex:1"></span><span class="mono muted">0.74</span></div>
+          <div style="display:flex;gap:12px;align-items:center"><b class="mono">AC-17</b><span class="muted">Remote Access</span><span style="flex:1"></span><span class="mono muted">0.61</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="band bleed">
+  <div class="section pad">
+    <div class="row-head reveal"><h2>Retrieve → rank → provenance → gaps</h2></div>
+    <div class="grid">
+      <div class="reveal"><div class="eyebrow">01 · Retrieve</div><p class="lead" style="font-size:15px">A fine-tuned embedder finds the closest controls in the target framework.</p></div>
+      <div class="reveal"><div class="eyebrow">02 · Rank</div><p class="lead" style="font-size:15px">Scored by semantic match — it beats TF-IDF/BM25 on the benchmark.</p></div>
+      <div class="reveal"><div class="eyebrow">03 · Provenance</div><p class="lead" style="font-size:15px">Every mapping tagged official / model-suggested / human-verified.</p></div>
+      <div class="reveal"><div class="eyebrow">04 · Gaps</div><p class="lead" style="font-size:15px">Coverage scored; missing controls surfaced for the audit.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FRAMEWORKS -->
+<section id="frameworks" class="section pad bleed">
+  <div class="row-head reveal"><h2>Framework coverage</h2><span class="muted">public-domain first; licensed frameworks gated</span></div>
+  <div class="grid">
+    <div class="tile reveal" style="box-shadow:none"><div class="body"><h3>US / Federal</h3><p>NIST 800-53 · 800-171 · CSF 2.0 · FedRAMP · CMMC · CJIS</p></div></div>
+    <div class="tile reveal" style="box-shadow:none"><div class="body"><h3>Healthcare &amp; Payments</h3><p>HIPAA · HITRUST · PCI DSS 4.0 · SOX ITGC · GLBA</p></div></div>
+    <div class="tile reveal" style="box-shadow:none"><div class="body"><h3>International &amp; Privacy</h3><p>ISO 27001/27002 · SOC 2 · CIS v8 · GDPR · ISO 27701</p></div></div>
+  </div>
+</section>
+
+<!-- DEPLOY -->
+<section id="deploy" class="band bleed">
+  <div class="section pad">
+    <div class="row-head reveal"><h2>Ship it anywhere</h2></div>
+    <p class="lead reveal">One image, CPU or GPU, metered per compute-unit. Run the container, or deploy the
+      Kubernetes manifests with autoscaling and per-tenant isolation.</p>
+    <div class="tile reveal" style="max-width:640px"><div class="body">
+      <p class="mono" style="color:var(--muted);white-space:pre-wrap">docker build -f regmap_engine/docker/Dockerfile -t regmap-engine .
+docker run -p 8000:8000 regmap-engine   # UI here, API at /docs</p>
+    </div></div>
+  </div>
+</section>
+
+<footer class="site-footer pad bleed">RegMap · compliance crosswalk engine · API + UI in one image · see docs/ for the roadmap.</footer>
+
+<script src="assets/shell.js"></script>
+</body>
+</html>

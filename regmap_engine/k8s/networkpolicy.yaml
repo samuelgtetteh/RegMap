@@ -1,0 +1,19 @@
+# Default-deny ingress to the engine, then allow only in-namespace traffic (e.g. the app/API
+# and Prometheus). Egress is left open so the pod can be scraped; tighten per environment.
+# Docker Desktop's default CNI does not enforce NetworkPolicy — it applies cleanly but is a
+# no-op locally; on a real cluster (Calico/Cilium) it isolates the engine.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: regmap-engine-ingress
+  namespace: regmap
+spec:
+  podSelector:
+    matchLabels: { app: regmap-engine }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { app.kubernetes.io/part-of: regmap }
+      ports:
+        - { protocol: TCP, port: 8000 }

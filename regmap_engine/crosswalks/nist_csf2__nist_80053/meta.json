@@ -1,0 +1,8 @@
+{
+  "source_framework": "NIST CSF 2.0 (subcategories)",
+  "target_framework": "NIST SP 800-53 Rev.5 (controls)",
+  "description": "Crosswalk from NIST Cybersecurity Framework 2.0 subcategories to SP 800-53 controls.",
+  "provenance": "SAMPLE — illustrative slice for the harness. Replace with the authoritative mapping via regmap_engine/import_olir.py (NIST publishes CSF 2.0 informative references / OLIR). NIST content is public domain.",
+  "direction": "source -> target",
+  "license_note": "NIST publications are U.S. Government works (public domain); text here is paraphrased/short."
+}

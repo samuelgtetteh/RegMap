@@ -1,0 +1,133 @@
+{"source_id": "AC-1", "target_ids": ["164.308(a)(3)", "164.308(a)(4)", "164.312(a)", "164.316(b)(2)(ii)", "164.316(b)(2)(iii)"], "provenance": "official"}
+{"source_id": "AC-2", "target_ids": ["164.308(a)(3)", "164.308(a)(3)(ii)(A)", "164.308(a)(3)(ii)(B)", "164.308(a)(4)", "164.308(a)(4)(ii)(B)", "164.308(a)(4)(ii)(C)", "164.312(a)(2)(i)", "164.312(a)(2)(ii)"], "provenance": "official"}
+{"source_id": "AC-3", "target_ids": ["164.308(a)(3)", "164.308(a)(3)(ii)(A)", "164.308(a)(4)(ii)(B)", "164.310(b)", "164.312(a)", "164.312(a)(2)(i)", "164.312(a)(2)(ii)"], "provenance": "official"}
+{"source_id": "AC-4", "target_ids": ["164.308(a)(3)(ii)(A)", "164.308(a)(4)(ii)(B)", "164.310(b)"], "provenance": "official"}
+{"source_id": "AC-5", "target_ids": ["164.308(a)(3)", "164.308(a)(4)", "164.308(a)(4)(ii)(A)", "164.312(a)"], "provenance": "official"}
+{"source_id": "AC-6", "target_ids": ["164.308(a)(3)", "164.308(a)(4)", "164.308(a)(4)(ii)(A)", "164.312(a)"], "provenance": "official"}
+{"source_id": "AC-7", "target_ids": ["164.308(a)(5)(ii)(C)"], "provenance": "official"}
+{"source_id": "AC-11", "target_ids": ["164.310(b)", "164.312(a)(2)(iii)"], "provenance": "official"}
+{"source_id": "AC-12", "target_ids": ["164.310(b)", "164.312(a)(2)(iii)"], "provenance": "official"}
+{"source_id": "AC-16", "target_ids": ["164.310(b)"], "provenance": "official"}
+{"source_id": "AC-17", "target_ids": ["164.310(b)"], "provenance": "official"}
+{"source_id": "AC-19", "target_ids": ["164.310(b)"], "provenance": "official"}
+{"source_id": "AT-1", "target_ids": ["164.308(a)(5)"], "provenance": "official"}
+{"source_id": "AT-2", "target_ids": ["164.308(a)(5)", "164.308(a)(5)(ii)(A)", "164.308(a)(5)(ii)(B)", "164.308(a)(5)(ii)(C)", "164.308(a)(5)(ii)(D)"], "provenance": "official"}
+{"source_id": "AT-3", "target_ids": ["164.308(a)(5)", "164.308(a)(5)(ii)(A)", "164.308(a)(5)(ii)(B)", "164.308(a)(5)(ii)(C)", "164.308(a)(5)(ii)(D)"], "provenance": "official"}
+{"source_id": "AT-4", "target_ids": ["164.308(a)(5)"], "provenance": "official"}
+{"source_id": "AU-1", "target_ids": ["164.308(a)(1)(ii)(D)"], "provenance": "official"}
+{"source_id": "AU-2", "target_ids": ["164.308(a)(1)(ii)(D)", "164.308(a)(5)(ii)(C)", "164.312(b)"], "provenance": "official"}
+{"source_id": "AU-3", "target_ids": ["164.312(b)"], "provenance": "official"}
+{"source_id": "AU-4", "target_ids": ["164.312(b)"], "provenance": "official"}
+{"source_id": "AU-5", "target_ids": ["164.312(b)"], "provenance": "official"}
+{"source_id": "AU-6", "target_ids": ["164.308(a)(1)(ii)(D)", "164.308(a)(5)(ii)(C)"], "provenance": "official"}
+{"source_id": "AU-7", "target_ids": ["164.308(a)(1)(ii)(D)"], "provenance": "official"}
+{"source_id": "AU-8", "target_ids": ["164.312(b)"], "provenance": "official"}
+{"source_id": "AU-9", "target_ids": ["164.308(a)(1)(ii)(D)", "164.312(b)"], "provenance": "official"}
+{"source_id": "AU-11", "target_ids": ["164.316(b)(2)(i)"], "provenance": "official"}
+{"source_id": "AU-12", "target_ids": ["164.308(a)(1)(ii)(D)", "164.312(b)"], "provenance": "official"}
+{"source_id": "CA-1", "target_ids": ["164.308(a)(1)", "164.308(a)(8)"], "provenance": "official"}
+{"source_id": "CA-2", "target_ids": ["164.308(a)(1)", "164.308(a)(8)"], "provenance": "official"}
+{"source_id": "CA-3", "target_ids": ["164.308(b)(1)"], "provenance": "official"}
+{"source_id": "CA-5", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "CA-6", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "CA-7", "target_ids": ["164.308(a)(1)", "164.308(a)(8)"], "provenance": "official"}
+{"source_id": "CA-9", "target_ids": ["164.308(b)(1)"], "provenance": "official"}
+{"source_id": "CM-1", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "CM-2", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "CM-6", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "CM-7", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "CM-8", "target_ids": ["164.308(a)(1)(ii)(A)"], "provenance": "official"}
+{"source_id": "CP-1", "target_ids": ["164.308(a)(7)"], "provenance": "official"}
+{"source_id": "CP-2", "target_ids": ["164.308(a)(7)", "164.308(a)(7)(ii)(B)", "164.308(a)(7)(ii)(C)", "164.308(a)(7)(ii)(E)", "164.310(a)(2)(i)"], "provenance": "official"}
+{"source_id": "CP-3", "target_ids": ["164.308(a)(7)(ii)(D)"], "provenance": "official"}
+{"source_id": "CP-4", "target_ids": ["164.308(a)(7)(ii)(D)"], "provenance": "official"}
+{"source_id": "CP-6", "target_ids": ["164.308(a)(7)(ii)(A)", "164.310(d)(2)(iv)"], "provenance": "official"}
+{"source_id": "CP-7", "target_ids": ["164.308(a)(7)(ii)(C)"], "provenance": "official"}
+{"source_id": "CP-8", "target_ids": ["164.308(a)(7)(ii)(C)"], "provenance": "official"}
+{"source_id": "CP-9", "target_ids": ["164.308(a)(7)(ii)(A)", "164.310(d)(2)(iv)"], "provenance": "official"}
+{"source_id": "CP-10", "target_ids": ["164.308(a)(7)(ii)(B)", "164.308(a)(7)(ii)(C)"], "provenance": "official"}
+{"source_id": "IA-1", "target_ids": ["164.308(a)(5)(ii)(D)"], "provenance": "official"}
+{"source_id": "IA-2", "target_ids": ["164.308(a)(5)(ii)(C)", "164.308(a)(5)(ii)(D)", "164.312(a)(2)(i)", "164.312(a)(2)(ii)", "164.312(d)"], "provenance": "official"}
+{"source_id": "IA-3", "target_ids": ["164.312(d)"], "provenance": "official"}
+{"source_id": "IA-4", "target_ids": ["164.312(a)(2)(i)"], "provenance": "official"}
+{"source_id": "IA-5", "target_ids": ["164.308(a)(5)(ii)(D)", "164.312(d)"], "provenance": "official"}
+{"source_id": "IA-6", "target_ids": ["164.312(d)"], "provenance": "official"}
+{"source_id": "IA-7", "target_ids": ["164.312(d)"], "provenance": "official"}
+{"source_id": "IA-8", "target_ids": ["164.312(d)"], "provenance": "official"}
+{"source_id": "IR-1", "target_ids": ["164.308(a)(6)"], "provenance": "official"}
+{"source_id": "IR-2", "target_ids": ["164.308(a)(6)"], "provenance": "official"}
+{"source_id": "IR-4", "target_ids": ["164.308(a)(6)", "164.308(a)(6)(ii)"], "provenance": "official"}
+{"source_id": "IR-5", "target_ids": ["164.308(a)(6)(ii)"], "provenance": "official"}
+{"source_id": "IR-6", "target_ids": ["164.308(a)(6)", "164.308(a)(6)(ii)"], "provenance": "official"}
+{"source_id": "IR-7", "target_ids": ["164.308(a)(6)"], "provenance": "official"}
+{"source_id": "IR-8", "target_ids": ["164.308(a)(6)(ii)"], "provenance": "official"}
+{"source_id": "MA-1", "target_ids": ["164.310(a)(2)(iv)"], "provenance": "official"}
+{"source_id": "MA-2", "target_ids": ["164.310(a)(2)(iv)"], "provenance": "official"}
+{"source_id": "MA-3", "target_ids": ["164.310(a)(2)(iv)"], "provenance": "official"}
+{"source_id": "MA-4", "target_ids": ["164.310(a)(2)(iv)"], "provenance": "official"}
+{"source_id": "MA-5", "target_ids": ["164.310(a)(2)(iv)"], "provenance": "official"}
+{"source_id": "MA-6", "target_ids": ["164.310(a)(2)(iv)"], "provenance": "official"}
+{"source_id": "MP-1", "target_ids": ["164.310(d)(1)"], "provenance": "official"}
+{"source_id": "MP-2", "target_ids": ["164.310(d)(1)", "164.310(d)(2)(iii)"], "provenance": "official"}
+{"source_id": "MP-3", "target_ids": ["164.310(d)(1)"], "provenance": "official"}
+{"source_id": "MP-4", "target_ids": ["164.310(d)(2)(iii)", "164.310(d)(2)(iv)"], "provenance": "official"}
+{"source_id": "MP-5", "target_ids": ["164.310(d)(1)"], "provenance": "official"}
+{"source_id": "MP-6", "target_ids": ["164.310(d)(1)", "164.310(d)(2)(i)", "164.310(d)(2)(ii)"], "provenance": "official"}
+{"source_id": "MP-7", "target_ids": ["164.310(d)(1)"], "provenance": "official"}
+{"source_id": "PE-1", "target_ids": ["164.310(a)(1)"], "provenance": "official"}
+{"source_id": "PE-2", "target_ids": ["164.310(a)(1)", "164.310(a)(2)(i)", "164.310(a)(2)(ii)", "164.310(a)(2)(iii)", "164.310(a)(2)(iv)"], "provenance": "official"}
+{"source_id": "PE-3", "target_ids": ["164.310(a)(1)", "164.310(a)(2)(ii)", "164.310(a)(2)(iii)", "164.310(c)"], "provenance": "official"}
+{"source_id": "PE-5", "target_ids": ["164.310(a)(2)(iii)"], "provenance": "official"}
+{"source_id": "PE-6", "target_ids": ["164.310(a)(2)(iii)"], "provenance": "official"}
+{"source_id": "PE-8", "target_ids": ["164.310(a)(2)(iv)"], "provenance": "official"}
+{"source_id": "PE-9", "target_ids": ["164.310(a)(2)(ii)"], "provenance": "official"}
+{"source_id": "PE-13", "target_ids": ["164.310(a)(2)(ii)"], "provenance": "official"}
+{"source_id": "PE-14", "target_ids": ["164.310(a)(2)(ii)"], "provenance": "official"}
+{"source_id": "PE-15", "target_ids": ["164.310(a)(2)(ii)"], "provenance": "official"}
+{"source_id": "PE-16", "target_ids": ["164.310(d)(1)"], "provenance": "official"}
+{"source_id": "PE-17", "target_ids": ["164.310(b)"], "provenance": "official"}
+{"source_id": "PE-18", "target_ids": ["164.310(c)"], "provenance": "official"}
+{"source_id": "PL-1", "target_ids": ["164.316(a)", "164.316(b)(2)(i)", "164.316(b)(2)(iii)"], "provenance": "official"}
+{"source_id": "PL-2", "target_ids": ["164.308(a)(7)(ii)(E)", "164.316(b)(1)", "164.316(b)(2)(ii)"], "provenance": "official"}
+{"source_id": "PL-4", "target_ids": ["164.308(a)(3)(ii)(A)"], "provenance": "official"}
+{"source_id": "PM-1", "target_ids": ["164.316(a)"], "provenance": "official"}
+{"source_id": "PM-2", "target_ids": ["164.308(a)(2)"], "provenance": "official"}
+{"source_id": "PM-4", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "PM-9", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "PM-10", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "PS-1", "target_ids": ["164.308(a)(3)"], "provenance": "official"}
+{"source_id": "PS-3", "target_ids": ["164.308(a)(3)", "164.308(a)(3)(ii)(A)", "164.308(a)(3)(ii)(B)"], "provenance": "official"}
+{"source_id": "PS-4", "target_ids": ["164.308(a)(3)(ii)(B)", "164.308(a)(3)(ii)(C)"], "provenance": "official"}
+{"source_id": "PS-5", "target_ids": ["164.308(a)(3)(ii)(B)", "164.308(a)(3)(ii)(C)"], "provenance": "official"}
+{"source_id": "PS-6", "target_ids": ["164.308(b)(1)"], "provenance": "official"}
+{"source_id": "PS-7", "target_ids": ["164.308(b)(1)"], "provenance": "official"}
+{"source_id": "PS-8", "target_ids": ["164.308(a)(1)(ii)(C)"], "provenance": "official"}
+{"source_id": "RA-1", "target_ids": ["164.308(a)(1)"], "provenance": "official"}
+{"source_id": "RA-2", "target_ids": ["164.308(a)(1)(ii)(A)"], "provenance": "official"}
+{"source_id": "RA-3", "target_ids": ["164.308(a)(1)", "164.308(a)(1)(ii)(A)", "164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "RA-5", "target_ids": ["164.308(a)(1)", "164.308(a)(1)(ii)(A)", "164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "RA-7", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "SA-1", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "SA-2", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "SA-3", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "SA-4", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "SA-5", "target_ids": ["164.316(b)(1)"], "provenance": "official"}
+{"source_id": "SA-8", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "SA-9", "target_ids": ["164.308(b)(1)", "164.314(a)(1)", "164.314(a)(2)(i)"], "provenance": "official"}
+{"source_id": "SC-1", "target_ids": ["164.312(e)(1)"], "provenance": "official"}
+{"source_id": "SC-5", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "SC-7", "target_ids": ["164.312(e)(1)"], "provenance": "official"}
+{"source_id": "SC-8", "target_ids": ["164.312(e)(1)", "164.312(e)(2)(i)", "164.312(e)(2)(ii)"], "provenance": "official"}
+{"source_id": "SC-12", "target_ids": ["164.312(a)(2)(iv)", "164.312(e)(2)(ii)"], "provenance": "official"}
+{"source_id": "SC-13", "target_ids": ["164.312(a)(2)(iv)", "164.312(e)(2)(ii)"], "provenance": "official"}
+{"source_id": "SC-15", "target_ids": ["164.310(b)"], "provenance": "official"}
+{"source_id": "SC-28", "target_ids": ["164.312(a)(2)(iv)"], "provenance": "official"}
+{"source_id": "SI-1", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "SI-2", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "SI-3", "target_ids": ["164.308(a)(5)(ii)(B)"], "provenance": "official"}
+{"source_id": "SI-4", "target_ids": ["164.308(a)(1)(ii)(D)", "164.308(a)(5)(ii)(B)"], "provenance": "official"}
+{"source_id": "SI-5", "target_ids": ["164.308(a)(5)(ii)(A)"], "provenance": "official"}
+{"source_id": "SI-6", "target_ids": ["164.308(a)(1)(ii)(D)"], "provenance": "official"}
+{"source_id": "SI-7", "target_ids": ["164.312(c)(1)", "164.312(c)(2)", "164.312(e)(2)(i)"], "provenance": "official"}
+{"source_id": "SI-10", "target_ids": ["164.308(a)(1)(ii)(B)"], "provenance": "official"}
+{"source_id": "SI-12", "target_ids": ["164.308(a)(1)"], "provenance": "official"}

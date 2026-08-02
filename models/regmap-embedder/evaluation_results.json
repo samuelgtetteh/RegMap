@@ -1,0 +1,9 @@
+{
+  "model": "all-MiniLM-L6-v2 + MultipleNegativesRankingLoss",
+  "positive_pairs": 222,
+  "recall@1": 0.2647058823529412,
+  "recall@3": 0.5588235294117647,
+  "recall@5": 0.7352941176470589,
+  "mrr": 0.46306534521712095,
+  "date": "2026-06-25"
+}

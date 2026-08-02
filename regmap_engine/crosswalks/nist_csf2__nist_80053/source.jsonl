@@ -1,0 +1,12 @@
+{"id": "PR.AA-01", "text": "Identities and credentials for authorized users, services, and hardware are managed by the organization."}
+{"id": "PR.AA-05", "text": "Access permissions, entitlements, and authorizations are defined and enforced, following the principles of least privilege and separation of duties."}
+{"id": "PR.PS-01", "text": "Configuration management practices are established and applied to information systems and their settings."}
+{"id": "PR.DS-01", "text": "The confidentiality, integrity, and availability of data at rest are protected."}
+{"id": "PR.DS-02", "text": "The confidentiality, integrity, and availability of data in transit are protected."}
+{"id": "PR.IR-01", "text": "Networks and environments are protected from unauthorized logical access and usage."}
+{"id": "DE.CM-01", "text": "Networks and network services are monitored to detect potentially adverse events."}
+{"id": "DE.CM-09", "text": "Computing hardware and software, and their runtime environments, are monitored to detect potentially adverse events."}
+{"id": "ID.AM-01", "text": "Inventories of hardware managed by the organization are maintained."}
+{"id": "ID.RA-01", "text": "Vulnerabilities in assets are identified, validated, and recorded."}
+{"id": "RS.MA-01", "text": "The incident response plan is executed once an incident is declared, in coordination with relevant parties."}
+{"id": "RC.RP-01", "text": "The recovery portion of the incident response plan is executed to restore systems and assets affected by an incident."}

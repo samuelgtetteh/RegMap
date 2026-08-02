@@ -1,0 +1,53 @@
+# OPT-IN — apply only on a cluster with NVIDIA GPU nodes + the device plugin:
+#   kubectl apply -f regmap_engine/k8s/gpu-deployment.yaml
+# Same image, scheduled onto a GPU node and told to use it. Carries app=regmap-engine so the
+# existing Service load-balances across cpu + gpu pods. Start at 0 replicas and let KEDA scale
+# it up on demand (keda-scaledobject.yaml) — that's the GPU half of "pay for what you use".
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: regmap-engine-gpu
+  namespace: regmap
+  labels: { app: regmap-engine, tier: gpu }
+spec:
+  replicas: 0                      # KEDA scales 0 -> N on traffic; no requests => no GPU cost
+  selector:
+    matchLabels: { app: regmap-engine, tier: gpu }
+  template:
+    metadata:
+      labels: { app: regmap-engine, tier: gpu }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      nodeSelector:
+        nvidia.com/gpu.present: "true"     # schedule only on GPU nodes
+      tolerations:
+        - { key: nvidia.com/gpu, operator: Exists, effect: NoSchedule }
+      containers:
+        - name: engine
+          image: regmap-engine:0.1          # build with a CUDA TORCH_INDEX for real GPU accel
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 8000 }
+          env:
+            - { name: REGMAP_DEVICE, value: "cuda" }
+            - { name: REGMAP_GPU_CU_MULT, value: "8" }
+          resources:
+            limits:
+              nvidia.com/gpu: 1             # one GPU per pod
+              memory: "4Gi"
+            requests:
+              cpu: "500m"
+              memory: "2Gi"
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 5
+            failureThreshold: 40
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }

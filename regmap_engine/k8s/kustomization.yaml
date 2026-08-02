@@ -1,0 +1,11 @@
+# Core, cluster-agnostic set. Apply with:  kubectl apply -k regmap_engine/k8s
+# GPU + KEDA scale-to-zero are opt-in (apply gpu-deployment.yaml / keda-scaledobject.yaml
+# separately on a GPU cluster) so this base applies cleanly on Docker Desktop.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+  - networkpolicy.yaml
+  - hpa.yaml

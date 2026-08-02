@@ -1,0 +1,12 @@
+{"source_id": "DE.CM-01", "target_ids": ["AU-6", "SI-4"], "provenance": "sample"}
+{"source_id": "DE.CM-09", "target_ids": ["CM-8", "SI-4"], "provenance": "sample"}
+{"source_id": "ID.AM-01", "target_ids": ["CM-8"], "provenance": "sample"}
+{"source_id": "ID.RA-01", "target_ids": ["RA-5"], "provenance": "sample"}
+{"source_id": "PR.AA-01", "target_ids": ["AC-2", "IA-2", "IA-4", "IA-5"], "provenance": "sample"}
+{"source_id": "PR.AA-05", "target_ids": ["AC-3", "AC-6"], "provenance": "sample"}
+{"source_id": "PR.DS-01", "target_ids": ["SC-28"], "provenance": "sample"}
+{"source_id": "PR.DS-02", "target_ids": ["SC-8"], "provenance": "sample"}
+{"source_id": "PR.IR-01", "target_ids": ["SC-7"], "provenance": "sample"}
+{"source_id": "PR.PS-01", "target_ids": ["CM-2", "CM-6"], "provenance": "sample"}
+{"source_id": "RC.RP-01", "target_ids": ["CP-10", "CP-9"], "provenance": "sample"}
+{"source_id": "RS.MA-01", "target_ids": ["IR-4", "IR-6"], "provenance": "sample"}

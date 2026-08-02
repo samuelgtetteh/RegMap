@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: regmap-engine
+  namespace: regmap
+  labels: { app: regmap-engine, tier: cpu }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: regmap-engine, tier: cpu }
+  template:
+    metadata:
+      labels: { app: regmap-engine, tier: cpu }
+    spec:
+      # Pull the private GHCR image (create the secret: see k8s/README.md "Registry / pull secret").
+      imagePullSecrets:
+        - name: ghcr
+      # Matches the non-root user baked into the image (Dockerfile: useradd -u 10001 appuser).
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: engine
+          # Digest-pinned (reproducible): the CPU-tier image pushed to GHCR.
+          # Rebuild+repush changes the digest — update it here (build slim-CPU: --build-arg TORCH_INDEX=.../cpu).
+          image: ghcr.io/samuelgtetteh/regmap-engine@sha256:aebf4f73d76a38a4847e4a5c4a60d3c0fa24f6bb2ce305bffa7b8c77723237b1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 8000 }
+          env:
+            - { name: REGMAP_DEVICE, value: "cpu" }
+            - { name: REGMAP_GPU_CU_MULT, value: "8" }
+          resources:
+            requests: { cpu: "250m", memory: "768Mi" }
+            limits: { cpu: "2", memory: "2Gi" }
+          # Model warms up (~10s) before it's ready; startupProbe guards that window so
+          # liveness never kills the pod during warm-up.
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 5
+            failureThreshold: 30      # up to ~150s to become ready
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }

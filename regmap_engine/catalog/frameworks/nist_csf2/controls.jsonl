@@ -1,0 +1,12 @@
+{"id": "DE.CM-01", "title": "Networks and network services are monitored to detect potentially adverse events.", "text": "Networks and network services are monitored to detect potentially adverse events."}
+{"id": "DE.CM-09", "title": "", "text": "Computing hardware and software, and their runtime environments, are monitored to detect potentially adverse events."}
+{"id": "ID.AM-01", "title": "Inventories of hardware managed by the organization are maintained.", "text": "Inventories of hardware managed by the organization are maintained."}
+{"id": "ID.RA-01", "title": "Vulnerabilities in assets are identified, validated, and recorded.", "text": "Vulnerabilities in assets are identified, validated, and recorded."}
+{"id": "PR.AA-01", "title": "", "text": "Identities and credentials for authorized users, services, and hardware are managed by the organization."}
+{"id": "PR.AA-05", "title": "", "text": "Access permissions, entitlements, and authorizations are defined and enforced, following the principles of least privilege and separation of duties."}
+{"id": "PR.DS-01", "title": "The confidentiality, integrity, and availability of data at rest are protected.", "text": "The confidentiality, integrity, and availability of data at rest are protected."}
+{"id": "PR.DS-02", "title": "The confidentiality, integrity, and availability of data in transit are protected.", "text": "The confidentiality, integrity, and availability of data in transit are protected."}
+{"id": "PR.IR-01", "title": "Networks and environments are protected from unauthorized logical access and usage.", "text": "Networks and environments are protected from unauthorized logical access and usage."}
+{"id": "PR.PS-01", "title": "", "text": "Configuration management practices are established and applied to information systems and their settings."}
+{"id": "RC.RP-01", "title": "", "text": "The recovery portion of the incident response plan is executed to restore systems and assets affected by an incident."}
+{"id": "RS.MA-01", "title": "", "text": "The incident response plan is executed once an incident is declared, in coordination with relevant parties."}
