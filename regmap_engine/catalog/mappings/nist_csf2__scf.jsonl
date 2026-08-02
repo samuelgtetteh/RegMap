@@ -1,0 +1,102 @@
+{"source_id": "DE.AE-02", "target_ids": ["IRO-02", "IRO-02.4"], "provenance": "official"}
+{"source_id": "DE.AE-03", "target_ids": ["IRO-02", "IRO-02.5", "MON-02", "MON-02.1"], "provenance": "official"}
+{"source_id": "DE.AE-04", "target_ids": ["IRO-02", "IRO-02.4"], "provenance": "official"}
+{"source_id": "DE.AE-06", "target_ids": ["IRO-02", "IRO-02.4", "IRO-04", "IRO-07", "IRO-09", "IRO-10", "MON-01.12", "MON-01.8", "MON-02", "MON-02.1"], "provenance": "official"}
+{"source_id": "DE.AE-07", "target_ids": ["THR-01", "THR-03"], "provenance": "official"}
+{"source_id": "DE.AE-08", "target_ids": ["IRO-02", "IRO-02.4"], "provenance": "official"}
+{"source_id": "DE.CM-01", "target_ids": ["MON-01", "MON-01.1", "MON-01.3", "MON-01.4", "MON-01.8"], "provenance": "official"}
+{"source_id": "DE.CM-02", "target_ids": ["PES-01", "PES-03", "PES-03.3", "PES-05"], "provenance": "official"}
+{"source_id": "DE.CM-03", "target_ids": ["MON-01", "MON-16", "NET-18"], "provenance": "official"}
+{"source_id": "DE.CM-06", "target_ids": ["MON-01"], "provenance": "official"}
+{"source_id": "DE.CM-09", "target_ids": ["END-01", "END-04", "END-06", "MON-01", "MON-01.7"], "provenance": "official"}
+{"source_id": "GV.OC-01", "target_ids": ["RSK-01.1", "TDA-06.2"], "provenance": "official"}
+{"source_id": "GV.OC-02", "target_ids": ["TPM-05", "TPM-05.4"], "provenance": "official"}
+{"source_id": "GV.OC-03", "target_ids": ["CPL-01", "CPL-02", "PRI-01", "TPM-05", "TPM-05.2"], "provenance": "official"}
+{"source_id": "GV.OC-04", "target_ids": ["BCD-02", "TPM-02"], "provenance": "official"}
+{"source_id": "GV.OC-05", "target_ids": ["BCD-02", "TPM-02"], "provenance": "official"}
+{"source_id": "GV.OV-01", "target_ids": ["GOV-03", "GOV-05"], "provenance": "official"}
+{"source_id": "GV.OV-02", "target_ids": ["GOV-03", "RSK-01"], "provenance": "official"}
+{"source_id": "GV.OV-03", "target_ids": ["GOV-05", "RSK-01"], "provenance": "official"}
+{"source_id": "GV.PO-01", "target_ids": ["GOV-02", "HRS-07"], "provenance": "official"}
+{"source_id": "GV.PO-02", "target_ids": ["GOV-03", "HRS-07"], "provenance": "official"}
+{"source_id": "GV.RM-01", "target_ids": ["GOV-01", "RSK-01"], "provenance": "official"}
+{"source_id": "GV.RM-03", "target_ids": ["GOV-01", "RSK-01"], "provenance": "official"}
+{"source_id": "GV.RM-04", "target_ids": ["RSK-01", "RSK-01.1", "RSK-06.1"], "provenance": "official"}
+{"source_id": "GV.RM-05", "target_ids": ["GOV-04", "HRS-03", "TPM-05.4"], "provenance": "official"}
+{"source_id": "GV.RM-06", "target_ids": ["RSK-01", "RSK-01.1", "RSK-04"], "provenance": "official"}
+{"source_id": "GV.RM-07", "target_ids": ["RSK-01.1"], "provenance": "official"}
+{"source_id": "GV.RR-01", "target_ids": ["GOV-01", "GOV-04", "RSK-01"], "provenance": "official"}
+{"source_id": "GV.RR-02", "target_ids": ["GOV-04", "HRS-02", "HRS-03", "TPM-05.4"], "provenance": "official"}
+{"source_id": "GV.RR-03", "target_ids": ["PRM-01", "PRM-02", "PRM-03"], "provenance": "official"}
+{"source_id": "GV.RR-04", "target_ids": ["HRS-01"], "provenance": "official"}
+{"source_id": "GV.SC-01", "target_ids": ["GOV-01", "GOV-02", "RSK-01", "RSK-09"], "provenance": "official"}
+{"source_id": "GV.SC-02", "target_ids": ["TPM-05", "TPM-05.2", "TPM-05.4"], "provenance": "official"}
+{"source_id": "GV.SC-03", "target_ids": ["GOV-01", "GOV-02", "RSK-01", "RSK-09"], "provenance": "official"}
+{"source_id": "GV.SC-04", "target_ids": ["AST-01", "TPM-01", "TPM-02"], "provenance": "official"}
+{"source_id": "GV.SC-05", "target_ids": ["CPL-01", "RSK-01", "RSK-09", "TPM-05", "TPM-05.2"], "provenance": "official"}
+{"source_id": "GV.SC-06", "target_ids": ["TPM-01", "TPM-02", "TPM-03", "TPM-03.2", "TPM-03.3", "TPM-04", "TPM-04.1", "TPM-04.3", "TPM-04.4", "TPM-05", "TPM-05.2", "TPM-05.4", "TPM-05.7"], "provenance": "official"}
+{"source_id": "GV.SC-07", "target_ids": ["TPM-01", "TPM-02", "TPM-03", "TPM-03.2", "TPM-03.3", "TPM-04", "TPM-04.1", "TPM-08"], "provenance": "official"}
+{"source_id": "GV.SC-08", "target_ids": ["BCD-01", "BCD-01.2", "IRO-01", "IRO-02", "IRO-02.5", "TPM-01", "TPM-02", "TPM-10", "TPM-11"], "provenance": "official"}
+{"source_id": "GV.SC-09", "target_ids": ["GOV-01", "GOV-05", "PRM-07", "RSK-01", "RSK-09", "RSK-09.1", "SEA-07.1", "TDA-01.1"], "provenance": "official"}
+{"source_id": "GV.SC-10", "target_ids": ["RSK-09", "TPM-01", "TPM-05.2"], "provenance": "official"}
+{"source_id": "ID.AM-01", "target_ids": ["AST-02"], "provenance": "official"}
+{"source_id": "ID.AM-02", "target_ids": ["AST-02"], "provenance": "official"}
+{"source_id": "ID.AM-03", "target_ids": ["AST-04", "DCH-19"], "provenance": "official"}
+{"source_id": "ID.AM-05", "target_ids": ["AST-04.1", "BCD-02", "TPM-02"], "provenance": "official"}
+{"source_id": "ID.AM-07", "target_ids": ["DCH-06", "PRI-05", "PRI-05.5"], "provenance": "official"}
+{"source_id": "ID.AM-08", "target_ids": ["AST-01", "DCH-01", "DCH-01.1", "PRM-07", "SEA-07", "SEA-07.1"], "provenance": "official"}
+{"source_id": "ID.IM-01", "target_ids": ["CPL-03", "CPL-03.2", "IAO-02", "IAO-05", "TDA-09", "TDA-09.1", "TPM-04.1", "TPM-08"], "provenance": "official"}
+{"source_id": "ID.IM-02", "target_ids": ["BCD-05", "CPL-03", "CPL-03.2", "IAO-02", "IAO-05", "IRO-13", "TDA-09", "TDA-09.1", "TPM-04.1", "TPM-08"], "provenance": "official"}
+{"source_id": "ID.IM-03", "target_ids": ["BCD-05", "GOV-05", "IRO-13"], "provenance": "official"}
+{"source_id": "ID.IM-04", "target_ids": ["BCD-01", "BCD-06", "IRO-04", "IRO-04.2"], "provenance": "official"}
+{"source_id": "ID.RA-01", "target_ids": ["IAO-01", "IAO-02", "IAO-05", "RSK-04", "TDA-09", "VPM-01", "VPM-06"], "provenance": "official"}
+{"source_id": "ID.RA-02", "target_ids": ["GOV-07", "THR-03"], "provenance": "official"}
+{"source_id": "ID.RA-03", "target_ids": ["THR-01", "THR-03", "THR-04", "THR-05", "THR-07"], "provenance": "official"}
+{"source_id": "ID.RA-05", "target_ids": ["RSK-01.1", "RSK-02.1", "RSK-04", "RSK-06.1"], "provenance": "official"}
+{"source_id": "ID.RA-06", "target_ids": ["RSK-01.1", "RSK-02.1", "RSK-06.1"], "provenance": "official"}
+{"source_id": "ID.RA-07", "target_ids": ["CHG-01", "CHG-02", "CHG-02.1", "CHG-02.2", "CHG-03", "CHG-04"], "provenance": "official"}
+{"source_id": "ID.RA-08", "target_ids": ["THR-01", "THR-03", "VPM-01", "VPM-02"], "provenance": "official"}
+{"source_id": "ID.RA-09", "target_ids": ["AST-15", "TDA-01", "TDA-14", "TDA-14.1", "TDA-14.2"], "provenance": "official"}
+{"source_id": "ID.RA-10", "target_ids": ["TPM-02", "TPM-04.1"], "provenance": "official"}
+{"source_id": "PR.AA-01", "target_ids": ["IAC-02", "IAC-03", "IAC-04", "IAC-05"], "provenance": "official"}
+{"source_id": "PR.AA-02", "target_ids": ["IAC-28"], "provenance": "official"}
+{"source_id": "PR.AA-03", "target_ids": ["IAC-01.2", "IAC-02", "IAC-03", "IAC-04", "IAC-05"], "provenance": "official"}
+{"source_id": "PR.AA-04", "target_ids": ["IAC-01.2", "IAC-02.2"], "provenance": "official"}
+{"source_id": "PR.AA-05", "target_ids": ["HRS-02", "HRS-11", "IAC-01", "IAC-01.2", "IAC-02", "IAC-03", "IAC-04", "IAC-05", "IAC-08", "IAC-21"], "provenance": "official"}
+{"source_id": "PR.AA-06", "target_ids": ["PES-01", "PES-02", "PES-02.1", "PES-03"], "provenance": "official"}
+{"source_id": "PR.AT-01", "target_ids": ["SAT-02", "SAT-03", "SAT-03.6"], "provenance": "official"}
+{"source_id": "PR.AT-02", "target_ids": ["SAT-03", "SAT-03.6"], "provenance": "official"}
+{"source_id": "PR.DS-01", "target_ids": ["CRY-01", "CRY-01.1", "CRY-05", "DCH-01"], "provenance": "official"}
+{"source_id": "PR.DS-02", "target_ids": ["CRY-01", "CRY-03", "CRY-04", "DCH-01"], "provenance": "official"}
+{"source_id": "PR.DS-10", "target_ids": ["CFG-02", "CRY-01", "DCH-01", "IAC-21"], "provenance": "official"}
+{"source_id": "PR.DS-11", "target_ids": ["BCD-11", "BCD-11.1", "BCD-11.5", "BCD-11.6"], "provenance": "official"}
+{"source_id": "PR.IR-01", "target_ids": ["NET-01", "SEA-01", "SEA-02"], "provenance": "official"}
+{"source_id": "PR.IR-02", "target_ids": ["BCD-01", "PES-01", "PES-07", "PES-07.5", "PES-08", "PES-09"], "provenance": "official"}
+{"source_id": "PR.IR-03", "target_ids": ["BCD-01", "SEA-01", "SEA-02"], "provenance": "official"}
+{"source_id": "PR.IR-04", "target_ids": ["CAP-01", "CAP-02", "CAP-03"], "provenance": "official"}
+{"source_id": "PR.PS-01", "target_ids": ["CFG-01"], "provenance": "official"}
+{"source_id": "PR.PS-02", "target_ids": ["MNT-01", "MNT-02", "MNT-03", "MNT-03.1", "PRM-07", "SEA-07.1", "TDA-17", "VPM-01", "VPM-01.1", "VPM-02", "VPM-05"], "provenance": "official"}
+{"source_id": "PR.PS-03", "target_ids": ["MNT-01", "MNT-02", "MNT-03", "MNT-03.1", "PRM-07", "SEA-07.1", "TDA-17"], "provenance": "official"}
+{"source_id": "PR.PS-04", "target_ids": ["MON-01", "MON-01.4", "MON-03"], "provenance": "official"}
+{"source_id": "PR.PS-05", "target_ids": ["CFG-01", "CFG-02", "CFG-03", "CFG-03.2", "CFG-05", "END-03"], "provenance": "official"}
+{"source_id": "PR.PS-06", "target_ids": ["TDA-01", "TDA-01.1", "TDA-06", "TDA-06.1", "TDA-06.2", "TDA-09"], "provenance": "official"}
+{"source_id": "RC.CO-04", "target_ids": ["IRO-16"], "provenance": "official"}
+{"source_id": "RC.RP-01", "target_ids": ["BCD-12"], "provenance": "official"}
+{"source_id": "RC.RP-02", "target_ids": ["BCD-01", "BCD-01.4", "BCD-02", "BCD-02.1"], "provenance": "official"}
+{"source_id": "RC.RP-03", "target_ids": ["BCD-13"], "provenance": "official"}
+{"source_id": "RC.RP-04", "target_ids": ["BCD-01", "BCD-01.4", "BCD-02", "BCD-02.1"], "provenance": "official"}
+{"source_id": "RC.RP-05", "target_ids": ["BCD-12"], "provenance": "official"}
+{"source_id": "RC.RP-06", "target_ids": ["IRO-02", "IRO-09"], "provenance": "official"}
+{"source_id": "RS.AN-03", "target_ids": ["IRO-13"], "provenance": "official"}
+{"source_id": "RS.AN-06", "target_ids": ["IRO-02", "IRO-08", "IRO-09"], "provenance": "official"}
+{"source_id": "RS.AN-07", "target_ids": ["IRO-08"], "provenance": "official"}
+{"source_id": "RS.AN-08", "target_ids": ["IRO-02.4"], "provenance": "official"}
+{"source_id": "RS.CO-02", "target_ids": ["IRO-02", "IRO-10", "IRO-10.4"], "provenance": "official"}
+{"source_id": "RS.CO-03", "target_ids": ["IRO-02", "IRO-10", "IRO-10.4"], "provenance": "official"}
+{"source_id": "RS.MA-01", "target_ids": ["IRO-02", "IRO-02.5", "IRO-04", "IRO-07", "IRO-10"], "provenance": "official"}
+{"source_id": "RS.MA-02", "target_ids": ["IRO-02", "IRO-04"], "provenance": "official"}
+{"source_id": "RS.MA-03", "target_ids": ["IRO-02.4"], "provenance": "official"}
+{"source_id": "RS.MA-04", "target_ids": ["IRO-02", "IRO-04", "IRO-07"], "provenance": "official"}
+{"source_id": "RS.MA-05", "target_ids": ["BCD-01"], "provenance": "official"}
+{"source_id": "RS.MI-01", "target_ids": ["IRO-02"], "provenance": "official"}
+{"source_id": "RS.MI-02", "target_ids": ["IRO-02"], "provenance": "official"}

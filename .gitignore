@@ -6,3 +6,6 @@ dist/
 *.tar
 .ipynb_checkpoints/
 .DS_Store
+
+# derived embedding vectors — rebuilt on demand from the catalog
+regmap_engine/catalog/.embeddings/

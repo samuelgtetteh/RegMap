@@ -24,6 +24,7 @@ docs/hosted_saas_roadmap.md. Do not invoice from this; the customer-attributed m
 
 Run locally:  uvicorn serve:app --host 0.0.0.0 --port 8000
 """
+import hashlib
 import os
 import json as _json
 import time
@@ -40,6 +41,7 @@ from eval_crosswalk import rank_tfidf, rank_bm25, score, aggregate
 
 HERE = Path(__file__).resolve().parent
 WEB = HERE / "web"                 # the RegMap product website (served by this engine)
+EMB_CACHE = HERE / "catalog" / ".embeddings"   # derived vectors; gitignored, safe to delete
 MODEL = os.environ.get("REGMAP_MODEL", str((HERE.parent / "models" / "regmap-embedder")))
 DEVICE = os.environ.get("REGMAP_DEVICE") or None   # None => auto (cuda if visible, else cpu)
 
@@ -129,24 +131,74 @@ def _load_model():
         return False
 
 
+def _signature(controls):
+    """Cache key for one framework's embeddings: the model plus the exact text encoded.
+
+    Any edit to a control statement, or a change of model, produces a different signature and so a
+    miss — the cache can never serve vectors that do not match the text being searched.
+    """
+    h = hashlib.sha256()
+    h.update(VERSION["model"].encode("utf-8"))
+    for cid in sorted(controls):
+        h.update(cid.encode("utf-8"))
+        h.update(controls[cid]["text"].encode("utf-8"))
+    return h.hexdigest()[:16]
+
+
+def _embed_framework(fid, controls):
+    """Embed one framework's catalog, reusing a cached matrix when the signature matches.
+
+    Encoding is the whole of startup cost and it grows with the catalog: ~1,000 controls is minutes on
+    CPU, which would blow the k8s startupProbe budget and make every rollout and scale-up slow. The
+    cache turns a cold start into a disk read, so only genuinely new or edited content is ever encoded.
+    """
+    import numpy as np
+    cids = sorted(controls)
+    sig = _signature(controls)
+    path = EMB_CACHE / f"{fid}.{sig}.npz"
+    if path.is_file():
+        try:
+            z = np.load(path, allow_pickle=False)
+            if list(z["ids"]) == cids:
+                return cids, z["mat"], "cached"
+        except Exception as e:
+            print(f"[regmap] ignoring unreadable embedding cache {path.name}: {e}")
+
+    mat = np.asarray(_model.encode([controls[c]["text"] for c in cids],
+                                   normalize_embeddings=True, show_progress_bar=False))
+    try:
+        EMB_CACHE.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(path, ids=np.array(cids), mat=mat)
+        for old in EMB_CACHE.glob(f"{fid}.*.npz"):       # drop superseded signatures
+            if old != path:
+                old.unlink(missing_ok=True)
+    except Exception as e:
+        print(f"[regmap] could not write embedding cache for {fid}: {e}")
+    return cids, mat, "encoded"
+
+
 @app.on_event("startup")
 def _startup():
     global _registry
+    t0 = time.perf_counter()
     _load_model()
     _registry = cat.load_registry()
+    stats = []
     for fid, f in _registry.items():
         if not f.get("controls"):
             continue                                  # registered but not yet imported
         _controls[fid] = cat.load_controls(fid)
         if _model is not None:
-            import numpy as np
-            cids = list(_controls[fid])
-            mat = _model.encode([_controls[fid][c]["text"] for c in cids],
-                                normalize_embeddings=True, show_progress_bar=False)
-            _emb[fid] = (cids, np.asarray(mat))
+            cids, mat, how = _embed_framework(fid, _controls[fid])
+            _emb[fid] = (cids, mat)
+            stats.append(f"{fid}:{len(cids)}{'*' if how == 'encoded' else ''}")
     dev = str(_model.device) if _model is not None else "cpu (tfidf)"
-    print(f"[regmap] ready · model={'on' if _model else 'off (TF-IDF)'} · device={dev} · "
-          f"frameworks={list(_controls)} · pairs={len(cat.reachable_pairs())}")
+    n = sum(len(c) for c in _controls.values())
+    print(f"[regmap] ready in {time.perf_counter()-t0:.1f}s · "
+          f"model={'on' if _model else 'off (TF-IDF)'} · device={dev} · "
+          f"{len(_controls)} frameworks / {n} controls · pairs={len(cat.reachable_pairs())}")
+    if stats:
+        print(f"[regmap] embeddings: {' '.join(stats)}   (* = encoded this boot, else cache hit)")
 
 
 # --- framework resolution + licence gating --------------------------------------------------------

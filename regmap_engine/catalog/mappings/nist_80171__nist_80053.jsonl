@@ -1,0 +1,97 @@
+{"source_id": "03.01.01", "target_ids": ["AC-2", "AC-2(13)", "AC-2(3)", "AC-2(5)"], "provenance": "official"}
+{"source_id": "03.01.02", "target_ids": ["AC-3"], "provenance": "official"}
+{"source_id": "03.01.03", "target_ids": ["AC-4"], "provenance": "official"}
+{"source_id": "03.01.04", "target_ids": ["AC-5"], "provenance": "official"}
+{"source_id": "03.01.05", "target_ids": ["AC-6", "AC-6(1)", "AC-6(7)", "AU-9(4)"], "provenance": "official"}
+{"source_id": "03.01.06", "target_ids": ["AC-6(2)", "AC-6(5)"], "provenance": "official"}
+{"source_id": "03.01.07", "target_ids": ["AC-6(10)", "AC-6(9)"], "provenance": "official"}
+{"source_id": "03.01.08", "target_ids": ["AC-7"], "provenance": "official"}
+{"source_id": "03.01.09", "target_ids": ["AC-8"], "provenance": "official"}
+{"source_id": "03.01.10", "target_ids": ["AC-11", "AC-11(1)"], "provenance": "official"}
+{"source_id": "03.01.11", "target_ids": ["AC-12"], "provenance": "official"}
+{"source_id": "03.01.12", "target_ids": ["AC-17", "AC-17(3)", "AC-17(4)"], "provenance": "official"}
+{"source_id": "03.01.16", "target_ids": ["AC-18", "AC-18(1)", "AC-18(3)"], "provenance": "official"}
+{"source_id": "03.01.18", "target_ids": ["AC-19", "AC-19(5)"], "provenance": "official"}
+{"source_id": "03.01.20", "target_ids": ["AC-20", "AC-20(1)", "AC-20(2)"], "provenance": "official"}
+{"source_id": "03.01.22", "target_ids": ["AC-22"], "provenance": "official"}
+{"source_id": "03.02.01", "target_ids": ["AT-2", "AT-2(2)", "AT-2(3)"], "provenance": "official"}
+{"source_id": "03.02.02", "target_ids": ["AT-3"], "provenance": "official"}
+{"source_id": "03.03.01", "target_ids": ["AU-2"], "provenance": "official"}
+{"source_id": "03.03.02", "target_ids": ["AU-3", "AU-3(1)"], "provenance": "official"}
+{"source_id": "03.03.03", "target_ids": ["AU-11", "AU-12"], "provenance": "official"}
+{"source_id": "03.03.04", "target_ids": ["AU-5"], "provenance": "official"}
+{"source_id": "03.03.05", "target_ids": ["AU-6", "AU-6(3)"], "provenance": "official"}
+{"source_id": "03.03.06", "target_ids": ["AU-7"], "provenance": "official"}
+{"source_id": "03.03.07", "target_ids": ["AU-8"], "provenance": "official"}
+{"source_id": "03.03.08", "target_ids": ["AU-9", "AU-9(4)"], "provenance": "official"}
+{"source_id": "03.04.01", "target_ids": ["CM-2"], "provenance": "official"}
+{"source_id": "03.04.02", "target_ids": ["CM-6"], "provenance": "official"}
+{"source_id": "03.04.03", "target_ids": ["CM-3"], "provenance": "official"}
+{"source_id": "03.04.04", "target_ids": ["CM-4", "CM-4(2)"], "provenance": "official"}
+{"source_id": "03.04.05", "target_ids": ["CM-5"], "provenance": "official"}
+{"source_id": "03.04.06", "target_ids": ["CM-7", "CM-7(1)"], "provenance": "official"}
+{"source_id": "03.04.08", "target_ids": ["CM-7(5)"], "provenance": "official"}
+{"source_id": "03.04.10", "target_ids": ["CM-8", "CM-8(1)"], "provenance": "official"}
+{"source_id": "03.04.11", "target_ids": ["CM-12"], "provenance": "official"}
+{"source_id": "03.04.12", "target_ids": ["CM-2(7)"], "provenance": "official"}
+{"source_id": "03.05.01", "target_ids": ["IA-11", "IA-2"], "provenance": "official"}
+{"source_id": "03.05.02", "target_ids": ["IA-3"], "provenance": "official"}
+{"source_id": "03.05.03", "target_ids": ["IA-2(1)", "IA-2(2)"], "provenance": "official"}
+{"source_id": "03.05.04", "target_ids": ["IA-2(8)"], "provenance": "official"}
+{"source_id": "03.05.05", "target_ids": ["IA-4", "IA-4(4)"], "provenance": "official"}
+{"source_id": "03.05.07", "target_ids": ["IA-5(1)"], "provenance": "official"}
+{"source_id": "03.05.11", "target_ids": ["IA-6"], "provenance": "official"}
+{"source_id": "03.05.12", "target_ids": ["IA-5"], "provenance": "official"}
+{"source_id": "03.06.01", "target_ids": ["IR-4"], "provenance": "official"}
+{"source_id": "03.06.02", "target_ids": ["IR-5", "IR-6", "IR-7"], "provenance": "official"}
+{"source_id": "03.06.03", "target_ids": ["IR-3"], "provenance": "official"}
+{"source_id": "03.06.04", "target_ids": ["IR-2"], "provenance": "official"}
+{"source_id": "03.06.05", "target_ids": ["IR-8"], "provenance": "official"}
+{"source_id": "03.07.04", "target_ids": ["MA-3", "MA-3(1)", "MA-3(2)", "MA-3(3)"], "provenance": "official"}
+{"source_id": "03.07.05", "target_ids": ["MA-4"], "provenance": "official"}
+{"source_id": "03.07.06", "target_ids": ["MA-5"], "provenance": "official"}
+{"source_id": "03.08.01", "target_ids": ["MP-4"], "provenance": "official"}
+{"source_id": "03.08.02", "target_ids": ["MP-2"], "provenance": "official"}
+{"source_id": "03.08.03", "target_ids": ["MP-6"], "provenance": "official"}
+{"source_id": "03.08.04", "target_ids": ["MP-3"], "provenance": "official"}
+{"source_id": "03.08.05", "target_ids": ["MP-5", "SC-28"], "provenance": "official"}
+{"source_id": "03.08.07", "target_ids": ["MP-7"], "provenance": "official"}
+{"source_id": "03.08.09", "target_ids": ["CP-9", "CP-9(8)"], "provenance": "official"}
+{"source_id": "03.09.01", "target_ids": ["PS-3"], "provenance": "official"}
+{"source_id": "03.09.02", "target_ids": ["PS-4", "PS-5"], "provenance": "official"}
+{"source_id": "03.10.01", "target_ids": ["PE-2"], "provenance": "official"}
+{"source_id": "03.10.02", "target_ids": ["PE-6"], "provenance": "official"}
+{"source_id": "03.10.06", "target_ids": ["PE-17"], "provenance": "official"}
+{"source_id": "03.10.07", "target_ids": ["PE-3", "PE-5"], "provenance": "official"}
+{"source_id": "03.10.08", "target_ids": ["PE-4"], "provenance": "official"}
+{"source_id": "03.11.01", "target_ids": ["RA-3", "RA-3(1)", "SR-6"], "provenance": "official"}
+{"source_id": "03.11.02", "target_ids": ["RA-5", "RA-5(2)"], "provenance": "official"}
+{"source_id": "03.11.04", "target_ids": ["RA-7"], "provenance": "official"}
+{"source_id": "03.12.01", "target_ids": ["CA-2"], "provenance": "official"}
+{"source_id": "03.12.02", "target_ids": ["CA-5"], "provenance": "official"}
+{"source_id": "03.12.03", "target_ids": ["CA-7"], "provenance": "official"}
+{"source_id": "03.12.05", "target_ids": ["CA-3"], "provenance": "official"}
+{"source_id": "03.13.01", "target_ids": ["SC-7"], "provenance": "official"}
+{"source_id": "03.13.04", "target_ids": ["SC-4"], "provenance": "official"}
+{"source_id": "03.13.06", "target_ids": ["SC-7(5)"], "provenance": "official"}
+{"source_id": "03.13.08", "target_ids": ["SC-28", "SC-28(1)", "SC-8", "SC-8(1)"], "provenance": "official"}
+{"source_id": "03.13.09", "target_ids": ["SC-10"], "provenance": "official"}
+{"source_id": "03.13.10", "target_ids": ["SC-12"], "provenance": "official"}
+{"source_id": "03.13.11", "target_ids": ["SC-13"], "provenance": "official"}
+{"source_id": "03.13.12", "target_ids": ["SC-15"], "provenance": "official"}
+{"source_id": "03.13.13", "target_ids": ["SC-18"], "provenance": "official"}
+{"source_id": "03.13.15", "target_ids": ["SC-23"], "provenance": "official"}
+{"source_id": "03.14.01", "target_ids": ["SI-2"], "provenance": "official"}
+{"source_id": "03.14.02", "target_ids": ["SI-3"], "provenance": "official"}
+{"source_id": "03.14.03", "target_ids": ["SI-5"], "provenance": "official"}
+{"source_id": "03.14.06", "target_ids": ["SI-4", "SI-4(4)"], "provenance": "official"}
+{"source_id": "03.14.08", "target_ids": ["SI-12"], "provenance": "official"}
+{"source_id": "03.15.01", "target_ids": ["AC-1", "AT-1", "AU-1", "CA-1", "CM-1", "IA-1", "IR-1", "MA-1", "MP-1", "PE-1", "PL-1", "PS-1", "RA-1", "SA-1", "SC-1", "SI-1", "SR-1"], "provenance": "official"}
+{"source_id": "03.15.02", "target_ids": ["PL-2"], "provenance": "official"}
+{"source_id": "03.15.03", "target_ids": ["PL-4"], "provenance": "official"}
+{"source_id": "03.16.01", "target_ids": ["SA-8"], "provenance": "official"}
+{"source_id": "03.16.02", "target_ids": ["SA-22"], "provenance": "official"}
+{"source_id": "03.16.03", "target_ids": ["SA-9"], "provenance": "official"}
+{"source_id": "03.17.01", "target_ids": ["SR-2"], "provenance": "official"}
+{"source_id": "03.17.02", "target_ids": ["SR-5"], "provenance": "official"}
+{"source_id": "03.17.03", "target_ids": ["SR-3"], "provenance": "official"}
