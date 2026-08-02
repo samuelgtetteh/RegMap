@@ -107,10 +107,22 @@ The pair-per-directory format could not reach a full framework catalog. It is no
       with real pairs or gate them as "coming soon"
 - [ ] Serve a per-pair provenance/coverage indicator in the UI (the auditability selling point) —
       `as_pair()` already returns `route` and `provenance` per pair, so the data is there
-- [ ] **Point `serve.py` at the catalog** instead of `crosswalks/` — swap `load_pair` for
-      `catalog.as_pair`, add `GET /frameworks` (registry + coverage) and make `/pairs` report
-      `reachable_pairs()`. This is what lets the UI offer a real *any framework → any framework* picker
-- [ ] Retire `crosswalks/` once `serve.py` reads the catalog (keep until then; it is the migration source)
+- [x] **`serve.py` now reads the catalog** (engine 0.2). DONE 2026-08-02, all endpoints run-tested
+      against a live server. Corpora are embedded **once per framework** rather than once per pair.
+      - `GET /frameworks` — 13 registered, 3 populated, with `access` + `available` + `hub` flags so the
+        UI can render "coming soon" instead of promising absent coverage
+      - `GET /pairs` — 6 answerable pairs, each with `route` and `authoritative`
+      - `POST /map` — takes `target` + `text`, **or `source` + `source_id`**, in which case the response
+        also carries the **official mapping** and flags each ranked result `official: true|false`
+      - `POST /eval` — reports `benchmark: false` + a note, so its leaky numbers can't be misread
+      - **Licence gate enforced at the API boundary**: `licence-required` frameworks return **403**
+        unless listed in `$REGMAP_LICENSED`. Default-deny — verified HITRUST returns 403
+      - **Legacy `{"text","pair"}` shape still works** (`k8s/test.sh`, `docker/README.md` unaffected)
+      - `/usage` now self-reports `billable: false` with the reason, so it can't be mistaken for invoiceable
+      - Verified consistent with the CLI: `/eval` returns R@1 0.223 · R@5 0.486, matching
+        `eval_crosswalk.py` on the same pair
+- [ ] Retire `crosswalks/` — `serve.py` no longer reads it, but keep it as the migration source until the
+      catalog has been through a few more imports
 
 ### A2 · Two audiences *(the product serves both — see roadmap §Audiences)*
 - [ ] **GRC / IT teams:** bulk map a control set, coverage + gap report, export evidence
@@ -196,17 +208,22 @@ reach a full framework set, migrated losslessly, with 13 frameworks registered a
 place. Real content: 800-53↔HIPAA with **222 official mappings**. **6 answerable pairs from 2 mappings.**
 Nothing in Phases B–E started. **No git repository yet.**
 
-**Next action:** `git init` + first commit — there is now real work worth protecting.
+**Version control:** ✅ `git init` done 2026-08-02, baseline commit `027394a` on `main`. **Git LFS** tracks
+`*.safetensors` / `*.docx` / `*.pdf` — the 87 MB model is in LFS, because Tier-2 retraining would otherwise
+add ~87 MB to history per retrain and that needs a history rewrite to undo. No remote configured yet.
+
+**Next action: the real UI.** `web/index.html:31-36` is still a hardcoded fake result block. The API behind
+it is now ready and interesting: a framework picker from `GET /frameworks`, a pair route badge from
+`GET /pairs`, and `POST /map` returning ranked results with an `official` flag per result. Build:
+1. Framework picker (any → any), driven by `/frameworks` + `/pairs`; grey out `available: false`
+2. Query box → `POST /map` → ranked results with score, provenance badge, and the official/not marker
+3. Route badge — `direct`/`inverted` = authoritative, `derived via <hub>` = advisory
 
 **Then, in order:**
-1. **Point `serve.py` at the catalog** (`catalog.as_pair`, `GET /frameworks`, `/pairs` →
-   `reachable_pairs()`). Small change, and it is what makes an any→any framework picker possible.
-2. **The real UI** — replace the hardcoded fake result block at `web/index.html:31-36` with a live
-   framework picker → `POST /map` → ranked results + score + provenance/route badge. Turns the brochure
-   into a demo for both audiences.
-3. **First student exercise** — "map this control", auto-graded against the 222 official mappings that
-   already exist. No new labelling needed.
-4. Then Phase B (persistence → API keys → attributed metering → CU redesign → quotas).
+1. **First student exercise** — "map this control", auto-graded against the official mappings. The API
+   already returns the answer key (`official.target_ids`), so this is UI work, not modelling work.
+2. **Bulk/gap view for GRC teams** — map a whole control set, report coverage and gaps.
+3. Then Phase B (persistence → API keys → attributed metering → CU redesign → quotas).
 
 **Cheap breadth win when ready:** import any framework's official mapping *to 800-53 or CSF 2.0* (both
 flagged `hub: true`) and every framework already on that hub becomes reachable for free.
