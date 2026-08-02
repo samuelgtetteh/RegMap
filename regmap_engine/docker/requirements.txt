@@ -5,3 +5,6 @@ uvicorn[standard]>=0.29
 scikit-learn>=1.4
 sentence-transformers>=3.0
 numpy>=1.26,<3
+# BM25 baseline: eval_crosswalk.py / POST /eval advertise it, and silently skip the method without
+# this. It was missing, so the container could never report the BM25 column the CLI documents.
+rank_bm25>=0.2.2

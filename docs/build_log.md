@@ -29,17 +29,36 @@ risk — a bad edit is unrecoverable.
 
 | | Status |
 |---|---|
-| Python | works (`python` on PATH) |
-| `scikit-learn` / TF-IDF path | ✅ working — eval runs |
-| `sentence-transformers` + `torch` | ❌ **not installed** — engine falls back to TF-IDF locally |
-| `rank_bm25` | ❌ not installed (also missing from `docker/requirements.txt`) |
-| `venv/` | ❌ absent — docs reference `venv\Scripts\python.exe` from the parent repo |
-| Model weights | ✅ present on disk (`models/regmap-embedder/model.safetensors`) |
+| `torch` | ✅ **2.12.1+cpu** — was already installed on this machine |
+| `sentence-transformers` | ✅ 5.6.1 (installed 2026-08-02) |
+| `transformers` | ✅ 5.14.1 |
+| `scikit-learn` / TF-IDF | ✅ 1.9.0 |
+| `rank_bm25` | ✅ installed — the BM25 baseline runs for the first time |
+| `numpy` / `fastapi` | ✅ 2.5.0 / 0.139.0 |
+| Model weights | ✅ **loads** — 384-dim, max_seq 256, cpu |
 
-- [ ] Create `venv` + install `regmap_engine/docker/requirements.txt` **plus torch** (multi-GB download;
-      needed to run the fine-tuned embedder locally instead of the TF-IDF fallback)
-- [ ] Add `rank_bm25` to `docker/requirements.txt` (the BM25 baseline `eval_crosswalk.py` advertises
-      cannot run in the container without it)
+Interpreter: `C:\Users\User\AppData\Local\Programs\Python\Python314\python.exe` (3.14.6). **No venv** —
+torch was already there globally, so `sentence-transformers` went into the same interpreter rather than a
+fresh venv needing its own multi-GB torch copy.
+
+- [x] Added `rank_bm25` to `docker/requirements.txt` — it was missing, so the container could never report
+      the BM25 column that the CLI and `/eval` advertise.
+
+### Measured with the embedder active (2026-08-02)
+`eval_crosswalk.py` on `nist_80053__hipaa`, all three methods, 133 queries:
+
+| method | R@1 | R@5 | R@10 | nDCG@10 | MAP |
+|---|---|---|---|---|---|
+| TF-IDF | 0.223 | 0.486 | 0.592 | 0.439 | 0.391 |
+| BM25 | 0.172 | 0.397 | 0.481 | 0.340 | 0.304 |
+| **regmap-embedder** | **0.478** | **0.906** | **0.965** | **0.816** | **0.756** |
+
+⚠️ **Inflated — not a benchmark.** This is the pair the embedder was fine-tuned on and the harness has no
+held-out split (Findings #1). It confirms the model loads and dominates lexical retrieval, nothing more.
+The defensible held-out figure is the paper's multi-relevant R@5 **0.797**.
+
+**Product effect**, same query (`AC-1` → HIPAA), TF-IDF vs embedder: coverage **60% → 100%** — all 5
+official mappings retrieved, 4 of them in the top 4. Screenshot-verified in the UI.
 
 ---
 
@@ -94,8 +113,8 @@ The pair-per-directory format could not reach a full framework catalog. It is no
 - [x] **Verified the engine reads it.** `eval_crosswalk.py` on the new pair: 133 evaluable queries,
       TF-IDF multi-relevant R@5 **0.486**, nDCG@10 0.439, MAP 0.391. (Embedder/BM25 unavailable locally —
       see Environment. **Do not quote these as a benchmark** — see Findings #1.)
-- [ ] **Re-run the eval with the embedder** once torch is installed, to confirm the model beats TF-IDF on
-      this pair as served (not just in the paper's held-out protocol)
+- [x] **Re-ran the eval with the embedder.** DONE 2026-08-02 — see the table above. The model dominates
+      both lexical baselines as served, and the API reports `method: embed`.
 - [ ] **Replace the `SAMPLE` CSF↔800-53 pair** — `crosswalks/nist_csf2__nist_80053/` is 12 controls and
       self-labelled SAMPLE in its `meta.json`. Needs the CSF 2.0 OLIR export **downloaded** first
       (https://csrc.nist.gov/projects/olir) — not on disk, unlike the HIPAA CSV
@@ -242,8 +261,12 @@ modelling to do. This is the cheapest possible first lab and it is the student h
 **Then, in order:**
 1. **Bulk / gap view for GRC teams** — map a whole control set in one pass, report coverage and gaps,
    export. This is the teams half, and it needs a new endpoint (`POST /map/bulk`).
-2. **Install torch** and re-check both surfaces with the fine-tuned embedder rather than TF-IDF.
-3. Then Phase B (persistence → API keys → attributed metering → CU redesign → quotas).
+2. Then Phase B (persistence → API keys → attributed metering → CU redesign → quotas).
+
+**Startup cost to watch:** with the embedder on, boot takes ~30-40 s because every framework catalog is
+encoded at startup. Fine now (205 controls), but it scales with the catalog and will hurt k8s readiness
+probes and scale-up latency. Cache embeddings to disk (keyed by framework + model version) before the
+catalog grows much — this belongs in Phase E, but note it now.
 
 **Known cosmetic debt:** `crosswalks/` is now dead code for the API (kept as the migration source), and
 `docker/README.md` still documents the old `pair`-only `/map` shape (the shape still works, but the doc
