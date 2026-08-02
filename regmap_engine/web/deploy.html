@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegMap — deploy</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="deploy">
+
+<section class="section pad bleed" style="padding-top:34px">
+  <div class="eyebrow">Deploy</div>
+  <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Run it anywhere</h1>
+  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 0;max-width:74ch">
+    One image carries the API, this website, and the fine-tuned model. It runs on a laptop, a single VM,
+    or Kubernetes, on CPU or GPU. The model is baked in and the container runs offline as a non-root user.
+  </p>
+  <div class="cov" id="live" style="margin-top:20px;max-width:700px"></div>
+</section>
+
+<hr class="divider">
+
+<section class="section pad bleed">
+  <div class="row-head"><h2>Container</h2></div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">
+    <div class="tile" style="box-shadow:none"><div class="body">
+      <h3>Build and run</h3>
+      <pre class="code">docker build -f regmap_engine/docker/Dockerfile \
+  -t regmap-engine:0.2 .          # from the repo root
+
+docker run --rm -p 8000:8000 regmap-engine:0.2
+#   UI   http://localhost:8000/
+#   API  http://localhost:8000/docs</pre>
+    </div></div>
+    <div class="tile" style="box-shadow:none"><div class="body">
+      <h3>CPU-only or pinned CUDA</h3>
+      <pre class="code"># slim CPU image
+--build-arg \
+  TORCH_INDEX=https://download.pytorch.org/whl/cpu
+
+# pinned CUDA build
+--build-arg \
+  TORCH_INDEX=https://download.pytorch.org/whl/cu121</pre>
+      <p style="margin-top:8px">The default image is GPU-capable and also runs on CPU. Without the model
+         present the service still answers on TF-IDF.</p>
+    </div></div>
+  </div>
+</section>
+
+<section class="band bleed">
+  <div class="section pad">
+    <div class="row-head"><h2>Kubernetes</h2></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">
+      <div class="tile" style="box-shadow:none"><div class="body">
+        <h3>Apply the manifests</h3>
+        <pre class="code">kubectl apply -k regmap_engine/k8s
+
+kubectl -n regmap port-forward \
+  svc/regmap-engine 8010:80</pre>
+        <p style="margin-top:8px">Deployment · Service · HPA · NetworkPolicy, as a kustomization. The
+           image reference is digest-pinned.</p>
+      </div></div>
+      <div class="tile" style="box-shadow:none"><div class="body">
+        <h3>Optional tiers</h3>
+        <p><b>GPU</b> — an opt-in Deployment for a GPU node pool.<br>
+           <b>KEDA</b> — scale-to-zero so an idle GPU costs nothing.</p>
+        <p style="color:var(--warn);font-size:12.5px;margin-top:8px">Both manifests exist but are
+           untested: they need real GPU hardware, which the current environment does not have.</p>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section pad bleed">
+  <div class="row-head"><h2>Configuration</h2></div>
+  <div style="overflow-x:auto"><table class="mtx cfg">
+    <tr><th class="rowh">Variable</th><th>Default</th><th>What it does</th></tr>
+    <tr><th class="rowh mono">REGMAP_MODEL</th><td class="mono">../models/regmap-embedder</td>
+        <td>Embedder to load. If it fails, the engine degrades to TF-IDF rather than refusing to start.</td></tr>
+    <tr><th class="rowh mono">REGMAP_DEVICE</th><td class="mono">auto</td>
+        <td>Force <span class="mono">cpu</span> or <span class="mono">cuda</span>. Auto-selects CUDA when visible.</td></tr>
+    <tr><th class="rowh mono">REGMAP_LICENSED</th><td class="mono">(empty)</td>
+        <td>Comma-separated framework ids the operator holds a licence for. <b>Default-deny</b>: licensed
+            frameworks are refused with 403 until listed here.</td></tr>
+    <tr><th class="rowh mono">REGMAP_GPU_CU_MULT</th><td class="mono">8</td>
+        <td>GPU-second to CPU-second ratio for the compute meter.</td></tr>
+    <tr><th class="rowh mono">REGMAP_ENGINE_VERSION</th><td class="mono">0.2</td>
+        <td>Stamped onto every response for reproducibility.</td></tr>
+  </table></div>
+</section>
+
+<section class="band bleed">
+  <div class="section pad">
+    <div class="row-head"><h2>Before this is a paid service</h2></div>
+    <p class="lead" style="font-size:14.5px;color:var(--muted);max-width:82ch;margin:0 0 14px">
+      The engine is deployable today, but it is not yet a billable multi-tenant service. Being straight
+      about the gap:
+    </p>
+    <div class="grid">
+      <div class="tile" style="box-shadow:none"><div class="body"><h3>No authentication</h3>
+        <p>Every endpoint is open to whoever can reach the port. API keys are the next piece of work.</p></div></div>
+      <div class="tile" style="box-shadow:none"><div class="body"><h3>The meter is not invoiceable</h3>
+        <p>Compute Units are recorded per request, but with no account attached, in memory, and per
+           replica — so they are diagnostics, not billing.</p></div></div>
+      <div class="tile" style="box-shadow:none"><div class="body"><h3>No quotas</h3>
+        <p>Nothing can reject a request or count it against a monthly allowance yet.</p></div></div>
+    </div>
+    <p style="font-size:13px;color:var(--faint);margin-top:14px">
+      Tracked in <span class="mono">docs/hosted_saas_roadmap.md</span> (Phase B) and
+      <span class="mono">docs/build_log.md</span>.
+    </p>
+  </div>
+</section>
+
+<footer class="site-footer pad bleed">
+  RegMap · API + UI + model in one image · CPU or GPU · laptop to Kubernetes.
+</footer>
+
+<script src="assets/api.js"></script>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  /* Show what this instance is actually running, so the page describes reality. */
+  (async function () {
+    let h;
+    try { h = await RegMap.health(); } catch (e) {
+      document.getElementById("live").outerHTML =
+        `<div class="note err">${RegMap.esc(e.message)}</div>`;
+      return;
+    }
+    document.getElementById("live").innerHTML = `
+      <div><span class="k">engine</span><span class="v" style="font-size:15px;padding-top:3px">${
+        RegMap.esc(h.version.engine)}</span></div>
+      <div><span class="k">retrieval</span><span class="v ${h.embedder ? "good" : "mid"}"
+        style="font-size:15px;padding-top:3px">${h.embedder ? "embedder" : "TF-IDF fallback"}</span></div>
+      <div><span class="k">device</span><span class="v" style="font-size:15px;padding-top:3px">${
+        RegMap.esc(h.device || "cpu")}</span></div>
+      <div><span class="k">frameworks</span><span class="v" style="font-size:15px;padding-top:3px">${
+        h.frameworks.length}</span></div>
+      <div><span class="k">pairs</span><span class="v" style="font-size:15px;padding-top:3px">${
+        h.pairs}</span></div>`;
+  })();
+})();
+</script>
+</body>
+</html>

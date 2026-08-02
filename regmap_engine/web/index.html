@@ -17,7 +17,7 @@
     marked as official; anything derived through a hub says so.</p>
   <div class="cta reveal">
     <a class="btn primary" href="/crosswalk.html">Open the crosswalk →</a>
-    <a class="btn ghost" href="#frameworks">See coverage</a>
+    <a class="btn ghost" href="/frameworks.html">See coverage</a>
   </div>
 </section>
 
@@ -56,30 +56,21 @@
   </div>
 </section>
 
-<!-- FRAMEWORKS — driven by GET /frameworks, so it cannot promise coverage that isn't there -->
-<section id="frameworks" class="section pad bleed">
-  <div class="row-head reveal">
-    <h2>Framework coverage</h2>
-    <span class="muted" style="color:var(--muted);font-size:13px" id="covSummary">loading…</span>
-  </div>
-  <div class="grid" id="fwGrid"></div>
-  <p class="lead reveal" style="font-size:13.5px;color:var(--faint);margin-top:16px;max-width:80ch">
-    Public-domain frameworks (NIST, HIPAA, GDPR) ship with full control text. Copyrighted frameworks
-    (ISO, PCI DSS, SOC 2, CIS) are mapped by control ID and paraphrased intent, never verbatim text.
-    HITRUST CSF and COBIT require a licence and stay disabled until one is in place.
-  </p>
-</section>
-
-<!-- DEPLOY -->
-<section id="deploy" class="band bleed">
-  <div class="section pad">
-    <div class="row-head reveal"><h2>Ship it anywhere</h2></div>
-    <p class="lead reveal">One image, CPU or GPU. Run the container, or deploy the Kubernetes manifests
-      with autoscaling and per-tenant isolation.</p>
-    <div class="tile reveal" style="max-width:640px"><div class="body">
-      <p class="mono" style="color:var(--muted);white-space:pre-wrap">docker build -f regmap_engine/docker/Dockerfile -t regmap-engine .
-docker run -p 8000:8000 regmap-engine   # UI here, API at /docs</p>
-    </div></div>
+<!-- WHERE TO GO NEXT — the detail lives on its own pages -->
+<section class="section pad bleed">
+  <div class="grid">
+    <a class="tile reveal" href="/crosswalk.html"><div class="body">
+      <div class="eyebrow">Tool</div><h3>Crosswalk →</h3>
+      <p>Map any control to any covered framework, with the official mappings marked.</p>
+    </div></a>
+    <a class="tile reveal" href="/frameworks.html"><div class="body">
+      <div class="eyebrow">Coverage</div><h3>Frameworks →</h3>
+      <p id="fwTeaser">Which frameworks are live, how pairs resolve, and what needs a licence.</p>
+    </div></a>
+    <a class="tile reveal" href="/deploy.html"><div class="body">
+      <div class="eyebrow">Operate</div><h3>Deploy →</h3>
+      <p>One image with the API, this site, and the model. Laptop to Kubernetes, CPU or GPU.</p>
+    </div></a>
   </div>
 </section>
 
@@ -90,7 +81,7 @@ docker run -p 8000:8000 regmap-engine   # UI here, API at /docs</p>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
-  const demo = $("demo"), q = $("q"), t = $("t"), run = $("run"), fwGrid = $("fwGrid");
+  const demo = $("demo"), q = $("q"), t = $("t"), run = $("run");
 
   /* ---- live demo ---------------------------------------------------------- */
   async function boot() {
@@ -98,10 +89,13 @@ docker run -p 8000:8000 regmap-engine   # UI here, API at /docs</p>
     try { fw = await RegMap.frameworks(); }
     catch (e) {
       demo.innerHTML = `<div class="note err">${RegMap.esc(e.message)}</div>`;
-      $("covSummary").textContent = "engine unreachable";
       return;
     }
-    renderCoverage(fw);
+    // teaser copy carries the real numbers, so the card cannot overstate coverage either
+    const live = fw.frameworks.filter(f => f.controls).length;
+    const ctls = fw.frameworks.reduce((n, f) => n + f.controls, 0);
+    $("fwTeaser").textContent =
+      `${live} of ${fw.count} frameworks live · ${ctls} controls indexed · what needs a licence.`;
 
     const usable = fw.frameworks.filter(f => f.available);
     t.innerHTML = usable.map(f =>
@@ -141,33 +135,6 @@ docker run -p 8000:8000 regmap-engine   # UI here, API at /docs</p>
                <span class="score">${r.score.toFixed(3)}</span>`}</div>
         </div>`;
       }).join("") + `</div>`;
-  }
-
-  /* ---- coverage, grouped by family, honest about what is missing ---------- */
-  function renderCoverage(fw) {
-    const fams = {};
-    fw.frameworks.forEach(f => (fams[f.family || "Other"] ||= []).push(f));
-    const live = fw.frameworks.filter(f => f.controls).length;
-    $("covSummary").textContent =
-      `${live} of ${fw.count} frameworks live · ${fw.frameworks.reduce((n, f) => n + f.controls, 0)} controls indexed`;
-
-    fwGrid.innerHTML = Object.entries(fams).map(([fam, list]) => `
-      <div class="tile reveal" style="box-shadow:none"><div class="body">
-        <h3>${RegMap.esc(fam)}</h3>
-        <div style="margin-top:4px">` + list.map(f => {
-          const state = f.controls
-            ? `<span class="pill ok">${f.controls} controls</span>`
-            : f.access === "licence-required"
-              ? `<span class="pill crit">licence required</span>`
-              : `<span class="pill warn">coming soon</span>`;
-          return `<div class="fw ${f.controls ? "" : "off"}">
-            <span class="n"><span>${RegMap.esc(f.name)}</span>
-              ${f.hub ? `<span class="sub">mapping hub</span>` : ""}</span>
-            ${state}</div>`;
-        }).join("") + `</div>
-      </div></div>`).join("");
-
-    document.querySelectorAll(".reveal:not(.in)").forEach(el => el.classList.add("in"));
   }
 
   run.addEventListener("click", go);

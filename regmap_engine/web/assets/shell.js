@@ -3,12 +3,15 @@
    add one entry to NAV below + drop a new <app>.html that links these two files. */
 (function () {
   // The site's pages. Add an app here and it appears in the nav on every page.
+  // One entry per page. Each id matches a <body data-page="…"> so the active link underlines itself.
+  // NOTE: /docs (the API explorer) and /health are deliberately NOT listed — they expose engine
+  // internals and are meant to become admin-only. Removing them from the nav stops advertising them;
+  // it is not access control. Real gating lands with the Phase B auth work.
   const NAV = [
     { id: "home",       label: "Home",       href: "/" },
     { id: "crosswalk",  label: "Crosswalk",  href: "/crosswalk.html" },
-    { id: "frameworks", label: "Frameworks", href: "/#frameworks" },
-    { id: "deploy",     label: "Deploy",     href: "/#deploy" },
-    { id: "api",        label: "API",        href: "/docs" },
+    { id: "frameworks", label: "Frameworks", href: "/frameworks.html" },
+    { id: "deploy",     label: "Deploy",     href: "/deploy.html" },
   ];
 
   const page = document.body.dataset.page || "";
@@ -23,7 +26,6 @@
        <nav class="nav-links">${links}</nav>
        <span class="nav-sp"></span>
        <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
-       <a class="btn ghost sm" href="/docs">API docs</a>
        <a class="btn primary sm" href="/crosswalk.html">Open crosswalk</a>
      </div>`;
   document.body.prepend(header);

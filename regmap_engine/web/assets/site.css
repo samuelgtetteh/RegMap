@@ -154,6 +154,32 @@ textarea{resize:vertical;min-height:74px;line-height:1.5}
   border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
 
+/* ---- code blocks (deploy page) ------------------------------------------- */
+pre.code{font-family:var(--mono);font-size:12.5px;line-height:1.6;color:var(--muted);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:10px;padding:12px 13px;margin:8px 0 0;overflow-x:auto;
+  white-space:pre}
+
+/* ---- matrix / config tables --------------------------------------------- */
+table.mtx{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;background:var(--surface);
+  border:1px solid var(--line);border-radius:12px;overflow:hidden}
+table.mtx th,table.mtx td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);
+  border-right:1px solid var(--line);white-space:nowrap}
+table.mtx tr:last-child th,table.mtx tr:last-child td{border-bottom:0}
+table.mtx th:last-child,table.mtx td:last-child{border-right:0}
+table.mtx th{font-weight:600;background:var(--surface-2);font-size:12px;color:var(--muted)}
+table.mtx th.rowh{color:var(--ink);font-weight:600;white-space:normal;min-width:150px}
+table.mtx th.corner{color:var(--faint);font-family:var(--mono);font-size:11px}
+table.mtx td{font-family:var(--mono);font-size:11.5px}
+table.mtx td.ok{color:var(--ok);background:rgba(61,220,132,.09);font-weight:600}
+table.mtx td.der{color:var(--warn);background:rgba(240,180,41,.09);font-weight:600}
+table.mtx td.none,table.mtx td.self{color:var(--faint);text-align:center}
+table.mtx.cfg td{white-space:normal;font-family:var(--sans);font-size:13px;color:var(--muted)}
+table.mtx.cfg td.mono,table.mtx.cfg th.mono{font-family:var(--mono);font-size:12px;white-space:nowrap}
+
+/* clickable tiles keep their link colour but gain the hover lift */
+a.tile{color:inherit}
+a.tile h3{color:var(--accent)}
+
 /* framework coverage cards (data-driven from /frameworks) */
 .fw{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;
   border-bottom:1px solid var(--line);font-size:13.5px}

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegMap — framework coverage</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="frameworks">
+
+<section class="section pad bleed" style="padding-top:34px">
+  <div class="eyebrow">Coverage</div>
+  <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Which frameworks are live</h1>
+  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 0;max-width:74ch">
+    Everything on this page is read from the running engine, so it reflects what is actually indexed —
+    not a roadmap. A framework with no controls imported says so.
+  </p>
+  <div class="cov" id="stats" style="margin-top:20px;max-width:760px"></div>
+</section>
+
+<hr class="divider">
+
+<section class="section pad bleed">
+  <div class="row-head"><h2>Frameworks</h2>
+    <span style="font-size:13px;color:var(--muted)">grouped by family</span></div>
+  <div class="grid" id="fwGrid"></div>
+</section>
+
+<section class="band bleed">
+  <div class="section pad">
+    <div class="row-head"><h2>Answerable pairs</h2>
+      <a href="/crosswalk.html">open the crosswalk →</a></div>
+    <p class="lead" style="font-size:14.5px;color:var(--muted);max-width:78ch;margin:0 0 16px">
+      Read a row as “from”, a column as “to”. <b>Official</b> means a published crosswalk backs it.
+      <b>Derived</b> means no direct mapping exists, so the pair is composed through a hub framework —
+      useful, but advisory rather than authoritative.
+    </p>
+    <div style="overflow-x:auto"><table id="matrix" class="mtx"></table></div>
+    <div id="pairNote" style="margin-top:14px"></div>
+  </div>
+</section>
+
+<section class="section pad bleed">
+  <div class="row-head"><h2>Licensing</h2></div>
+  <div class="grid">
+    <div class="tile" style="box-shadow:none"><div class="body">
+      <h3><span class="pill ok">public</span></h3>
+      <p>US Government works and public regulations. Full control text ships with the product.</p>
+    </div></div>
+    <div class="tile" style="box-shadow:none"><div class="body">
+      <h3><span class="pill warn">paraphrase-only</span></h3>
+      <p>Copyrighted standards. Mapped by control ID and our own short paraphrase of intent —
+         never verbatim text.</p>
+    </div></div>
+    <div class="tile" style="box-shadow:none"><div class="body">
+      <h3><span class="pill crit">licence-required</span></h3>
+      <p>Proprietary content that cannot ship without a licence. The engine refuses these frameworks
+         (HTTP 403) unless the operator supplies one, so they cannot be served by accident.</p>
+    </div></div>
+  </div>
+</section>
+
+<footer class="site-footer pad bleed">
+  RegMap · coverage is read live from the engine · every mapping carries its provenance.
+</footer>
+
+<script src="assets/api.js"></script>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+
+  const accessPill = a => a === "public" ? "ok" : a === "paraphrase-only" ? "warn" : "crit";
+
+  (async function boot() {
+    let fw, pr;
+    try { [fw, pr] = await Promise.all([RegMap.frameworks(), RegMap.pairs()]); }
+    catch (e) {
+      $("stats").outerHTML = `<div class="note err">${RegMap.esc(e.message)}</div>`;
+      return;
+    }
+
+    const live = fw.frameworks.filter(f => f.controls);
+    const ctlTotal = fw.frameworks.reduce((n, f) => n + f.controls, 0);
+    const official = pr.pairs.filter(p => p.authoritative).length;
+
+    $("stats").innerHTML = `
+      <div><span class="k">frameworks live</span><span class="v">${live.length}<span
+        style="font-size:13px;color:var(--faint);font-weight:400"> / ${fw.count}</span></span></div>
+      <div><span class="k">controls indexed</span><span class="v">${ctlTotal}</span></div>
+      <div><span class="k">answerable pairs</span><span class="v">${pr.count}</span></div>
+      <div><span class="k">official routes</span><span class="v good">${official}</span></div>
+      <div><span class="k">derived routes</span><span class="v mid">${pr.count - official}</span></div>`;
+
+    /* ---- framework cards, grouped by family ------------------------------- */
+    const fams = {};
+    fw.frameworks.forEach(f => (fams[f.family || "Other"] ||= []).push(f));
+    $("fwGrid").innerHTML = Object.entries(fams).map(([fam, list]) => `
+      <div class="tile" style="box-shadow:none"><div class="body">
+        <h3>${RegMap.esc(fam)}</h3>
+        <div style="margin-top:4px">` + list.map(f => `
+          <div class="fw ${f.controls ? "" : "off"}">
+            <span class="n">
+              <span>${RegMap.esc(f.name)}</span>
+              <span class="sub">${RegMap.esc(f.version || "")}${f.hub ? " · mapping hub" : ""}</span>
+            </span>
+            <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+              ${f.controls ? `<span class="pill ok">${f.controls} controls</span>`
+                           : `<span class="pill ${accessPill(f.access)}">${
+                               f.access === "licence-required" ? "licence required" : "coming soon"}</span>`}
+            </span>
+          </div>`).join("") + `</div>
+      </div></div>`).join("");
+
+    /* ---- pair matrix ------------------------------------------------------ */
+    const ids = live.map(f => f.id);
+    const byPair = {};
+    pr.pairs.forEach(p => (byPair[p.source + ">" + p.target] = p));
+    const short = id => (fw.frameworks.find(f => f.id === id) || {}).name || id;
+
+    const head = `<tr><th class="corner">from ↓ / to →</th>`
+      + ids.map(i => `<th>${RegMap.esc(short(i))}</th>`).join("") + `</tr>`;
+    const rows = ids.map(a => `<tr><th class="rowh">${RegMap.esc(short(a))}</th>`
+      + ids.map(b => {
+          if (a === b) return `<td class="self">—</td>`;
+          const p = byPair[a + ">" + b];
+          if (!p) return `<td class="none" title="no mapping and no hub route">·</td>`;
+          const cls = p.authoritative ? "ok" : "der";
+          const label = p.route === "direct" ? "official"
+                      : p.route === "inverted" ? "official ⇄"
+                      : "derived";
+          return `<td class="${cls}" title="${RegMap.esc(p.route)}">${label}</td>`;
+        }).join("") + `</tr>`).join("");
+    $("matrix").innerHTML = head + rows;
+
+    const derived = pr.pairs.filter(p => !p.authoritative);
+    if (derived.length) {
+      $("pairNote").innerHTML = `<div class="note">
+        <b>${derived.length}</b> of ${pr.count} pairs are composed through a hub rather than published
+        directly: ${derived.map(p => `${RegMap.esc(short(p.source))} → ${RegMap.esc(short(p.target))}`)
+        .join(", ")}. Each is marked <i>derived</i> in the API and the UI.</div>`;
+    }
+  })();
+})();
+</script>
+</body>
+</html>

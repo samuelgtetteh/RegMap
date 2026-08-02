@@ -160,6 +160,23 @@ The pair-per-directory format could not reach a full framework catalog. It is no
 - [ ] Retire `crosswalks/` — `serve.py` no longer reads it, but keep it as the migration source until the
       catalog has been through a few more imports
 
+### A1b · Site structure *(DONE 2026-08-02)*
+- [x] **Split the one-page site into a page per nav title.** `#frameworks` and `#deploy` were anchors on
+      the homepage; they are now real pages, and each nav entry maps to a `<body data-page="…">`.
+      - **`frameworks.html`** — live coverage: summary stats (frameworks live / controls indexed /
+        answerable pairs / official vs derived routes), framework cards by family with versions and hub
+        flags, a **pair matrix** (from ↓ / to →, cells reading official · official ⇄ · derived · —) that
+        makes the hub payoff visible, and a licensing legend for the three access tiers.
+      - **`deploy.html`** — a live "what this instance is running" strip from `/health`, container build
+        and run, CPU/CUDA build args, k8s apply, a **configuration table** for every `REGMAP_*` env var,
+        and a "before this is a paid service" section stating plainly that there is no auth, the meter is
+        not invoiceable, and there are no quotas.
+      - **`index.html`** trimmed to a landing page: hero, live demo, how-it-works, and three cards routing
+        to the new pages (the coverage card carries the real counts, so it can't overstate either).
+- [x] **Took `/docs` and `/health` out of the public nav** — they expose engine internals and are meant to
+      be admin-only. ⚠️ This is *not* access control; both are still reachable by URL. Real gating is
+      specified in **Phase B7** below, including why `/health` must be split rather than gated.
+
 ### A2 · Two audiences *(the product serves both — see roadmap §Audiences)*
 - [ ] **GRC / IT teams:** bulk map a control set, coverage + gap report, export evidence
 - [ ] **Students:** browse a framework catalog, guided "map this control" exercise, auto-graded against
@@ -181,6 +198,25 @@ The pair-per-directory format could not reach a full framework catalog. It is no
       Period boundaries + resets
 - [ ] **Harden `/eval`** — authenticated, rate-limited, bounded (cap queries × corpus per call). Currently
       the most expensive call in the service and open to the internet
+
+### B7 · Admin-only endpoints *(decided 2026-08-02, deferred to this phase)*
+Operator and diagnostic surfaces should not be public. They are already **out of the site nav** — that
+stops advertising them, but it is **not** access control; they remain reachable by URL.
+
+- [ ] **`/health` — split it, do not simply gate it.** ⚠️ `k8s/deployment.yaml` points **startupProbe,
+      readinessProbe and livenessProbe** all at `/health` (lines 39-47). Putting auth in front of it would
+      make every pod fail its probes and never go ready — it would take the whole deployment down. Correct
+      shape:
+      - public `/health` → `{"status":"ok"}` **only**, so the probes keep working
+      - admin-only detail → today's payload leaks the **model filesystem path**, device, framework list and
+        engine/model versions (`status · version · embedder · model · device · frameworks · pairs · method`)
+- [ ] **`/docs`, `/redoc`, `/openapi.json`** — admin-only, or disabled in production via FastAPI's
+      `docs_url=None` / `openapi_url=None`. Right now the full API schema is public
+- [ ] **`/usage`** — admin-only; it is operator telemetry. Per-tenant usage belongs behind the customer's
+      own account instead (B3)
+- [ ] **`/eval`** — admin or paid-tier only (see the hardening item above)
+- [ ] Decide the mechanism: an admin role/scope in the same `api_keys` table (B2) is the cheapest option
+      that avoids maintaining a second auth system
 
 ## Phase C — Payments & self-service
 - [ ] Stripe: plan subscriptions + usage records for overage; webhooks → `subscriptions`
