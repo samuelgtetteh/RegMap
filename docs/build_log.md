@@ -329,20 +329,35 @@ add ~87 MB to history per retrain and that needs a history rewrite to undo. No r
 `/crosswalk.html`, pick any two covered frameworks and any control, and see the model's ranking measured
 against the official crosswalk. Nothing on the site is fabricated any more.
 
-**Next action — RETRAIN THE EMBEDDER.** Data is prepared and waiting; see
-**`docs/model_retrain_plan.md`**. Training pairs went from **159 → 1,459** (9.2x) and framework pairs from
-1 → 5 when today's sources landed, and the paper's own finding is that in-domain paired data is the
-primary driver of quality. So this is the cheapest large gain available.
-Files: `data/processed/retrain-v2/` (`query-holdout` = product metric, `strict` = generalisation metric,
-both leakage-checked CLEAN, seed 42) + per-framework ranking corpora. Rebuild with
-`python regmap_engine/build_training_data.py --write`.
-⚠️ **Build the held-out eval harness FIRST** — `eval_crosswalk.py` has no split, so a retrained model
-scores ~0.95 on memorised data and tells you nothing. The number to beat is the paper's held-out R@5
-**0.797**, not the 0.906 that `/eval` reports.
-⚠️ **Do not overwrite `models/regmap-embedder/`** — it is the artifact the DTRAP paper describes. Train to
-`-v2` and bump `REGMAP_MODEL_VERSION` (the embedding cache keys on it, so it invalidates itself).
+**RETRAIN: DONE 2026-08-03. `regmap-embedder@0.2` is shipped and serving.**
 
-**After that — first student exercise (`web/learn.html`).** Everything needed already exists: pick a
+| model | val loss | R@1 | R@5 | nDCG@10 | R@5 95% CI |
+|---|---|---|---|---|---|
+| `@0.1` released | 3.2646 | 0.325 | 0.653 | 0.640 | 0.555–0.751 |
+| **`@0.2` epoch 10 — SHIPPED** | 2.7019 | 0.310 | **0.734** | **0.693** | 0.647–0.818 |
+| `v2-best` epoch 2 | **2.5509** | **0.334** | 0.682 | 0.664 | 0.591–0.774 |
+
+64 held-out queries, ranked against full corpora. TF-IDF baseline R@5 0.470.
+
+⚠️ **Two things not to forget:**
+1. **The CIs overlap** — the gain is directionally consistent and reproducible but **not statistically
+   significant** at n=64. R@1 got slightly worse. Do not quote it as significant.
+2. **Validation loss picked the WRONG model.** The best-loss checkpoint (epoch 2) scored *worse* R@5.
+   MNRL loss is computed against 15 in-batch candidates while the product ranks against ~1,000 controls,
+   so they diverge. **Select on held-out R@5, never on loss.** `train_embedder.py` carries this warning
+   inline; the best-checkpoint save it does is a diagnostic, not the release candidate.
+
+Where the gain landed (and it is the right place): CSF→800-53 **0.244 → 0.344**, CSF→800-171
+**0.563 → 0.682**, while 800-53→HIPAA held at 0.937 — breadth without catastrophic forgetting.
+
+Artifacts: `models/regmap-embedder-v2/` + `MODEL_CARD.md` + `training_report.json` ·
+`notebooks/03_embedder_retrain_v2.ipynb` (generated from the artifacts, 20 cells) ·
+`data/processed/retrain-v2/eval_{baseline,v2,v2best}.json` ·
+`docs/RegMap Platform - Progress Report.docx` · `docs/Exhibit 11B ….docx` (also copied into
+`ai-cybersecurity-portfolio/exhibits/`). Image rebuilt as **`regmap-engine:0.3-cpu`**.
+`models/regmap-embedder/` (@0.1) is deliberately untouched — the DTRAP figures need it.
+
+**NEXT ACTION — first student exercise (`web/learn.html`).** Everything needed already exists: pick a
 random control from the source framework, hide the `official` flags, let the learner select which target
 provisions they think map, then score their selection against `official.target_ids` and reveal. That is
 **UI work only** — the answer key is already in the `/map` response, so there is no labelling and no
@@ -498,3 +513,36 @@ path-rewriting adapter in front of the detector. Not a k8s problem.
       `baseline`-PSS session variant for labs that need root
 - [ ] A lab needs a **catalog entry** (id, image(s), PSS level, tier, ports, grading hook) so the
       provisioner can instantiate one by name rather than by hand-substituted YAML
+
+---
+
+## Machine state at pause — 2026-08-03 (ephemeral, NOT code)
+
+Running when work stopped. None of this is required to resume; recreate as needed.
+
+| what | how to restore / remove |
+|---|---|
+| Container `regmap-v3-test` on **:8141** — `regmap-engine:0.3-cpu`, healthy, serving `@0.2` | `docker start regmap-v3-test` · or `docker run -d -p 8141:8000 regmap-engine:0.3-cpu` |
+| Local uvicorn on **:8140** (repo working tree) | `cd regmap_engine && python -m uvicorn serve:app --port 8140` |
+| kind cluster **`regmap-labs`** — 3 nodes, Calico, session sweeper deployed | rebuild per `k8s/labs/kind-cluster.yaml` · remove with `kind delete cluster --name regmap-labs` |
+| `kind` v0.32.0 installed at `~/bin/kind.exe` | re-download from the kubernetes-sigs release page |
+
+Images built: `regmap-engine:0.3-cpu` (current, `@0.2` model) · `regmap-engine:0.2-cpu` (previous,
+`@0.1`) · `regmap-engine:0.1` (8.72 GB, pre-catalog, **stale — do not test against it**).
+
+### Environment gotchas that will waste time if forgotten
+- **`datasets` must stay uninstalled.** pyarrow's `_dataset` DLL is blocked by an Application Control
+  policy on this machine, and installing `datasets` breaks `import sentence_transformers` outright. This
+  is why `train_embedder.py` implements MNRL directly instead of using either library training API.
+- **Git Bash `ps` cannot see Windows python processes.** A background training run looked dead when it was
+  not, and two runs competed for CPU. Use `Get-CimInstance Win32_Process` to check.
+- **`Compress-Archive` silently skips hidden directories** — it produced a "backup" with no `.git` at all.
+  Use `[IO.Compression.ZipFile]::CreateFromDirectory`.
+- **`localstack/localstack:3.0` in the local Docker store is corrupted** (missing blob
+  `sha256:8444ed98…3f0a`); a forced re-pull is blocked by a container belonging to another project.
+  This blocks the `found-cloud-01` lab.
+
+### Backup
+`C:\Users\User\regmap-platform-backup_2026-08-02_2214.zip` — 167.9 MB, 343 entries, `.git` verified
+inside. **Predates the retrain**, so it does not contain `models/regmap-embedder-v2/` or the documents.
+Still **no git remote** — this tree plus that zip are the only copies.
