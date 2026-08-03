@@ -1,0 +1,88 @@
+{
+  "base_model": "C:\\Users\\User\\regmap-platform\\models\\regmap-embedder",
+  "output": "..\\models\\regmap-embedder-v2",
+  "protocol": "query-holdout",
+  "loss": "MultipleNegativesRankingLoss (explicit in-batch softmax, scale 20.0)",
+  "seed": 42,
+  "epochs": 10,
+  "batch_size": 16,
+  "lr": 2e-05,
+  "weight_decay": 0.01,
+  "grad_clip": 1.0,
+  "warmup_steps": 62,
+  "steps_per_epoch": 62,
+  "total_steps": 620,
+  "train_pairs": 1003,
+  "val_pairs": 250,
+  "train_pairs_by_mapping": {
+    "nist_80053__hipaa_security": 150,
+    "nist_80171__nist_80053": 118,
+    "nist_csf2__nist_80053": 483,
+    "nist_csf2__nist_80171": 228,
+    "nist_csf2__nist_ssdf": 24
+  },
+  "hard_negatives": false,
+  "hard_negatives_mined": 0,
+  "train_seconds": 4468.2,
+  "embedding_dim": 384,
+  "max_seq_length": 256,
+  "val_loss_before": 3.2646,
+  "val_loss_after": 2.7019,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": null,
+      "val_loss": 3.2646
+    },
+    {
+      "epoch": 1,
+      "train_loss": 2.1406,
+      "val_loss": 2.6161
+    },
+    {
+      "epoch": 2,
+      "train_loss": 1.5007,
+      "val_loss": 2.536
+    },
+    {
+      "epoch": 3,
+      "train_loss": 1.2871,
+      "val_loss": 2.6387
+    },
+    {
+      "epoch": 4,
+      "train_loss": 1.1317,
+      "val_loss": 2.6236
+    },
+    {
+      "epoch": 5,
+      "train_loss": 1.061,
+      "val_loss": 2.8399
+    },
+    {
+      "epoch": 6,
+      "train_loss": 1.0141,
+      "val_loss": 2.7419
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.992,
+      "val_loss": 2.7693
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.9878,
+      "val_loss": 2.7108
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.9193,
+      "val_loss": 2.6991
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.8884,
+      "val_loss": 2.7019
+    }
+  ]
+}

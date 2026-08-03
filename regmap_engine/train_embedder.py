@@ -166,6 +166,7 @@ def main():
     v0 = val_loss(model, val_rows, a.batch, device)
     print(f"val loss before : {v0:.4f}")
     history = [{"epoch": 0, "train_loss": None, "val_loss": round(v0, 4)}]
+    best_val, best_epoch = v0, 0
 
     model.train()
     t0 = time.perf_counter()
@@ -193,14 +194,24 @@ def main():
             run += float(loss); nb += 1
 
         v = val_loss(model, val_rows, a.batch, device)
+        best = v < best_val - 1e-6
         print(f"  epoch {epoch:>2}/{a.epochs}  train_loss={run/max(nb,1):.4f}  val_loss={v:.4f}"
-              f"  lr={sched.get_last_lr()[0]:.2e}")
+              f"  lr={sched.get_last_lr()[0]:.2e}{'  <- best' if best else ''}")
         history.append({"epoch": epoch, "train_loss": round(run / max(nb, 1), 4),
-                        "val_loss": round(v, 4)})
+                        "val_loss": round(v, 4), "best": best})
+        # Keep the best epoch by held-out loss. Without this the run saves whatever the last epoch
+        # happened to be, which on this data is well past the optimum (train loss keeps falling while
+        # val loss rises from about epoch 3).
+        if best:
+            best_val, best_epoch = v, epoch
+            model.save(str(Path(a.out)))
 
     secs = time.perf_counter() - t0
     out = Path(a.out)
-    model.save(str(out))
+    if best_epoch == 0:
+        # never improved on the starting point: save anyway so the run is inspectable, but say so
+        print("WARNING: no epoch beat the starting validation loss; saving the final state")
+        model.save(str(out))
 
     report = {
         "base_model": base, "output": str(out), "protocol": a.protocol,
@@ -216,11 +227,14 @@ def main():
         "max_seq_length": model.max_seq_length,
         "val_loss_before": round(v0, 4),
         "val_loss_after": history[-1]["val_loss"],
+        "best_epoch": best_epoch, "best_val_loss": round(best_val, 4),
+        "saved_checkpoint": f"epoch {best_epoch} (best held-out loss)",
         "history": history,
     }
     (out / "training_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"\ntrained in      : {secs:.0f}s")
-    print(f"val loss        : {v0:.4f} -> {history[-1]['val_loss']:.4f}")
+    print(f"val loss        : {v0:.4f} -> {history[-1]['val_loss']:.4f} "
+          f"(best {best_val:.4f} @ epoch {best_epoch})")
     print(f"saved           : {out}")
 
 
