@@ -37,12 +37,12 @@ RUN if [ -n "$TORCH_INDEX" ]; then \
     fi \
  && pip install --no-cache-dir -r requirements.txt
 
-# The engine (code + crosswalk pairs) and the released embedder.
+# The engine (code + framework catalog) and the released embedder.
 COPY regmap_engine /app/regmap_engine
 COPY models/regmap-embedder /app/models/regmap-embedder
 
 # Version stamp for reproducibility — surfaced in /health, /usage and every /map response.
-ARG ENGINE_VERSION=0.1
+ARG ENGINE_VERSION=0.2
 ARG MODEL_VERSION=regmap-embedder@0.1
 
 # Standalone: the model is local, so forbid any runtime call-home to Hugging Face.
@@ -54,7 +54,17 @@ ENV REGMAP_MODEL=/app/models/regmap-embedder \
     TRANSFORMERS_OFFLINE=1 \
     PYTHONUNBUFFERED=1
 
+# Pre-compute the embedding cache so a container starts in seconds instead of re-encoding the whole
+# catalog (~1,400 controls and growing) on every boot. This MUST happen here, while still root: /app is
+# root-owned and the runtime user cannot write the cache, so without this every start would re-encode.
+# The result is verified — a silent miss here would only show up as slow k8s rollouts much later.
+RUN cd /app/regmap_engine \
+ && python warm_cache.py \
+ && test -n "$(ls catalog/.embeddings/*.npz 2>/dev/null)" \
+      || (echo "embedding cache was not written" >&2; exit 1)
+
 # Run as a non-root user (security: smaller blast radius, passes image scanners' root check).
+# The engine only reads /app at runtime, so root ownership is left in place deliberately.
 RUN useradd -m -u 10001 appuser
 USER appuser
 

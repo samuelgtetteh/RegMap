@@ -1,0 +1,44 @@
+# Build context excludes. The Dockerfile does `COPY regmap_engine /app/regmap_engine`, so anything
+# left here gets baked into an image layer. Keep this in step with .gitignore.
+
+# --- caches and build junk ---
+# NOTE the `**/` prefixes. A bare `__pycache__/` matches only the context root, so without them the
+# host's bytecode leaks in — and the host builds cpython-314 .pyc files while the image runs 3.11.
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.ipynb_checkpoints
+**/.DS_Store
+
+# --- derived embedding vectors ---
+# Rebuilt from the catalog, and the image pre-warms its own at build time (see Dockerfile).
+# Copying a host-built cache in would ship vectors that may not match the image's model.
+**/.embeddings
+
+# --- superseded data model ---
+# serve.py reads catalog/ now; crosswalks/ is kept in the repo only as the migration source.
+regmap_engine/crosswalks/
+
+# --- not needed at runtime ---
+.git/
+.gitignore
+.gitattributes
+venv/
+.venv/
+dist/
+*.tar
+docs/
+paper/
+notebooks/
+scripts/
+data/           # raw framework downloads; importers run before the build, not inside it
+models/**/eval/
+models/**/*.md
+
+# The engine's own docker/ and k8s/ directories describe how to build and deploy the image — they are
+# not needed inside it. requirements.txt is re-included: the Dockerfile COPYs it as its first layer,
+# and excluding it would break the build.
+regmap_engine/docker/
+!regmap_engine/docker/requirements.txt
+regmap_engine/k8s/

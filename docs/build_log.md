@@ -177,6 +177,43 @@ The pair-per-directory format could not reach a full framework catalog. It is no
       be admin-only. ⚠️ This is *not* access control; both are still reachable by URL. Real gating is
       specified in **Phase B7** below, including why `/health` must be split rather than gated.
 
+### A1c · Docker image brought current *(DONE 2026-08-02)*
+The images in Docker Desktop were all stale — testing against them tested a product from before any of
+today's work.
+
+- **Diagnosed `regmap-engine:0.1`** (8.72 GB local, any-env): no `catalog.py`, **`web/` completely
+  empty** (it had never shipped the website at all, so `/` returned the inline fallback), and one pair
+  with 12 gold mappings — not even the 800-53↔HIPAA pair. `ghcr.io/samuelgtetteh/regmap-engine:0.1-cpu`
+  is the same vintage; its digest `sha256:aebf4f73…237b1` matches the k8s pin exactly.
+- **`RegMap_Engine` container exit 137 was NOT a crash.** `OOMKilled=false` and the logs end with a
+  clean `Shutting down` → `Application shutdown complete`. It was SIGKILLed after graceful shutdown —
+  Docker Desktop stopping, or a `docker stop` timeout. Nothing to fix.
+- [x] **Added `.dockerignore`** — there was none, so `COPY regmap_engine` baked in `__pycache__`,
+      the dead `crosswalks/`, and would have shipped a host-built `.embeddings/`. ⚠️ Patterns need
+      `**/` — a bare `__pycache__/` matches only the context root, and the host builds
+      **cpython-314** `.pyc` files while the image runs **3.11**. Verified: 0 host `.pyc` files in the
+      image now (the `cpython-311` ones left are generated in-image by the warm step, which is fine).
+- [x] **Pre-warm the embedding cache at build time** (`warm_cache.py`, invoked from the Dockerfile with
+      a `test -n` guard so a silent miss fails the build). Required because the container is non-root
+      against a root-owned `/app` — at runtime the cache write fails, so without this it would
+      re-encode the whole catalog on **every** boot.
+- [x] **Bumped the Dockerfile `ENGINE_VERSION` default 0.1 → 0.2.** The `ENV` from that ARG overrides
+      `serve.py`'s own default, so a rebuild would otherwise have reported engine 0.1 with 0.2 code.
+- [x] **Built and verified `regmap-engine:0.2-cpu`** (2.18 GB, slim CPU — matches the k8s tier):
+      starts in **5.2 s** with all 5 cache hits · engine 0.2 · embedder on · 5 frameworks /
+      1,441 controls · 18 pairs · all four web pages 200 · `/map` returns official flags
+      (AC-1→HIPAA: 4 of 5 official found) · HITRUST 403 · metering headers present · runs as
+      uid 10001.
+
+**Startup cost, measured** (correcting an earlier over-estimate of "minutes"): 1,441 controls encode in
+**~27 s** cold; warm start is **~9 s** locally and **5.2 s** in the container, mostly model load. So the
+cache is worth ~17-20 s per start today, and grows with the catalog.
+
+- [ ] ⚠️ **`k8s/deployment.yaml` is still digest-pinned to the stale 0.1-cpu image.** Deploying it now
+      ships the pre-catalog product with no website. Push `0.2-cpu` to GHCR and re-pin before any k8s
+      work. Requires registry credentials
+- [ ] Rebuild the any-env/GPU variant (`regmap-engine:0.2`) — only the slim CPU image was rebuilt
+
 ### A2 · Two audiences *(the product serves both — see roadmap §Audiences)*
 - [ ] **GRC / IT teams:** bulk map a control set, coverage + gap report, export evidence
 - [ ] **Students:** browse a framework catalog, guided "map this control" exercise, auto-graded against

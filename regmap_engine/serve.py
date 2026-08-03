@@ -148,9 +148,13 @@ def _signature(controls):
 def _embed_framework(fid, controls):
     """Embed one framework's catalog, reusing a cached matrix when the signature matches.
 
-    Encoding is the whole of startup cost and it grows with the catalog: ~1,000 controls is minutes on
-    CPU, which would blow the k8s startupProbe budget and make every rollout and scale-up slow. The
-    cache turns a cold start into a disk read, so only genuinely new or edited content is ever encoded.
+    Encoding dominates startup and grows with the catalog. Measured at 1,441 controls on CPU: ~27 s to
+    encode from cold vs ~9 s warm (and the warm figure is mostly loading the model), so the cache is
+    worth ~17 s per start today and more as frameworks are added. Only new or edited content is encoded.
+
+    The image pre-warms this at build time — see docker/Dockerfile. At runtime the container is
+    non-root against a root-owned /app, so a write here fails; that is logged, not fatal, and the
+    engine simply encodes in-process.
     """
     import numpy as np
     cids = sorted(controls)
