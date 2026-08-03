@@ -329,7 +329,20 @@ add ~87 MB to history per retrain and that needs a history rewrite to undo. No r
 `/crosswalk.html`, pick any two covered frameworks and any control, and see the model's ranking measured
 against the official crosswalk. Nothing on the site is fabricated any more.
 
-**Next action — first student exercise (`web/learn.html`).** Everything needed already exists: pick a
+**Next action — RETRAIN THE EMBEDDER.** Data is prepared and waiting; see
+**`docs/model_retrain_plan.md`**. Training pairs went from **159 → 1,459** (9.2x) and framework pairs from
+1 → 5 when today's sources landed, and the paper's own finding is that in-domain paired data is the
+primary driver of quality. So this is the cheapest large gain available.
+Files: `data/processed/retrain-v2/` (`query-holdout` = product metric, `strict` = generalisation metric,
+both leakage-checked CLEAN, seed 42) + per-framework ranking corpora. Rebuild with
+`python regmap_engine/build_training_data.py --write`.
+⚠️ **Build the held-out eval harness FIRST** — `eval_crosswalk.py` has no split, so a retrained model
+scores ~0.95 on memorised data and tells you nothing. The number to beat is the paper's held-out R@5
+**0.797**, not the 0.906 that `/eval` reports.
+⚠️ **Do not overwrite `models/regmap-embedder/`** — it is the artifact the DTRAP paper describes. Train to
+`-v2` and bump `REGMAP_MODEL_VERSION` (the embedding cache keys on it, so it invalidates itself).
+
+**After that — first student exercise (`web/learn.html`).** Everything needed already exists: pick a
 random control from the source framework, hide the `official` flags, let the learner select which target
 provisions they think map, then score their selection against `official.target_ids` and reveal. That is
 **UI work only** — the answer key is already in the `/map` response, so there is no labelling and no

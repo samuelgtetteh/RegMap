@@ -1,0 +1,66 @@
+{
+  "built_for": "retraining regmap-embedder beyond @0.1",
+  "seed": 42,
+  "val_frac": 0.15,
+  "test_frac": 0.15,
+  "usable_pairs": 1459,
+  "pairs_by_mapping": {
+    "nist_80053__hipaa_security": 222,
+    "nist_80171__nist_80053": 157,
+    "nist_csf2__nist_80053": 737,
+    "nist_csf2__nist_80171": 310,
+    "nist_csf2__nist_ssdf": 33
+  },
+  "protocols": {
+    "query-holdout": {
+      "train": 1003,
+      "val": 250,
+      "test": 206
+    },
+    "strict": {
+      "train": 614,
+      "val": 28,
+      "test": 62
+    }
+  },
+  "excluded": [
+    {
+      "mapping": "nist_csf2__cis_v8",
+      "pairs": 62,
+      "reason": "'cis_v8' has no shippable control text",
+      "access": "paraphrase-only"
+    },
+    {
+      "mapping": "nist_csf2__iso_27001",
+      "pairs": 389,
+      "reason": "'iso_27001' has no shippable control text",
+      "access": "paraphrase-only"
+    },
+    {
+      "mapping": "nist_csf2__pci_dss4",
+      "pairs": 551,
+      "reason": "'pci_dss4' has no shippable control text",
+      "access": "paraphrase-only"
+    },
+    {
+      "mapping": "nist_csf2__scf",
+      "pairs": 363,
+      "reason": "'scf' has no shippable control text",
+      "access": "paraphrase-only"
+    }
+  ],
+  "corpora": {
+    "hipaa_security": 60,
+    "nist_80053": 1016,
+    "nist_80171": 97,
+    "nist_80172": 103,
+    "nist_csf2": 207,
+    "nist_ssdf": 61
+  },
+  "baseline_to_beat": {
+    "model": "regmap-embedder@0.1",
+    "trained_on_pairs": 159,
+    "note": "held-out multi-relevant R@5 0.797 per the DTRAP paper. Do NOT compare against eval_crosswalk.py numbers, which have no held-out split."
+  },
+  "do_not_overwrite": "models/regmap-embedder is the artifact the DTRAP paper describes. Train to models/regmap-embedder-v2 and bump REGMAP_MODEL_VERSION."
+}
