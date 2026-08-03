@@ -153,7 +153,48 @@ dot product *is* cosine similarity.
             md(cells, "### Pooled comparison, held-out queries\n\n" +
                fmt_table(rows, ["metric", "@0.1", "v2", "delta", "relative"]))
 
-    md(cells, "## 5. How to read this honestly")
+    # ---- model selection: the counterintuitive result -------------------------------------------
+    v2best_eval = read_json(ROOT / "data" / "processed" / "retrain-v2" / "eval_v2best.json")
+    repbest = read_json(ROOT / "models" / "regmap-embedder-v2-best" / "training_report.json")
+    if v2best_eval and repbest and base_eval and v2_eval:
+        def pl(e):
+            for k, v in e["results"].items():
+                if "regmap-embedder" in k:
+                    return v
+            return None
+        b, a10, a2 = pl(base_eval), pl(v2_eval), pl(v2best_eval)
+        md(cells, "## 5. Model selection — validation loss is the wrong criterion here")
+        md(cells, f"""
+The loss curve above bottoms early and then rises while training loss keeps falling, which reads as
+overfitting. So a second run was trained for {repbest['epochs']} epochs with checkpointing on **best
+held-out loss** — it selected epoch {repbest['best_epoch']} (val loss {repbest['best_val_loss']}).
+
+Evaluating all three on the *same* held-out queries gives a result worth stating plainly:
+
+{fmt_table([
+    ["@0.1 (released)", "3.2646", f"{b['pooled']['recall@1']:.3f}", f"{b['pooled']['recall@5']:.3f}",
+     f"{b['pooled']['ndcg@10']:.3f}", f"{b['ci'][0]:.3f}-{b['ci'][1]:.3f}"],
+    ["v2, epoch 10", f"{rep['val_loss_after']}", f"{a10['pooled']['recall@1']:.3f}",
+     f"{a10['pooled']['recall@5']:.3f}", f"{a10['pooled']['ndcg@10']:.3f}",
+     f"{a10['ci'][0]:.3f}-{a10['ci'][1]:.3f}"],
+    [f"v2-best, epoch {repbest['best_epoch']}", f"{repbest['best_val_loss']}",
+     f"{a2['pooled']['recall@1']:.3f}", f"{a2['pooled']['recall@5']:.3f}",
+     f"{a2['pooled']['ndcg@10']:.3f}", f"{a2['ci'][0]:.3f}-{a2['ci'][1]:.3f}"],
+], ["model", "val loss", "R@1", "R@5", "nDCG@10", "R@5 95% CI"])}
+
+**The model with the best validation loss has the worst Recall@5 of the two retrained models.**
+Selecting on loss would have shipped the weaker model.
+
+The reason is a mismatch of scale: MNRL's loss is computed against **15 in-batch candidates**, while the
+product ranks against a **full framework corpus of up to ~1,000 controls**. Being confident among 15
+neighbours is not the same skill as ranking one of a thousand. So the release candidate was selected on
+held-out **Recall@5**, not on loss — `v2, epoch 10`.
+
+Note also that epoch 2 has the best **Recall@1**. If the product needed a single answer rather than a
+shortlist, the choice would flip. It does not: `/map` returns a ranked shortlist for an expert to confirm.
+""")
+
+    md(cells, "## 6. How to read this honestly")
     md(cells, f"""
 - The number to beat is the paper's **held-out multi-relevant R@5 = 0.797**, not the 0.906 that
   `eval_crosswalk.py` prints — that figure is inflated by training leakage and `/eval` self-reports

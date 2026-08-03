@@ -39,15 +39,15 @@ RUN if [ -n "$TORCH_INDEX" ]; then \
 
 # The engine (code + framework catalog) and the released embedder.
 COPY regmap_engine /app/regmap_engine
-COPY models/regmap-embedder /app/models/regmap-embedder
+COPY models/regmap-embedder-v2 /app/models/regmap-embedder-v2
 
 # Version stamp for reproducibility — surfaced in /health, /usage and every /map response.
 ARG ENGINE_VERSION=0.2
-ARG MODEL_VERSION=regmap-embedder@0.1
+ARG MODEL_VERSION=regmap-embedder@0.2
 
 # Standalone: the model is local, so forbid any runtime call-home to Hugging Face.
 # Device is auto-detected at startup (cuda if visible, else cpu); force it with REGMAP_DEVICE if needed.
-ENV REGMAP_MODEL=/app/models/regmap-embedder \
+ENV REGMAP_MODEL=/app/models/regmap-embedder-v2 \
     REGMAP_ENGINE_VERSION=${ENGINE_VERSION} \
     REGMAP_MODEL_VERSION=${MODEL_VERSION} \
     HF_HUB_OFFLINE=1 \

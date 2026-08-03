@@ -199,9 +199,18 @@ def main():
               f"  lr={sched.get_last_lr()[0]:.2e}{'  <- best' if best else ''}")
         history.append({"epoch": epoch, "train_loss": round(run / max(nb, 1), 4),
                         "val_loss": round(v, 4), "best": best})
-        # Keep the best epoch by held-out loss. Without this the run saves whatever the last epoch
-        # happened to be, which on this data is well past the optimum (train loss keeps falling while
-        # val loss rises from about epoch 3).
+        # Keep the best epoch by held-out LOSS -- but read the warning below before trusting it.
+        #
+        # MEASURED 2026-08-03: on this data, validation loss and retrieval quality DISAGREE. A 4-epoch
+        # run bottomed at epoch 2 (val 2.5509) yet scored held-out R@5 0.682, while the 10-epoch run
+        # ended at a worse val loss (2.7019) and scored R@5 0.734. Selecting on loss therefore picks the
+        # WORSE model for the product. MNRL's in-batch softmax loss is only a proxy: it is computed
+        # against 15 in-batch candidates, whereas the product ranks against a full framework corpus of
+        # up to ~1,000 controls.
+        #
+        # So treat this checkpoint as a diagnostic, not the release candidate. Select the shipped model
+        # with eval_retrain.py on the held-out set, using the metric the product is judged on (R@5 /
+        # nDCG@10). A proper fix is to run that evaluation per epoch and checkpoint on it directly.
         if best:
             best_val, best_epoch = v, epoch
             model.save(str(Path(a.out)))

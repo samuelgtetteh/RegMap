@@ -178,10 +178,28 @@ if rep10:
            ["Seed", rep10["seed"]],
            ["Embedding dimension", rep10["embedding_dim"]],
            ["Training time", f"{rep10['train_seconds']:.0f}s on CPU"]])
-    para("Validation loss reached its minimum early and then rose while training loss kept falling — "
-         "clear overfitting at this data volume. The training script now keeps the best epoch by "
-         "held-out loss rather than the final one, and a shorter run was trained for comparison.",
-         italic=True)
+    para("Validation loss reached its minimum early and then rose while training loss kept falling, "
+         "which reads as overfitting — so a second, shorter run was trained with checkpointing on best "
+         "held-out loss, and all three models were evaluated on the same held-out queries.")
+    v2b = read_json(ROOT / "data/processed/retrain-v2/eval_v2best.json")
+    rb = read_json(ROOT / "models/regmap-embedder-v2-best/training_report.json")
+    vb = pooled(v2b)
+    if vb and rb:
+        table(["Model", "Validation loss", "Recall@1", "Recall@5", "nDCG@10"],
+              [["Released @0.1", f"{rep10['val_loss_before']}", f"{bb['pooled']['recall@1']:.3f}",
+                f"{bb['pooled']['recall@5']:.3f}", f"{bb['pooled']['ndcg@10']:.3f}"],
+               ["Retrained, epoch 10 (shipped)", f"{rep10['val_loss_after']}",
+                f"{vv['pooled']['recall@1']:.3f}", f"{vv['pooled']['recall@5']:.3f}",
+                f"{vv['pooled']['ndcg@10']:.3f}"],
+               [f"Retrained, epoch {rb['best_epoch']} (best loss)", f"{rb['best_val_loss']}",
+                f"{vb['pooled']['recall@1']:.3f}", f"{vb['pooled']['recall@5']:.3f}",
+                f"{vb['pooled']['ndcg@10']:.3f}"]])
+        para("This produced a result worth recording: the model with the best validation loss has the "
+             "worse Recall@5 of the two retrained models, so selecting on loss would have shipped the "
+             "weaker model. The cause is a mismatch of scale — the training loss is computed against 15 "
+             "in-batch candidates, whereas the product ranks against a full framework corpus of up to "
+             "roughly 1,000 controls. The released model was therefore selected on held-out Recall@5, "
+             "not on training loss.", italic=True)
 
 doc.add_heading("4. Engineering delivered", level=1)
 for b in [

@@ -42,7 +42,9 @@ from eval_crosswalk import rank_tfidf, rank_bm25, score, aggregate
 HERE = Path(__file__).resolve().parent
 WEB = HERE / "web"                 # the RegMap product website (served by this engine)
 EMB_CACHE = HERE / "catalog" / ".embeddings"   # derived vectors; gitignored, safe to delete
-MODEL = os.environ.get("REGMAP_MODEL", str((HERE.parent / "models" / "regmap-embedder")))
+# Defaults to the retrained model. regmap-embedder (@0.1) stays on disk untouched because the DTRAP
+# paper's figures are reproducible only against it -- point REGMAP_MODEL there to reproduce them.
+MODEL = os.environ.get("REGMAP_MODEL", str((HERE.parent / "models" / "regmap-embedder-v2")))
 DEVICE = os.environ.get("REGMAP_DEVICE") or None   # None => auto (cuda if visible, else cpu)
 
 # Framework ids the operator holds a licence for. Default empty => licence-required content is refused.
@@ -51,7 +53,7 @@ LICENSED = {s.strip() for s in os.environ.get("REGMAP_LICENSED", "").split(",") 
 # --- versioning (reproducibility): stamp what produced every result -------------------------------
 VERSION = {
     "engine": os.environ.get("REGMAP_ENGINE_VERSION", "0.2"),
-    "model": os.environ.get("REGMAP_MODEL_VERSION", "regmap-embedder@0.1"),
+    "model": os.environ.get("REGMAP_MODEL_VERSION", "regmap-embedder@0.2"),
 }
 
 # --- usage metering (per-use hardware billing) ----------------------------------------------------

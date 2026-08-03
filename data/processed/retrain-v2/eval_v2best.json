@@ -1,0 +1,31 @@
+{
+  "protocol": "query-holdout",
+  "split": "test",
+  "queries": 64,
+  "results": {
+    "../models/regmap-embedder-v2-best": {
+      "pooled_r@5": 0.6816779574592075,
+      "ci": [
+        0.590604967948718,
+        0.7738873106060606
+      ],
+      "n": 64,
+      "pooled": {
+        "recall@1": 0.3341,
+        "hit@1": 0.5781,
+        "ndcg@1": 0.5781,
+        "recall@3": 0.5603,
+        "hit@3": 0.7812,
+        "ndcg@3": 0.6075,
+        "recall@5": 0.6817,
+        "hit@5": 0.875,
+        "ndcg@5": 0.6445,
+        "recall@10": 0.7655,
+        "hit@10": 0.9062,
+        "ndcg@10": 0.6639,
+        "mrr": 0.7094,
+        "map": 0.6001
+      }
+    }
+  }
+}
