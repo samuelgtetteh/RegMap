@@ -437,3 +437,51 @@ were wired, and **1,464 official mappings were unreachable**. Both largely fixed
 - [ ] **`regmap-engine:0.2-cpu` is now stale again** — it was built before 800-172, the mapping-only
       support and the ISO id fix. Rebuild before using it to test (its embedding cache is baked at
       build time, so a rebuild also re-warms it).
+
+---
+
+## Real labs for the k8s test — investigated *(2026-08-02)*
+
+**Yes, two real labs exist** in the local images (from the parent platform), and both are genuine
+auto-graded labs, not placeholders:
+
+| lab | what it is | state |
+|---|---|---|
+| `cloud-target-lab:0.1` | Seeds **LocalStack** with real misconfigurations via boto3 — public S3 bucket `acme-public-uploads`, an insecure EC2 security group with a `legacy-jump-box`, IAM issues — then `verify.py` grades what the learner found. **This is the compliance/audit lab** and it maps directly onto RegMap: "public bucket → which 800-53 control? → which HIPAA/ISO clause?" | **best fit, blocked — see below** |
+| `live-target-lab:0.1` | `identity_generator.py` streams synthetic logins forever at the Identity Anomaly detector, mixing normal traffic with behavioural attack bursts (one account across many machines). Knows which events it made anomalous, so grading ground truth is free | **ran in k8s, but does not compose standalone** |
+
+### Proven: real lab images run under the full session constraints
+- [x] Built `k8s/labs/lab-soc-triage.yaml` — a 2-container Job (detector + generator) and ran it in a
+      session namespace. **Both containers reached Ready**, on a worker node, under `restricted` Pod
+      Security forced to **uid 10001** (both images default to root), read-only rootfs, no SA token,
+      default-deny egress. Intra-pod localhost traffic worked and the detector answered `/health` 200.
+      So the session template works with real labs, not just the engine standing in.
+- The session namespace was later gone and the Job with it, consistent with the sweeper reaping on
+  expiry — though that CronJob's logs had already rotated (history limit 1), so the *verified* sweeper
+  evidence remains the earlier `sess-test01` run.
+
+### Blocker 1 — `live-target-lab` targets the platform API, not the standalone detector
+The generator hardcodes `{API_URL}/identity/score` and `{API_URL}/decision/verdicts/{id}/feedback` —
+those are **platform-mounted prefixes**. The standalone `identity-anomaly:0.1` image serves `/score` and
+`/health` only, so every event 404s. Options: run the full platform backend, or put a small
+path-rewriting adapter in front of the detector. Not a k8s problem.
+
+### Blocker 2 — `cloud-target-lab` needs LocalStack, which has two problems here
+- [ ] **The local `localstack/localstack:3.0` image is corrupted.** Blob
+      `sha256:8444ed98…3f0a` is missing, so `kind load` fails both directly and via `docker save`
+      (the archive came out 0.40 GB against a reported 1.67 GB). `docker pull` reports "up to date" and
+      does not repair it. A clean re-pull needs `docker rmi --force`, which is blocked by container
+      `1b8df3e82a2b` from **another project** — not ours to delete.
+- [ ] **LocalStack will not run as non-root**: as uid 10001 it dies with
+      `TimeoutError: gave up waiting for edge server on 0.0.0.0:4566`. So a LocalStack lab needs the
+      namespace relaxed from `restricted` to **`baseline`** Pod Security and LocalStack run as root.
+      That is defensible for a deliberately-vulnerable target inside a namespace with no SA token,
+      default-deny egress and a quota — but it must be a **conscious per-lab decision**, exactly as
+      `lab_sessions_design.md` requires.
+
+### Next
+- [ ] Decide the adapter-vs-platform question for the SOC lab, or start with the cloud lab instead
+- [ ] Repair the LocalStack image (needs the other project's container stopped) and add a
+      `baseline`-PSS session variant for labs that need root
+- [ ] A lab needs a **catalog entry** (id, image(s), PSS level, tier, ports, grading hook) so the
+      provisioner can instantiate one by name rather than by hand-substituted YAML

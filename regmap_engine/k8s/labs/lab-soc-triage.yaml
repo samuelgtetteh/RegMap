@@ -1,0 +1,99 @@
+# LAB: SOC triage — the first real lab wired into the paid-session model.
+#
+# Two containers in one pod:
+#   detector   identity-anomaly API (uvicorn :8080) — scores authentication events
+#   generator  live-target-lab identity_generator.py — streams synthetic logins at the detector
+#              forever, mixing normal traffic with behavioural attack bursts (one account
+#              authenticating across many machines — credential stuffing / lateral movement)
+#
+# The learner triages the resulting alert feed. Grading ground truth is free: the generator KNOWS which
+# events it made anomalous, which is the auto-grading moat described in product_master_plan.md §3.2.
+#
+# They share the pod's localhost, so the generator reaches the detector without any NetworkPolicy
+# exception — and default-deny egress still blocks everything leaving the session. That is the reason to
+# co-locate them rather than run two Deployments.
+#
+# Placeholders match session-template.yaml (__SESSION__, __SECONDS__, __EXPIRES__).
+# Both images run as root by default; they are forced to uid 10001 here to satisfy the restricted Pod
+# Security standard, which is why /tmp is an emptyDir (the root filesystem is read-only).
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lab
+  namespace: __SESSION__
+  labels:
+    regmap.io/session: "__SESSION__"
+    regmap.io/lab: soc-triage
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: __SECONDS__     # the paid deadline — kubelet enforces it
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        regmap.io/session: "__SESSION__"
+        regmap.io/lab: soc-triage
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: detector
+          image: ghcr.io/samuelgtetteh/identity-anomaly:0.1
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8080, name: http }]
+          env:
+            - { name: HOME, value: /tmp }        # read-only rootfs: keep any dotfiles off /
+            - { name: PYTHONDONTWRITEBYTECODE, value: "1" }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { cpu: 500m, memory: 1Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts: [{ name: tmp, mountPath: /tmp }]
+
+        - name: generator
+          image: ghcr.io/samuelgtetteh/live-target-lab:0.1
+          imagePullPolicy: IfNotPresent
+          command: ["python", "identity_generator.py"]
+          env:
+            # Same pod => localhost. The image default points at host.docker.internal, which does not
+            # exist in a cluster.
+            - { name: API_URL,       value: "http://localhost:8080" }
+            - { name: INTERVAL,      value: "2" }
+            - { name: ANOMALY_RATE,  value: "0.2" }
+            - { name: HOME,          value: /tmp }
+            - { name: PYTHONDONTWRITEBYTECODE, value: "1" }
+            - { name: PYTHONUNBUFFERED,        value: "1" }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 200m, memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts: [{ name: tmp, mountPath: /tmp }]
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lab
+  namespace: __SESSION__
+spec:
+  selector:
+    regmap.io/session: "__SESSION__"
+  ports:
+    - { port: 80, targetPort: http, name: http }
