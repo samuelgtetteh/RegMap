@@ -13,15 +13,12 @@ How to use it:
 
 ---
 
-## ⚠️ Set this up first: version control
+## Version control — done
 
-**There is no git repository here, and none in the parent directory.** No history, no diffs, no rollback,
-no way to see what a session changed. For a build meant to pause and resume, this is the single biggest
-risk — a bad edit is unrecoverable.
-
-- [ ] `git init` + first commit of the current tree (`.gitignore` already exists and is sane)
-- [ ] Decide remote (the old parent repo pushed to `origin/main`; this folder is a detached copy)
-- [ ] Commit at the end of every session, so the log below and the history agree
+- [x] `git init` on `main` (2026-08-02). **Git LFS** tracks `*.safetensors` / `*.docx` / `*.pdf`, so the
+      87 MB model does not bloat history on every Tier-2 retrain.
+- [x] Committing at the end of each work chunk, so this log and the history agree.
+- [ ] **No remote configured** — nothing is pushed, so this tree is still the only copy. Decide a remote.
 
 ---
 
@@ -115,10 +112,17 @@ The pair-per-directory format could not reach a full framework catalog. It is no
       see Environment. **Do not quote these as a benchmark** — see Findings #1.)
 - [x] **Re-ran the eval with the embedder.** DONE 2026-08-02 — see the table above. The model dominates
       both lexical baselines as served, and the API reports `method: embed`.
-- [ ] **Replace the `SAMPLE` CSF↔800-53 pair** — `crosswalks/nist_csf2__nist_80053/` is 12 controls and
-      self-labelled SAMPLE in its `meta.json`. Needs the CSF 2.0 OLIR export **downloaded** first
-      (https://csrc.nist.gov/projects/olir) — not on disk, unlike the HIPAA CSV
-- [ ] **Add ISO 27001 ↔ 800-53** via OLIR (Phase 0 target in `product_roadmap.md` is 2–3 live pairs)
+- [x] **Replaced the `SAMPLE` CSF↔800-53 pair.** DONE 2026-08-02 via the downloaded sources: the CSF 2.0
+      OSCAL catalog gives **207 real controls** (was 12) and the OLIR informative-reference export gives
+      **738 official CSF 2.0 → 800-53 mappings** (was 21 sample ones), with 209/210 target ids joining the
+      catalog. Also added 800-171 Rev 3 (97 controls, plus its own official 800-53 mapping extracted from
+      OSCAL back-matter) and SSDF (61).
+- [x] **Phase 0's "2–3 live pairs" target is exceeded: 18 answerable pairs from 9 mappings.**
+- [ ] **ISO 27001 is mapping-only, not searchable.** The OLIR export supplies 488 official CSF 2.0 → ISO
+      27001 mappings (ids), but ISO's control *text* is copyrighted and cannot be shipped — so ISO can be
+      crosswalked by identifier and not semantically searched. Same for PCI DSS (551), SCF (363), CIS (62).
+      Making these useful needs either a licence or original paraphrases, plus an API route that returns
+      official mapping ids without ranking. See `data/raw/SOURCES.md`
 - [x] **UI that actually calls the engine.** DONE 2026-08-02, rendered and screenshot-verified in headless
       Chrome (not just contract-tested).
       - **`web/crosswalk.html`** — the working tool: any→any framework pickers from `/frameworks`, a route
