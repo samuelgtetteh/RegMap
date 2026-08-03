@@ -121,5 +121,13 @@
     "hub": true,
     "license_note": "SCF content is licensed; only the NIST-published mapping ids are used here.",
     "text": "mapping-only"
+  },
+  "nist_80172": {
+    "name": "NIST SP 800-172 Rev.3 (enhanced CUI)",
+    "family": "US federal",
+    "version": "Rev.3",
+    "access": "public",
+    "text": "full",
+    "license_note": "NIST publications are U.S. Government works (public domain)."
   }
 }

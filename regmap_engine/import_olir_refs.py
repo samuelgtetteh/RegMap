@@ -68,8 +68,16 @@ def parse_element(fid, raw):
     s = str(raw or "").strip().rstrip(",;.")
     if not s:
         return None
+    # Some labels contain a colon themselves ("ISO/IEC 27001:2022"), so splitting the line on its first
+    # colon leaks the version into the element. Strip a leading 4-digit year here.
+    s = re.sub(r"^\d{4}\s*:\s*", "", s).strip()
+    # The export uses several spellings for "which part of the standard", none of them part of the id.
+    s = re.sub(r"^(Mandatory\s+Clauses?|Annex\s+A\s+Controls?|Controls?|Clause)\s*:?\s*", "",
+               s, flags=re.I).strip()
+    # Literal placeholders meaning "nothing corresponds" must not become control ids.
+    if s.lower() in ("none", "n/a", "na", "-", ""):
+        return None
     if fid == "iso_27001":
-        s = re.sub(r"^(Mandatory\s+Clause|Annex\s+A\s+Controls?)\s*:?\s*", "", s, flags=re.I).strip()
         return s or None
     if fid in ("nist_80053", "nist_ssdf"):
         c = canon_id(s)

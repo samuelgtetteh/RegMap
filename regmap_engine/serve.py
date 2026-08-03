@@ -216,16 +216,23 @@ def _resolve_fid(name):
     return cands[0] if len(cands) == 1 else None
 
 
-def _require(fid, what):
-    """Resolve a framework and enforce licence access. Raises HTTPException."""
+def _require(fid, what, need_text=True):
+    """Resolve a framework and enforce licence access. Raises HTTPException.
+
+    `need_text=False` allows a mapping-only framework (ids and official mappings, no shippable control
+    text — ISO 27001, PCI DSS, CIS, SCF). Those cannot be ranked but can still be looked up.
+    """
     r = _resolve_fid(fid)
     if r is None:
         raise HTTPException(404, f"unknown {what} framework '{fid}' (see GET /frameworks)")
     access = _registry[r].get("access", "public")
     if access == "licence-required" and r not in LICENSED:
         raise HTTPException(403, f"'{r}' content requires a licence; set REGMAP_LICENSED to enable it")
-    if r not in _controls:
-        raise HTTPException(409, f"framework '{r}' is registered but its catalog is not imported yet")
+    if need_text and r not in _controls:
+        if cat.resolve(r, r)[0] is None and not any(r in p for p in cat.available_mappings()):
+            raise HTTPException(409, f"framework '{r}' is registered but nothing is imported for it yet")
+        raise HTTPException(409, f"'{r}' is mapping-only: its control text is not shippable, so it "
+                                 f"cannot be ranked. Pass a `source_id` to get its official mappings.")
     return r
 
 
@@ -301,9 +308,14 @@ def framework_controls(fid: str, include_text: bool = False):
 
 @app.get("/pairs")
 def pairs():
-    """Every pair answerable right now, and how: direct | inverted | derived via <hub>."""
+    """Every pair answerable right now, and how.
+
+    `route`     direct | inverted | derived via <hub>
+    `rankable`  false for a mapping-only target: the official mappings are returned, but there is no
+                control text to rank against (see GET /frameworks -> text).
+    """
     out = []
-    for a, b, route in cat.reachable_pairs():
+    for a, b, route in cat.reachable_pairs(include_mapping_only=True):
         if _registry.get(a, {}).get("access") == "licence-required" and a not in LICENSED:
             continue
         if _registry.get(b, {}).get("access") == "licence-required" and b not in LICENSED:
@@ -312,9 +324,12 @@ def pairs():
                     "source_framework": _registry.get(a, {}).get("name", a),
                     "target_framework": _registry.get(b, {}).get("name", b),
                     "authoritative": route in ("direct", "inverted"),
+                    "rankable": b in _controls,
                     "source_controls": _registry.get(a, {}).get("controls", 0),
                     "target_controls": _registry.get(b, {}).get("controls", 0)})
-    return {"version": VERSION, "count": len(out), "pairs": out}
+    rankable = sum(1 for p in out if p["rankable"])
+    return {"version": VERSION, "count": len(out), "rankable": rankable,
+            "mapping_only": len(out) - rankable, "pairs": out}
 
 
 class MapReq(BaseModel):
@@ -341,9 +356,34 @@ def map_control(req: MapReq):
         src, tgt = _split_pair(req.pair)
         if not tgt:
             raise HTTPException(404, f"unknown pair '{req.pair}' (see GET /pairs)")
-    tgt = _require(req.target or tgt, "target")
+
+    # A mapping-only target (ISO 27001, PCI DSS, CIS, SCF) has no text to rank, but its official
+    # mappings are still answerable from a source control id. Allow that case through.
+    want = req.target or tgt
+    lookup_only = bool(req.source_id) and (_resolve_fid(want) or "") not in _controls
+    tgt = _require(want, "target", need_text=not lookup_only)
     if req.source or src:
         src = _require(req.source or src, "source")
+
+    if lookup_only:
+        if not src:
+            raise HTTPException(400, "a mapping-only target needs `source` and `source_id`")
+        ids, route = cat.official_targets(src, tgt, req.source_id)
+        if ids is None:
+            raise HTTPException(404, f"no mapping and no hub route from '{src}' to '{tgt}'")
+        return {"source": src, "target": tgt,
+                "source_framework": _registry[src].get("name", src),
+                "target_framework": _registry[tgt].get("name", tgt),
+                "query": {"text": None, "source_id": req.source_id},
+                "method": "official-mapping", "version": VERSION,
+                "text_available": False,
+                "note": f"'{tgt}' control text is not shippable ("
+                        f"{_registry[tgt].get('access')}), so results cannot be ranked. These are the "
+                        f"official mapped identifiers.",
+                "official": {"route": route, "authoritative": route in ("direct", "inverted"),
+                             "provenance": "official", "target_ids": ids},
+                "results": [{"id": i, "title": "", "text": "", "score": None, "official": True}
+                            for i in ids]}
 
     # the query text: an explicit control from the source framework, or free text
     if req.source_id:

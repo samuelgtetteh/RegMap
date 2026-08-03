@@ -395,3 +395,45 @@ running". That most likely meant "applied without error" on a CNI that ignores i
 - [ ] Decide `MAX_SESSION_SECONDS`, idle-kill vs bill-as-paid, and warm-pool vs cold-start
 - [ ] Real lab workloads — `regmap-engine:0.2-cpu` is only a stand-in
 - [ ] Tear down the kind cluster when finished: `kind delete cluster --name regmap-labs`
+
+---
+
+## Download audit — are the raw files actually wired in? *(2026-08-02)*
+
+Asked directly, audited rather than assumed. Answer at the time of asking: **no** — 6 of 13 data files
+were wired, and **1,464 official mappings were unreachable**. Both largely fixed.
+
+### Fixed
+- [x] **`nist_80172_rev3.json` imported** — downloaded but never used. 103 controls. Also fixed
+      `canon_id` to strip the `SP_800_172_3_0_0_` prefix (it only handled 800-171), so ids are
+      `03.01.01E` rather than `SP_800_172_3_0_0_03.01.01E`.
+- [x] **Mapping-only frameworks are now reachable — the big one.** ISO 27001, PCI DSS, CIS v8 and SCF
+      had official mappings on disk but could not be served at all, because `as_pair()` needs both
+      catalogs to have text and theirs is copyrighted. Added `catalog.official_targets()` plus a
+      `/map` path that returns official mapped **identifiers** without ranking.
+      **Answerable pairs: 18 → 34** (18 rankable + 16 mapping-only). `/pairs` now reports `rankable`
+      per pair, and `GET /frameworks` reports `text: full | mapping-only`.
+      Verified: `CSF PR.AA-01 → ISO 27001` = `5.15, 5.16, 5.18, 8.2, 8.5` (direct);
+      `800-53 AC-2 → PCI DSS` resolves through the CSF hub and is correctly flagged non-authoritative.
+- [x] **Fixed a real parsing bug found by doing this.** The OLIR label `ISO/IEC 27001:2022` contains a
+      colon, and the parser split each line on its *first* colon — so the version leaked into the
+      element and ISO ids came out as `2022: Annex A Controls: 5.15`. Also 63 literal `"None"`
+      placeholders were becoming control ids. ISO mappings went 488 → **389**, which is a correctness
+      gain, not a loss.
+
+### Still not wired — deliberately
+- [ ] **The four `nist_80053_baseline_*.json` files** are OSCAL **profiles**, not catalogs: they *select*
+      control ids (149 at LOW, 370 at HIGH) rather than defining controls. They answer "is this control
+      required at MODERATE?", which is a **control-selection/tagging** feature, not a crosswalk — so it
+      needs a different model (a baseline attribute on 800-53 controls), not a framework entry.
+      `import_oscal.py` handles `catalog` roots only and would need a separate profile importer.
+- [ ] **`csf_pf_to_80053r5.xlsx`** — its `CSF to SP 800-53r5` sheet is **CSF v1.1**, superseded by the
+      2.0 mappings already imported. Its `PF to SP 800-53r5` sheet (16,732 rows) is the **NIST Privacy
+      Framework**, which is genuinely new content and is not in the registry at all yet.
+- [ ] `nist_800_53_rev5_hipaa_crosswalk.csv` — a shorter earlier export of a file already imported.
+- [ ] `nist_800_53_rev5_hipaa_crosswalk_full (2).csv` — byte-identical duplicate, safe to delete.
+
+### Consequence
+- [ ] **`regmap-engine:0.2-cpu` is now stale again** — it was built before 800-172, the mapping-only
+      support and the ISO id fix. Rebuild before using it to test (its embedding cache is baked at
+      build time, so a rebuild also re-warms it).

@@ -33,8 +33,10 @@ def canon_id(raw, family=None):
     s = str(raw or "").strip()
     if not s:
         return ""
-    # SP 800-171 OSCAL ids: SP_800_171_03.01.01 -> 03.01.01
-    m = re.match(r"^SP_800_171_(.+)$", s)
+    # SP 800-171/172 OSCAL ids carry a document (and sometimes version) prefix:
+    #   SP_800_171_03.01.01          -> 03.01.01
+    #   SP_800_172_3_0_0_03.01.02E   -> 03.01.02E   (the trailing E marks an enhanced requirement)
+    m = re.match(r"^SP_800_17[12](?:_\d+(?:_\d+)*)?_(.+)$", s)
     if m:
         return m.group(1)
     # already a CSF-style id (GV.OC-01) — leave alone

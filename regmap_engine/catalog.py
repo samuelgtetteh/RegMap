@@ -179,23 +179,65 @@ def resolve(a, b):
     return None, None
 
 
-def reachable_pairs():
+def has_text(fid):
+    """Can this framework be searched semantically, or only crosswalked by identifier?
+
+    Copyrighted frameworks (ISO 27001, PCI DSS, CIS, SCF) arrive as *mappings only*: NIST's OLIR
+    crosswalk is a US Government work so the correspondence is freely usable, but the control text is
+    not ours to ship. Such a framework has ids and official mappings but no statements to embed.
+    """
+    return bool(load_controls(fid))
+
+
+def reachable_pairs(include_mapping_only=False):
     """Every (a, b, route) the product can answer today — direct, inverted, or hub-composed.
 
     This is the honest coverage number for the UI: it counts what actually resolves, not what the
     registry aspires to.
+
+    By default only pairs where both frameworks have control text, i.e. pairs that can be *ranked*.
+    With include_mapping_only=True, also returns pairs whose target is mapping-only: those cannot be
+    ranked, but their official mappings are still lookup-able by control id — which is most of the
+    value for an auditor asking "which ISO clause covers this?".
     """
     reg = load_registry()
-    ids = [f for f in reg if reg[f].get("controls")]
+    full = [f for f in reg if has_text(f)]
+    targets = full if not include_mapping_only else list(reg)
     out = []
-    for a in ids:
-        for b in ids:
+    for a in full:            # the source must have text: you look up *from* a real control
+        for b in targets:
             if a == b:
                 continue
             m, route = resolve(a, b)
             if m:
                 out.append((a, b, route))
     return out
+
+
+def mapping_only_pairs():
+    """Pairs answerable by official mapping alone, because the target has no shippable text."""
+    return [(a, b, r) for a, b, r in reachable_pairs(include_mapping_only=True)
+            if not has_text(b)]
+
+
+def official_targets(a, b, source_id):
+    """The authoritative mapping for one control, without needing the target's text.
+
+    This is the path that makes mapping-only frameworks usable: it answers "what does <control> map to
+    in <framework>?" straight from the official crosswalk, returning identifiers only.
+    Returns (target_ids, route), or (None, None) if the pair has no route at all.
+    """
+    m, route = resolve(a, b)
+    if m is None:
+        return None, None
+    entry = m.get(source_id)
+    if not entry:
+        return [], route
+    targets = sorted(entry["targets"])
+    known = load_controls(b)
+    if known:                 # when we hold the target catalog, restrict to ids we actually have
+        targets = [t for t in targets if t in known]
+    return targets, route
 
 
 # ---- compatibility shim: present a catalog pair the way the old format did ------------------------
