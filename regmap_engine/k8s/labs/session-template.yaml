@@ -1,0 +1,143 @@
+# One paid lab session = one namespace containing everything below.
+#
+# Placeholders are substituted by the provisioner (or by test-teardown.sh):
+#   __SESSION__   session id, e.g. sess-ab12cd
+#   __SECONDS__   how long the learner paid for, in seconds  -> activeDeadlineSeconds
+#   __EXPIRES__   absolute expiry, RFC3339                   -> label read by the sweeper
+#   __IMAGE__     the lab workload image
+#   __TIER__      cpu-small | cpu-large | gpu
+#
+# The teardown guarantee is `activeDeadlineSeconds` on the Job (layer 1 in
+# docs/lab_sessions_design.md): the kubelet enforces it, so the lab stops even if every service we run
+# is dead. Everything else here is containment and cleanup.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: __SESSION__
+  labels:
+    app.kubernetes.io/managed-by: regmap-provisioner
+    regmap.io/session: "__SESSION__"
+    regmap.io/tier: "__TIER__"
+    # The sweeper CronJob selects on this. A label (not just an annotation) so it is selectable.
+    regmap.io/expires-at: "__EXPIRES__"
+    # Enforce the restricted Pod Security standard for everything in this namespace.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+# Hard ceiling on what one session can consume, so a runaway lab cannot eat the cluster or the bill.
+# Also caps object counts: a learner with shell access should not be able to spawn more workloads.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: session-quota
+  namespace: __SESSION__
+spec:
+  hard:
+    requests.cpu: "1"
+    requests.memory: 2Gi
+    limits.cpu: "2"
+    limits.memory: 4Gi
+    pods: "4"
+    count/jobs.batch: "2"
+    count/services: "2"
+    persistentvolumeclaims: "0"     # ephemeral sessions: nothing to exfiltrate later
+---
+# Defaults so a pod without explicit resources still cannot be unbounded.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: session-limits
+  namespace: __SESSION__
+spec:
+  limits:
+    - type: Container
+      default:            { cpu: "500m", memory: 512Mi }
+      defaultRequest:     { cpu: "100m", memory: 128Mi }
+      max:                { cpu: "2",    memory: 4Gi }
+---
+# Default-deny both directions. NOTE: kind/kindnet (Docker Desktop) does NOT enforce NetworkPolicy —
+# this is accepted and silently ignored there. Verify on a cluster with Calico or Cilium before
+# treating lab isolation as real. See docs/lab_sessions_design.md.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: __SESSION__
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Allow only DNS out. Add per-lab allowances on top of this, never instead of it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: __SESSION__
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# The lab itself. A Job, not a Deployment: a Deployment's controller would restart the pod forever,
+# which is precisely the wrong behaviour for something that must end when the credit runs out.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lab
+  namespace: __SESSION__
+  labels:
+    regmap.io/session: "__SESSION__"
+spec:
+  backoffLimit: 0                     # a crashed lab is over; do not silently re-bill a retry
+  activeDeadlineSeconds: __SECONDS__  # <-- THE GUARANTEE. Derived from what the learner paid.
+  ttlSecondsAfterFinished: 300        # reap the finished Job object
+  template:
+    metadata:
+      labels:
+        regmap.io/session: "__SESSION__"
+    spec:
+      restartPolicy: Never
+      # Without this the learner holds a real API-server token inside the lab.
+      automountServiceAccountToken: false
+      # In cloud, pin labs to their own tainted node pool so they never share a node with the
+      # control plane or the engine:
+      # tolerations: [{ key: regmap.io/lab, operator: Exists, effect: NoSchedule }]
+      # nodeSelector: { regmap.io/pool: labs }
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: lab
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8000, name: http }]
+          env:
+            - { name: REGMAP_SESSION, value: "__SESSION__" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lab
+  namespace: __SESSION__
+spec:
+  selector:
+    regmap.io/session: "__SESSION__"
+  ports:
+    - { port: 80, targetPort: http, name: http }

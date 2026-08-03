@@ -1,0 +1,103 @@
+# Layer 4 of the teardown design: an in-cluster sweeper that deletes expired session namespaces.
+#
+# Its whole point is to work when OUR SERVICES ARE DEAD. The provisioner's own reaper (layer 3) is
+# best-effort cleanup; this runs inside the cluster on a schedule and depends on nothing we operate.
+#
+# It is NOT the guarantee that a lab stops — that is `activeDeadlineSeconds` on the Job (layer 1),
+# enforced by the kubelet. The sweeper reclaims the namespace afterwards, and catches sessions whose
+# namespace outlived its pod.
+#
+#   kubectl apply -f sweeper.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: regmap-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: session-sweeper
+  namespace: regmap-system
+---
+# Least privilege: list namespaces, and delete only namespaces. It cannot touch anything else in the
+# cluster, and deleting the namespace garbage-collects the session's contents anyway.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: regmap-session-sweeper
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: regmap-session-sweeper
+subjects:
+  - kind: ServiceAccount
+    name: session-sweeper
+    namespace: regmap-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: regmap-session-sweeper
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: session-sweeper
+  namespace: regmap-system
+spec:
+  schedule: "* * * * *"           # every minute; expiry precision costs money
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 120
+      template:
+        spec:
+          serviceAccountName: session-sweeper
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: sweeper
+              image: bitnami/kubectl:latest
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: ["ALL"] }
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  now=$(date -u +%s)
+                  # Compare each managed namespace's expiry label against now. String comparison would
+                  # be wrong across formats, so parse both to epoch seconds.
+                  kubectl get ns \
+                    -l app.kubernetes.io/managed-by=regmap-provisioner \
+                    -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.labels.regmap\.io/expires-at}{"\n"}{end}' \
+                  | while read -r ns exp; do
+                      [ -n "${ns:-}" ] || continue
+                      if [ -z "${exp:-}" ]; then
+                        echo "sweep: $ns has no expiry label — leaving it, needs investigation"
+                        continue
+                      fi
+                      # labels cannot contain ':', so the provisioner writes 2026-08-02T20-50-00Z
+                      iso=$(echo "$exp" | sed 's/T\([0-9][0-9]\)-\([0-9][0-9]\)-\([0-9][0-9]\)Z/T\1:\2:\3Z/')
+                      if ! e=$(date -u -d "$iso" +%s 2>/dev/null); then
+                        echo "sweep: $ns has unparseable expiry '$exp' — leaving it"
+                        continue
+                      fi
+                      if [ "$now" -ge "$e" ]; then
+                        echo "sweep: $ns expired at $iso — deleting"
+                        kubectl delete ns "$ns" --wait=false
+                      fi
+                    done
+                  echo "sweep: done"

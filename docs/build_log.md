@@ -351,3 +351,43 @@ flagged `hub: true`) and every framework already on that hub becomes reachable f
 **Blocked / needs input:** EKS vs AKS · whether a free tier exists at all · CSF 2.0 and ISO 27001 need
 OLIR exports **downloaded** (not on disk) · HITRUST + COBIT need licences before their content ships ·
 `provisioner/` must be recovered from the parent repo for Phase D (practice environments).
+
+---
+
+## Phase D · lab sessions — teardown design PROVEN on real k8s *(2026-08-02)*
+
+Design: `docs/lab_sessions_design.md`. Rig + manifests: `regmap_engine/k8s/labs/`.
+
+**The commercial question was "what guarantees a lab stops when the credit runs out?"** Answer: not our
+provisioner — its failure mode is silently burning money. Expiry is enforced by the cluster in layers,
+with `Job` + `activeDeadlineSeconds` as the guarantee (kubelet kills it, no service of ours involved),
+`ResourceQuota`/`LimitRange` as containment, and an in-cluster `CronJob` sweeper that works when our
+services are dead. Credits are **held up front and refunded on teardown**, with the deadline *derived
+from the payment*, so overspend is structurally impossible rather than merely monitored.
+
+- [x] **Built the local rig on `kind`, not Docker Desktop.** Decisive reason: Docker Desktop's cluster
+      uses kindnet, which **does not enforce NetworkPolicy** — policies apply and silently do nothing, so
+      isolation would have looked correct while being absent. kind with `disableDefaultCNI` + Calico
+      enforces it. Secondary reason: enabling Docker Desktop k8s restarts the Docker engine and would
+      have stopped every other running container.
+- [x] **`test-teardown.sh`: 9/9 passing** — deadline enforced (`DeadlineExceeded`), pod terminated, no SA
+      token, **NetworkPolicy actually blocking egress**, metadata endpoint blocked, non-root +
+      read-only rootfs, quota rejecting an over-limit pod, and the sweeper deleting an expired namespace
+      from inside the cluster.
+- [x] Installed `kind` v0.32.0 to `~/bin`; cluster `regmap-labs` = 1 control-plane + 2 workers labelled
+      `regmap.io/pool=labs`, so labs land off the control-plane node as they would in cloud.
+
+**Correction to an existing doc:** `regmap_engine_deploy_status.md` lists NetworkPolicy as "verified
+running". That most likely meant "applied without error" on a CNI that ignores it. Treat as unverified.
+
+- [ ] **Provisioner service** — still absent from this repo. When recovered or rebuilt it must be
+      re-verified against this design: it was built around Deployments + a TTL reaper, i.e. layer 3 only,
+      which is the mechanism this design deliberately does *not* rely on
+- [ ] **Credit ledger + auth gate are Phase B.** The K8s loop is now *proven* but cannot be *sold* until
+      accounts, credits and authentication exist. Sessions should be another `usage_events` row type —
+      do not build a second billing system
+- [ ] Lab sessions bill on **wall-clock × tier** (renting hardware), which is deliberately different
+      from the API's deterministic work units. Do not unify the two meters
+- [ ] Decide `MAX_SESSION_SECONDS`, idle-kill vs bill-as-paid, and warm-pool vs cold-start
+- [ ] Real lab workloads — `regmap-engine:0.2-cpu` is only a stand-in
+- [ ] Tear down the kind cluster when finished: `kind delete cluster --name regmap-labs`

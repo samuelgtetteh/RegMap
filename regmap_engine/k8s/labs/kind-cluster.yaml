@@ -1,0 +1,43 @@
+# kind cluster for testing paid lab sessions locally.
+#
+# Why kind rather than Docker Desktop's built-in Kubernetes:
+#   1. Docker Desktop's cluster uses kindnet, which does NOT enforce NetworkPolicy. Lab isolation is a
+#      security requirement, so being unable to test it is disqualifying. Here we disable the default
+#      CNI and install Calico, which does enforce it.
+#   2. Enabling Docker Desktop Kubernetes restarts the Docker engine and stops every other running
+#      container. kind just creates containers alongside them.
+#   3. Disposable: `kind delete cluster --name regmap-labs` leaves no trace and changes no settings.
+#
+#   kind create cluster --name regmap-labs --config kind-cluster.yaml
+#   # then install a CNI that enforces NetworkPolicy (nothing schedules until you do):
+#   kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.2/manifests/calico.yaml
+#   kubectl -n kube-system rollout status ds/calico-node --timeout=300s
+#
+# A control plane plus two workers, so lab pods land on a different node from the control plane —
+# which is how the cloud deployment is meant to be shaped (labs on their own tainted pool).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: regmap-labs
+
+networking:
+  # Calico is installed instead. NetworkPolicy is unenforceable without this line.
+  disableDefaultCNI: true
+  podSubnet: "192.168.0.0/16"      # Calico's default expectation
+
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      # Pod Security admission cluster-wide default. Session namespaces additionally set
+      # `restricted` on themselves, but a sane default means a namespace created without labels
+      # is not wide open.
+      - |
+        kind: ClusterConfiguration
+        apiServer:
+          extraArgs:
+            enable-admission-plugins: NodeRestriction,ResourceQuota,PodSecurity
+  - role: worker
+    labels:
+      regmap.io/pool: labs
+  - role: worker
+    labels:
+      regmap.io/pool: labs
