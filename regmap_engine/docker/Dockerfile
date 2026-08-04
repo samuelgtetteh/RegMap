@@ -13,7 +13,11 @@
 #   docker build -f regmap_engine/docker/Dockerfile \
 #     --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu124 -t regmap-engine:0.1-cu124 .
 #
-# Run:
+# Run (mount a volume so the billing ledger survives restarts):
+#   docker volume create regmap-data
+#   docker run -d -p 8000:8000 -v regmap-data:/data \
+#     -e REGMAP_REQUIRE_AUTH=true regmap-engine:0.4-cpu
+#
 #   docker run --rm -p 8000:8000 regmap-engine:0.1                 # CPU host
 #   docker run --rm --gpus all -p 8000:8000 regmap-engine:0.1     # GPU host (needs NVIDIA Container Toolkit)
 #   curl localhost:8000/health        # -> reports the device it actually loaded on (cpu / cuda:0)
@@ -40,6 +44,8 @@ RUN if [ -n "$TORCH_INDEX" ]; then \
 # The engine (code + framework catalog) and the released embedder.
 COPY regmap_engine /app/regmap_engine
 COPY models/regmap-embedder-v2 /app/models/regmap-embedder-v2
+# Operator CLI for accounts, API keys and usage — run it with `docker exec`.
+COPY scripts/regmap_admin.py /app/scripts/regmap_admin.py
 
 # Version stamp for reproducibility — surfaced in /health, /usage and every /map response.
 ARG ENGINE_VERSION=0.2
@@ -47,7 +53,11 @@ ARG MODEL_VERSION=regmap-embedder@0.2
 
 # Standalone: the model is local, so forbid any runtime call-home to Hugging Face.
 # Device is auto-detected at startup (cuda if visible, else cpu); force it with REGMAP_DEVICE if needed.
-ENV REGMAP_MODEL=/app/models/regmap-embedder-v2 \
+# Ledger defaults onto the /data volume. Point DATABASE_URL at managed Postgres for
+# multi-replica production; SQLite is single-writer, so the Deployment is pinned to one
+# replica while using it.
+ENV DATABASE_URL=sqlite:////data/regmap.db \
+    REGMAP_MODEL=/app/models/regmap-embedder-v2 \
     REGMAP_ENGINE_VERSION=${ENGINE_VERSION} \
     REGMAP_MODEL_VERSION=${MODEL_VERSION} \
     HF_HUB_OFFLINE=1 \
@@ -66,6 +76,13 @@ RUN cd /app/regmap_engine \
 # Run as a non-root user (security: smaller blast radius, passes image scanners' root check).
 # The engine only reads /app at runtime, so root ownership is left in place deliberately.
 RUN useradd -m -u 10001 appuser
+
+# The billing ledger must be writable by the runtime user AND survive container restarts, so it lives
+# on a declared volume rather than in the image's writable layer. Without this the SQLite database is
+# destroyed on every restart, silently discarding the usage records billing depends on.
+RUN mkdir -p /data && chown 10001:10001 /data
+VOLUME ["/data"]
+
 USER appuser
 
 WORKDIR /app/regmap_engine

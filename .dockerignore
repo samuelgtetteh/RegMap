@@ -32,6 +32,9 @@ docs/
 paper/
 notebooks/
 scripts/
+# The operator CLI ships in the image: accounts and API keys are provisioned by an
+# operator inside the running container, so it has to be there.
+!scripts/regmap_admin.py
 data/           # raw framework downloads; importers run before the build, not inside it
 models/**/eval/
 models/**/*.md

@@ -659,3 +659,65 @@ limits, quota gate), `compute_units.py` (the billable unit), `scripts/regmap_adm
 **NEXT ACTION — Phase C: payments.** Stripe subscriptions plus usage records for overage, webhooks →
 `subscriptions`, self-serve signup, and a usage dashboard. Needs your Stripe account. Also outstanding
 and cheap: a LICENSE file, and a README refresh.
+
+---
+
+## Production-grade verification on SQLite — 2026-08-04
+
+Decision: stay on SQLite for now; Postgres when real users arrive. That is workable, but only because
+the ledger was made **durable** — an ephemeral billing database makes any billing test meaningless.
+
+### What changed to make SQLite viable
+- [x] **Dockerfile**: `/data` created and chowned to uid 10001, declared as `VOLUME`, and
+      `DATABASE_URL` defaults to `sqlite:////data/regmap.db`. The runtime user is non-root against a
+      root-owned `/app`, so the ledger could not have lived there; and without the volume it would sit
+      in the container's writable layer and vanish on every restart.
+- [x] **`k8s/pvc.yaml`** (new): 1Gi ReadWriteOnce claim, mounted at `/data`.
+- [x] **`deployment.yaml` pinned to `replicas: 1`** with the reason inline. SQLite is single-writer and
+      the PVC is ReadWriteOnce, so a second replica either fails to schedule or splits the ledger.
+- [x] **HPA removed from `kustomization.yaml`** and the file itself carries a DO-NOT-APPLY warning.
+      Autoscaling with a SQLite ledger would silently corrupt billing — this was live in the
+      kustomization and would have been applied.
+- [x] **`scripts/regmap_admin.py` now ships in the image** (`.dockerignore` excluded `scripts/`), since
+      accounts and keys are provisioned by an operator inside the running container.
+- [x] Rebuilt as **`regmap-engine:0.4-cpu`**.
+
+### `scripts/smoke_test.sh` — 40/40 passing
+Black-box over HTTP against the deployed container, so it tests what a customer hits. Creates its own
+volume and account, and removes both on exit.
+
+| group | covered |
+|---|---|
+| auth | no key 401 · bogus 401 · valid 200 · `X-API-Key` also accepted · revoked 401 |
+| public surface | `/health` 200 and body is exactly `{"status":"ok"}` · `/pricing` · `/frameworks` |
+| admin gating | `/health/detail` 403→200 · `/docs` 401→200 · `/usage` 403 · `/admin/accounts` 403→200 |
+| **billing determinism** | same request billed **0.5500 CU three times**; scales 0.5500 (60 ctl) → 1.0280 (1016 ctl); correct account on the charge |
+| ledger | `/me` usage moves 4.878 → 5.428 CU; `key_hash` never exposed |
+| quota | over-quota **402**, and the rejected request **consumed nothing** (still 299.9 CU) |
+| rate limit | `/eval` **429** after 4/min with `Retry-After` |
+| **durability** | ledger identical across a container restart; key still valid afterwards |
+| reconciliation | counter corrupted to 99,999 CU, rebuilt to 61.15 from the event log |
+| product | all six pages 200 · exercise sets · bulk gap analysis runs |
+
+### Kubernetes — deployed and verified on kind
+- [x] `kubectl apply -k regmap_engine/k8s` → namespace, PVC **Bound**, Service, NetworkPolicy,
+      Deployment rolled out on `regmap-labs-worker`.
+- [x] Account provisioned in-cluster, driven through the **Service** via port-forward, 5 requests
+      recorded (2.75 CU).
+- [x] **Ledger survived pod replacement**: deleted the pod, k8s rescheduled it, and the new pod read
+      back `2.75|5` unchanged from the PVC. That is the property that makes SQLite acceptable for now.
+
+### Environment gotchas found (cost real time)
+- **Git Bash rewrites POSIX paths.** `docker exec … /app/scripts/x.py` arrived as
+  `C:/Program Files/Git/app/scripts/x.py`. `MSYS_NO_PATHCONV=1` and `MSYS2_ARG_CONV_EXCL='*'` are now
+  set at the top of `smoke_test.sh`.
+- **Long `&&` chains hide failures in tests.** A broken chain made a passing durability check report
+  `LEDGER LOST DATA` when the data was intact. Rewritten with explicit variables.
+- **`kubectl` context drifts.** Docker Desktop's own Kubernetes became the active context after a
+  restart, so `kubectl` was talking to an 8-node desktop cluster rather than kind. Check
+  `kubectl config current-context` before believing cluster output.
+
+### Still not covered
+- [ ] **Postgres** — untested by design for now; multi-replica and HPA stay disabled until then.
+- [ ] **Payment capture** — the ledger computes what is owed; nothing charges a card (Phase C).
+- [ ] GPU tier, KEDA scale-to-zero, multi-replica behaviour.

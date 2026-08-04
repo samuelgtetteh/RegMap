@@ -1,0 +1,23 @@
+# Durable storage for the billing ledger.
+#
+# While the ledger is SQLite this is REQUIRED, not optional: without it the database lives in the pod's
+# writable layer and is destroyed on every restart, rollout and rescheduling — silently discarding the
+# usage records billing depends on.
+#
+# ReadWriteOnce is deliberate and it is also the constraint that forces replicas: 1 (see deployment.yaml).
+# SQLite is a single-writer database, so two pods sharing one file is not a supported configuration.
+# Moving to managed Postgres is what lifts that limit — at which point this PVC is no longer needed and
+# DATABASE_URL points at the database instead.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: regmap-ledger
+  namespace: regmap
+  labels:
+    app.kubernetes.io/name: regmap-engine
+    app.kubernetes.io/component: ledger
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi

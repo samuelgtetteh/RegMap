@@ -1,3 +1,7 @@
+# ⚠️ DO NOT APPLY WHILE THE LEDGER IS SQLITE.
+# SQLite is single-writer and the ledger PVC is ReadWriteOnce, so scaling past one replica
+# either fails to schedule or splits the billing ledger across pods. This manifest is kept
+# out of kustomization.yaml until DATABASE_URL points at managed Postgres.
 # Horizontal autoscaling for the CPU tier. Needs metrics-server in the cluster
 # (Docker Desktop doesn't ship it — the HPA still applies, it just reports <unknown>
 # until metrics-server is installed). On a real cluster this scales replicas with load,
