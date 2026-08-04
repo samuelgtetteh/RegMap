@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegMap — coverage and gap analysis</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="gaps">
+
+<section class="section pad bleed" style="padding-top:34px">
+  <div class="eyebrow">Gap analysis</div>
+  <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Where does one framework leave you against another?</h1>
+  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 0;max-width:76ch">
+    Map an entire control set in one pass. Coverage and gaps are computed from the <b>official published
+    crosswalk</b>, so the gap list says nothing about the model — it is a statement about the published
+    mapping, and it can go into a report.
+  </p>
+</section>
+
+<section class="section tight pad bleed">
+  <div class="xwalk-bar">
+    <label class="fld">We comply with
+      <select id="src"><option value="">Loading…</option></select>
+    </label>
+    <div class="arrow">→</div>
+    <label class="fld">Assess against
+      <select id="tgt"><option value="">Loading…</option></select>
+    </label>
+  </div>
+  <div class="xwalk-meta" id="routeMeta"></div>
+  <div style="display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap">
+    <button class="btn primary" id="run">Run analysis →</button>
+    <button class="btn ghost" id="csv" disabled>Export CSV</button>
+    <span id="status" style="font-size:13px;color:var(--muted)"></span>
+  </div>
+</section>
+
+<hr class="divider">
+
+<section class="section pad bleed" id="out" style="padding-top:22px"></section>
+
+<footer class="site-footer pad bleed">
+  RegMap · coverage and gaps computed from official crosswalks, not model output.
+</footer>
+
+<script src="assets/api.js"></script>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const src = $("src"), tgt = $("tgt"), out = $("out"), run = $("run"), csv = $("csv"),
+        status = $("status"), routeMeta = $("routeMeta");
+  const esc = RegMap.esc;
+  let PAIRS = [], FW = [], last = null;
+
+  const name = id => (FW.find(f => f.id === id) || {}).name || id;
+
+  async function boot() {
+    let fw, pr;
+    try { [fw, pr] = await Promise.all([RegMap.frameworks(), RegMap.pairs()]); }
+    catch (e) { out.innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+    FW = fw.frameworks;
+    // A gap number is only meaningful where a mapping exists at all — including mapping-only targets,
+    // since gaps are computed from identifiers and need no control text.
+    PAIRS = pr.pairs;
+    const sources = [...new Set(PAIRS.map(p => p.source))];
+    src.innerHTML = sources.map(s => `<option value="${esc(s)}">${esc(name(s))}</option>`).join("");
+    const best = PAIRS.filter(p => p.authoritative)
+                      .sort((a, b) => b.target_controls - a.target_controls)[0] || PAIRS[0];
+    src.value = best.source; fillTargets(best.target); onPair();
+    go();
+  }
+
+  function fillTargets(prefer) {
+    const ts = PAIRS.filter(p => p.source === src.value).map(p => p.target);
+    tgt.innerHTML = ts.map(t => `<option value="${esc(t)}">${esc(name(t))}</option>`).join("");
+    if (prefer && ts.includes(prefer)) tgt.value = prefer;
+  }
+
+  function onPair() {
+    const p = PAIRS.find(p => p.source === src.value && p.target === tgt.value);
+    if (!p) { routeMeta.innerHTML = `<span class="pill crit">no route</span>`; return; }
+    const b = RegMap.routeBadge(p.route, p.authoritative);
+    routeMeta.innerHTML = `<span class="pill ${b.cls}">${esc(b.label)}</span>`
+      + `<span>${p.source_controls} → ${p.target_controls || "identifiers only"} controls</span>`
+      + (p.rankable ? "" : `<span>target text is licensed — gaps by identifier only</span>`);
+  }
+
+  async function go() {
+    run.disabled = true; csv.disabled = true;
+    status.innerHTML = `<span class="spin"></span> mapping the control set…`;
+    let d;
+    try { d = await RegMap.bulk({ source: src.value, target: tgt.value, top_k: 3 }); }
+    catch (e) { run.disabled = false; status.textContent = "";
+      out.innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+    run.disabled = false; csv.disabled = false; status.textContent = "";
+    last = d; render(d);
+  }
+
+  function render(d) {
+    const c = d.counts;
+    const pct = d.coverage_pct == null ? 0 : d.coverage_pct;
+    const cls = pct >= 70 ? "good" : pct >= 35 ? "mid" : "bad";
+
+    const gapChips = d.gaps.slice(0, 120).map(g =>
+      `<div class="gap-chip"><b>${esc(g.id)}</b><span>${esc(g.title || "")}</span></div>`).join("");
+
+    const mapped = d.rows.filter(r => r.official.length);
+    const unmapped = d.rows.filter(r => !r.official.length);
+
+    out.innerHTML = `
+      <div class="row-head">
+        <h2 style="font-size:20px">${esc(d.source_framework)} → ${esc(d.target_framework)}</h2>
+        <span style="font-size:13px;color:var(--muted)">route ${esc(d.route)} ·
+          ${d.authoritative ? "authoritative" : "derived — advisory only"}</span>
+      </div>
+
+      ${d.truncated ? `<div class="note" style="margin-bottom:12px"><b>Partial run.</b>
+        ${esc(d.note)}</div>` : ""}
+
+      <div class="cov">
+        <div><span class="k">controls mapped</span><span class="v">${c.controls_submitted}</span></div>
+        <div><span class="k">with official mapping</span><span class="v good">${c.with_official_mapping}</span></div>
+        <div><span class="k">no official mapping</span><span class="v mid">${c.without_official_mapping}</span></div>
+        <div><span class="k">${esc(d.target)} covered</span><span class="v ${cls}">${c.target_covered}<span
+          style="font-size:13px;color:var(--faint);font-weight:400"> / ${c.target_universe}</span></span></div>
+        <div><span class="k">gaps</span><span class="v bad">${c.target_gaps}</span></div>
+        <div><span class="k">coverage</span><span class="v ${cls}">${pct}%</span></div>
+      </div>
+      <div class="bar" style="margin-top:10px"><i style="width:${pct}%"></i></div>
+      <p style="font-size:13px;color:var(--muted);margin-top:10px">
+        Complying with these ${c.controls_submitted} ${esc(d.source_framework)} controls addresses
+        <b>${c.target_covered}</b> of ${c.target_universe} ${esc(d.target_framework)} provisions.
+        The remaining <b>${c.target_gaps}</b> are not covered by this control set at all.
+      </p>
+
+      <div class="row-head" style="margin-top:30px"><h2 style="font-size:18px">Gaps —
+        unaddressed in ${esc(d.target_framework)}</h2>
+        <span style="font-size:13px;color:var(--muted)">${d.gaps.length > 120
+          ? `showing first 120 of ${d.gaps.length}` : `${d.gaps.length} total`}</span></div>
+      ${d.gaps.length ? `<div class="gap-grid">${gapChips}</div>`
+                      : `<div class="note">No gaps — every provision is addressed.</div>`}
+
+      <div class="row-head" style="margin-top:30px"><h2 style="font-size:18px">Mapped controls</h2>
+        <span style="font-size:13px;color:var(--muted)">${mapped.length} with an official target</span></div>
+      <div style="overflow-x:auto"><table class="mtx"><tr><th class="rowh">Control</th>
+        <th>Maps to (official)</th></tr>
+        ${mapped.slice(0, 60).map(r => `<tr>
+          <th class="rowh"><span class="mono">${esc(r.source_id)}</span>
+            <div class="sub" style="font-family:var(--sans);white-space:normal">${esc(r.title || "")}</div></th>
+          <td style="white-space:normal">${r.official.map(o => `<span class="pill ok"
+            style="margin:2px 4px 2px 0">${esc(o)}</span>`).join("")}</td></tr>`).join("")}
+      </table></div>
+      ${mapped.length > 60 ? `<p style="font-size:12.5px;color:var(--faint);margin-top:8px">
+        showing 60 of ${mapped.length} — export the CSV for the full set.</p>` : ""}
+
+      ${unmapped.length ? `
+      <div class="row-head" style="margin-top:30px"><h2 style="font-size:18px">No official mapping</h2>
+        <span style="font-size:13px;color:var(--muted)">model suggestions — require review</span></div>
+      <div class="note" style="margin-bottom:10px">These controls have no entry in the published
+        crosswalk. The suggestions below come from the model and are <b>not authoritative</b> — treat them
+        as a starting point for an expert, not as evidence.</div>
+      <div style="overflow-x:auto"><table class="mtx"><tr><th class="rowh">Control</th>
+        <th>Model suggests</th></tr>
+        ${unmapped.slice(0, 30).map(r => `<tr>
+          <th class="rowh"><span class="mono">${esc(r.source_id)}</span>
+            <div class="sub" style="font-family:var(--sans);white-space:normal">${esc(r.title || "")}</div></th>
+          <td style="white-space:normal">${r.suggested.length
+            ? r.suggested.map(s => `<span class="pill warn" style="margin:2px 4px 2px 0">${esc(s.id)}
+                ${s.score.toFixed(2)}</span>`).join("")
+            : `<span style="color:var(--faint)">—</span>`}</td></tr>`).join("")}
+      </table></div>` : ""}`;
+  }
+
+  /* CSV export — the deliverable a GRC team actually takes away. */
+  function download() {
+    if (!last) return;
+    const rows = [["type", "source_framework", "source_id", "source_title",
+                   "target_framework", "target_id", "provenance"]];
+    last.rows.forEach(r => r.official.forEach(o =>
+      rows.push(["mapping", last.source_framework, r.source_id, r.title,
+                 last.target_framework, o, last.authoritative ? "official" : "derived"])));
+    last.rows.forEach(r => r.suggested.forEach(s =>
+      rows.push(["suggestion", last.source_framework, r.source_id, r.title,
+                 last.target_framework, s.id, "model-suggested (not authoritative)"])));
+    last.gaps.forEach(g =>
+      rows.push(["gap", last.source_framework, "", "", last.target_framework, g.id, "unaddressed"]));
+
+    const esc2 = v => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+    const blob = new Blob([rows.map(r => r.map(esc2).join(",")).join("\r\n")],
+                          { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `regmap_${last.source}_to_${last.target}_gap_analysis.csv`;
+    a.click(); URL.revokeObjectURL(a.href);
+  }
+
+  src.addEventListener("change", () => { fillTargets(); onPair(); });
+  tgt.addEventListener("change", onPair);
+  run.addEventListener("click", go);
+  csv.addEventListener("click", download);
+  boot();
+})();
+</script>
+</body>
+</html>

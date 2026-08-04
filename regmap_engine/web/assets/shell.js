@@ -10,6 +10,8 @@
   const NAV = [
     { id: "home",       label: "Home",       href: "/" },
     { id: "crosswalk",  label: "Crosswalk",  href: "/crosswalk.html" },
+    { id: "gaps",       label: "Gap analysis", href: "/gaps.html" },
+    { id: "learn",      label: "Practise",   href: "/learn.html" },
     { id: "frameworks", label: "Frameworks", href: "/frameworks.html" },
     { id: "deploy",     label: "Deploy",     href: "/deploy.html" },
   ];

@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegMap — practise control mapping</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="learn">
+
+<section class="section pad bleed" style="padding-top:34px">
+  <div class="eyebrow">Practice · graded</div>
+  <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Map the control</h1>
+  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 0;max-width:74ch">
+    You are given a control from one framework and a set of candidate provisions from another. Select the
+    ones that genuinely map. Your answer is scored against the <b>official published crosswalk</b> — not
+    against an opinion — so this is the same judgement an auditor is paid to make.
+  </p>
+  <div class="note" style="margin-top:16px;max-width:74ch">
+    <b>Selecting everything will fail you.</b> Scoring uses precision and recall, so over-selecting is
+    penalised exactly as much as missing. That is deliberate: an auditor who maps a control to everything
+    has done no work.
+  </div>
+</section>
+
+<section class="section tight pad bleed">
+  <div class="xwalk-bar">
+    <label class="fld">From framework
+      <select id="src"><option value="">Loading…</option></select>
+    </label>
+    <div class="arrow">→</div>
+    <label class="fld">To framework
+      <select id="tgt"><option value="">Loading…</option></select>
+    </label>
+  </div>
+  <div class="xwalk-meta" id="routeMeta"></div>
+  <div style="display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap">
+    <button class="btn primary" id="newq">New exercise →</button>
+    <label class="fld" style="flex-direction:row;align-items:center;gap:8px;text-transform:none">
+      <span style="font-size:12px">Difficulty</span>
+      <select id="distractors" style="width:auto;padding:7px 10px">
+        <option value="4">easier — 4 distractors</option>
+        <option value="8" selected>standard — 8</option>
+        <option value="14">harder — 14</option>
+      </select>
+    </label>
+    <span id="tally" class="mono" style="font-size:12.5px;color:var(--muted)"></span>
+  </div>
+</section>
+
+<hr class="divider">
+
+<section class="section pad bleed" id="out" style="padding-top:22px"></section>
+
+<footer class="site-footer pad bleed">
+  RegMap · graded against official government crosswalks · NICE task T0267
+</footer>
+
+<script src="assets/api.js"></script>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const src = $("src"), tgt = $("tgt"), out = $("out"), newq = $("newq"),
+        routeMeta = $("routeMeta"), tally = $("tally"), distractors = $("distractors");
+  let PAIRS = [], FW = [], current = null;
+  const stats = { attempts: 0, passed: 0, f1: [] };
+
+  const esc = RegMap.esc;
+
+  function showTally() {
+    if (!stats.attempts) { tally.textContent = ""; return; }
+    const avg = stats.f1.reduce((a, b) => a + b, 0) / stats.f1.length;
+    tally.textContent = `session: ${stats.passed}/${stats.attempts} passed · mean F1 ${avg.toFixed(2)}`;
+  }
+
+  /* Only pairs with an AUTHORITATIVE mapping can be graded — a derived route is advisory, so grading
+     against it would be marking a learner against a guess. */
+  async function boot() {
+    let fw, pr;
+    try { [fw, pr] = await Promise.all([RegMap.frameworks(), RegMap.pairs()]); }
+    catch (e) { out.innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+    FW = fw.frameworks;
+    PAIRS = pr.pairs.filter(p => p.authoritative && p.rankable);
+    if (!PAIRS.length) {
+      out.innerHTML = `<div class="note err">No pair has an official mapping to grade against.</div>`;
+      newq.disabled = true; return;
+    }
+    const name = id => (FW.find(f => f.id === id) || {}).name || id;
+    const sources = [...new Set(PAIRS.map(p => p.source))];
+    src.innerHTML = sources.map(s => `<option value="${esc(s)}">${esc(name(s))}</option>`).join("");
+    // default to the pair with the most official mappings behind it
+    const best = PAIRS.slice().sort((a, b) => b.source_controls - a.source_controls)[0];
+    src.value = best.source;
+    fillTargets(best.target);
+    onPair();
+    run();
+  }
+
+  function fillTargets(prefer) {
+    const name = id => (FW.find(f => f.id === id) || {}).name || id;
+    const ts = PAIRS.filter(p => p.source === src.value).map(p => p.target);
+    tgt.innerHTML = ts.map(t => `<option value="${esc(t)}">${esc(name(t))}</option>`).join("");
+    if (prefer && ts.includes(prefer)) tgt.value = prefer;
+  }
+
+  function onPair() {
+    const p = PAIRS.find(p => p.source === src.value && p.target === tgt.value);
+    routeMeta.innerHTML = p
+      ? `<span class="pill ok">official — ${esc(p.route)}</span>`
+        + `<span>graded against the published crosswalk</span>`
+      : `<span class="pill crit">not gradable</span>`;
+  }
+
+  /* ---- set an exercise ---------------------------------------------------- */
+  async function run() {
+    newq.disabled = true;
+    out.innerHTML = `<div class="note"><span class="spin"></span> setting an exercise…</div>`;
+    try {
+      current = await RegMap.exercise({ source: src.value, target: tgt.value,
+                                        distractors: Number(distractors.value) });
+    } catch (e) {
+      newq.disabled = false;
+      out.innerHTML = `<div class="note err">${esc(e.message)}</div>`; return;
+    }
+    newq.disabled = false;
+    render(current);
+  }
+
+  function render(ex) {
+    out.innerHTML = `
+      <div class="row-head">
+        <h2 style="font-size:20px">${esc(ex.prompt.id)} · ${esc(ex.prompt.title || "")}</h2>
+        <span style="font-size:13px;color:var(--muted)">${esc(ex.source_framework)} →
+          ${esc(ex.target_framework)}</span>
+      </div>
+      <div class="cov" style="display:block">
+        <div class="k" style="margin-bottom:6px">the control you must map</div>
+        <div style="font-size:14px;line-height:1.6">${esc(ex.prompt.text)}</div>
+      </div>
+      <p class="lead" style="font-size:14px;color:var(--muted);margin:16px 0 10px">
+        ${esc(ex.instructions)}</p>
+      <div class="res-list" id="cands">
+        ${ex.candidates.map((c, i) => `
+          <label class="res pick" data-id="${esc(c.id)}" style="cursor:pointer;grid-template-columns:26px 1fr">
+            <input type="checkbox" value="${esc(c.id)}" style="width:16px;height:16px;margin-top:3px">
+            <div>
+              <span class="cid">${esc(c.id)}</span>
+              ${c.title ? `<div class="ctitle">${esc(c.title)}</div>` : ""}
+              <div class="ctext" style="-webkit-line-clamp:3">${esc(c.text)}</div>
+            </div>
+          </label>`).join("")}
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap">
+        <button class="btn primary" id="submit">Submit answer</button>
+        <span id="picked" style="font-size:13px;color:var(--muted)">0 selected</span>
+      </div>
+      <div id="result" style="margin-top:20px"></div>`;
+
+    const boxes = [...out.querySelectorAll('#cands input[type=checkbox]')];
+    const upd = () => { $("picked").textContent =
+      `${boxes.filter(b => b.checked).length} selected`; };
+    boxes.forEach(b => b.addEventListener("change", upd));
+    $("submit").addEventListener("click", () => grade(boxes));
+  }
+
+  /* ---- grade + reveal ---------------------------------------------------- */
+  async function grade(boxes) {
+    const selected = boxes.filter(b => b.checked).map(b => b.value);
+    const btn = $("submit"); btn.disabled = true;
+    let g;
+    try { g = await RegMap.grade({ token: current.token, selected }); }
+    catch (e) { btn.disabled = false;
+      $("result").innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+
+    boxes.forEach(b => b.disabled = true);
+    const s = g.score, c = g.counts;
+    const cls = v => v >= 0.7 ? "good" : v >= 0.4 ? "mid" : "bad";
+
+    // colour each option by outcome so the learner sees exactly where the judgement went wrong
+    const byId = {};
+    g.correct.forEach(x => byId[x.id] = "correct");
+    g.missed.forEach(x => byId[x.id] = "missed");
+    g.incorrect.forEach(x => byId[x.id] = "incorrect");
+    out.querySelectorAll(".res.pick").forEach(el => {
+      const verdict = byId[el.dataset.id];
+      if (!verdict) return;
+      el.classList.add("mark-" + verdict);
+      const tagText = verdict === "correct" ? "correct"
+                    : verdict === "missed" ? "missed this one" : "does not map";
+      const pill = verdict === "correct" ? "ok" : verdict === "missed" ? "warn" : "crit";
+      el.querySelector(".cid").insertAdjacentHTML("afterend",
+        `<span class="pill ${pill}" style="margin-left:8px">${tagText}</span>`);
+    });
+
+    stats.attempts++; if (s.passed) stats.passed++; stats.f1.push(s.f1); showTally();
+
+    $("result").innerHTML = `
+      <div class="cov">
+        <div><span class="k">precision</span><span class="v ${cls(s.precision)}">${s.precision.toFixed(2)}</span></div>
+        <div><span class="k">recall</span><span class="v ${cls(s.recall)}">${s.recall.toFixed(2)}</span></div>
+        <div><span class="k">F1</span><span class="v ${cls(s.f1)}">${s.f1.toFixed(2)}</span></div>
+        <div><span class="k">result</span><span class="v ${s.passed ? "good" : "bad"}"
+          style="font-size:15px;padding-top:4px">${s.passed ? "PASS" : "FAIL"}</span></div>
+        <div><span class="k">threshold</span><span class="v" style="font-size:15px;padding-top:4px">F1 ≥ ${s.pass_threshold}</span></div>
+      </div>
+      <div class="note" style="margin-top:12px">
+        The official crosswalk lists <b>${c.official}</b> provision${c.official === 1 ? "" : "s"} for
+        ${esc(g.source_id)}. You selected ${c.selected}, of which <b>${c.correct}</b> were right;
+        you missed ${c.missed} and included ${c.incorrect} that do not map.
+        ${c.incorrect > 0 && c.missed === 0
+          ? " Recall was fine — the loss was precision, so you were too inclusive."
+          : ""}
+        ${c.missed > 0 && c.incorrect === 0
+          ? " Precision was fine — you were too conservative and left correct mappings out."
+          : ""}
+        <div class="sub" style="margin-top:8px">Evidence recorded against NICE task
+          ${esc(g.nice_task)} · route ${esc(g.route)}.</div>
+      </div>
+      <div style="margin-top:14px"><button class="btn ghost" id="again">Another exercise →</button></div>`;
+    $("again").addEventListener("click", run);
+  }
+
+  src.addEventListener("change", () => { fillTargets(); onPair(); });
+  tgt.addEventListener("change", onPair);
+  newq.addEventListener("click", run);
+  boot();
+})();
+</script>
+</body>
+</html>

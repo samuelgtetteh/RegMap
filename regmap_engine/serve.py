@@ -7,6 +7,9 @@ Serves the compliance control catalog as a microservice:
   GET  /pairs               — every framework pair this instance can answer, and by what route
   POST /map                 — rank a target framework's controls for a control / free-text intent
   POST /eval                — retrieval metrics for a pair (Recall@k / nDCG@k / MRR / MAP)
+  POST /map/bulk            — map a whole control set; coverage % and the official gap list
+  POST /exercise            — set a graded mapping exercise (candidates only, no answer)
+  POST /exercise/grade      — score a submission against the official crosswalk and reveal
   GET  /usage               — cumulative metered compute (see the billing caveat below)
 
 Backed by `catalog.py` (hub-and-spoke: control text once per framework, mappings by id), so a pair is
@@ -24,8 +27,11 @@ docs/hosted_saas_roadmap.md. Do not invoice from this; the customer-attributed m
 
 Run locally:  uvicorn serve:app --host 0.0.0.0 --port 8000
 """
+import base64
 import hashlib
+import hmac
 import os
+import random
 import json as _json
 import time
 from pathlib import Path
@@ -481,3 +487,245 @@ def eval_pair(req: EvalReq):
         if pq:
             out["methods"][name] = {k: round(v, 4) for k, v in aggregate(pq).items()}
     return out
+
+
+# =====================================================================================================
+# BULK MAPPING + GAP ANALYSIS  — the GRC-team surface
+# =====================================================================================================
+
+class BulkReq(BaseModel):
+    source: str = Field(..., description="source framework id")
+    target: str = Field(..., description="target framework id")
+    source_ids: Optional[List[str]] = Field(
+        None, description="controls to map; omit for the whole source framework (capped)")
+    top_k: int = Field(5, ge=1, le=25)
+
+
+# Bulk encodes one query per control, so it is by far the heaviest endpoint. Cap it rather than let a
+# single request tie up a worker for minutes — the UI pages through instead.
+BULK_MAX = int(os.environ.get("REGMAP_BULK_MAX", "150"))
+
+
+@app.post("/map/bulk")
+def map_bulk(req: BulkReq):
+    """Map a whole control set in one pass and report coverage and gaps.
+
+    Answers the question a GRC team actually has — "we comply with X, so where does that leave us
+    against Y, and what is missing?" — rather than one control at a time.
+
+    `gaps` are target provisions that NO control in the submitted set maps to, computed from the
+    official crosswalk. That is the defensible number: it says nothing about the model, only about the
+    published mapping, so it can go into a report.
+    """
+    src = _require(req.source, "source")
+    tgt_resolved = _resolve_fid(req.target)
+    rankable = (tgt_resolved or "") in _controls
+    tgt = _require(req.target, "target", need_text=rankable)
+
+    mapping, route = cat.resolve(src, tgt)
+    ids = req.source_ids or sorted(_controls[src])
+    truncated = len(ids) > BULK_MAX
+    ids = ids[:BULK_MAX]
+
+    tgt_ctl = _controls.get(tgt, {})
+    rows, covered = [], set()
+    for sid in ids:
+        if sid not in _controls[src]:
+            continue
+        official = sorted({t for t in (mapping or {}).get(sid, {}).get("targets", set())
+                           if not tgt_ctl or t in tgt_ctl})
+        covered.update(official)
+        row = {"source_id": sid, "title": _controls[src][sid]["title"],
+               "official": official, "official_count": len(official), "suggested": []}
+        # Only rank when the target has text, and only for controls with no official answer — that is
+        # where a suggestion adds something rather than restating the crosswalk.
+        if rankable and not official and _model is not None and tgt in _emb:
+            import numpy as np
+            cids, mat = _emb[tgt]
+            q = _model.encode([_controls[src][sid]["text"]], normalize_embeddings=True,
+                              show_progress_bar=False)[0]
+            sims = mat @ np.asarray(q)
+            order = sorted(range(len(cids)), key=lambda i: -sims[i])[:req.top_k]
+            row["suggested"] = [{"id": cids[i], "score": round(float(sims[i]), 4)} for i in order]
+        rows.append(row)
+
+    universe = set(tgt_ctl) if tgt_ctl else {t for v in (mapping or {}).values() for t in v["targets"]}
+    gaps = sorted(universe - covered)
+    with_official = sum(1 for r in rows if r["official"])
+
+    return {
+        "source": src, "target": tgt, "route": route,
+        "source_framework": _registry[src].get("name", src),
+        "target_framework": _registry[tgt].get("name", tgt),
+        "authoritative": route in ("direct", "inverted"),
+        "rankable": rankable,
+        "version": VERSION,
+        "counts": {
+            "controls_submitted": len(rows),
+            "with_official_mapping": with_official,
+            "without_official_mapping": len(rows) - with_official,
+            "target_universe": len(universe),
+            "target_covered": len(covered),
+            "target_gaps": len(gaps),
+        },
+        "coverage_pct": round(100 * len(covered) / len(universe), 1) if universe else None,
+        "gaps": [{"id": g, "title": tgt_ctl.get(g, {}).get("title", "")} for g in gaps],
+        "rows": rows,
+        "truncated": truncated,
+        "cap": BULK_MAX,
+        "note": (f"Only the first {BULK_MAX} controls were mapped; pass explicit source_ids to page "
+                 f"through the rest." if truncated else None),
+    }
+
+
+# =====================================================================================================
+# GRADED EXERCISE  — the learner surface
+# =====================================================================================================
+# The answer never reaches the browser. /exercise returns a shuffled candidate set plus a signed token
+# describing what was asked; /exercise/grade re-derives the official answer from the catalog and scores
+# the submission. The token is HMAC-signed so it cannot be edited to change the question, and it carries
+# no answer, so decoding it reveals nothing the learner cannot already see.
+
+_EX_SECRET = os.environ.get("REGMAP_EXERCISE_SECRET", "").encode() or os.urandom(32)
+
+
+def _sign(payload):
+    raw = _json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    body = base64.urlsafe_b64encode(raw).decode().rstrip("=")
+    sig = hmac.new(_EX_SECRET, body.encode(), hashlib.sha256).hexdigest()[:32]
+    return body + "." + sig
+
+
+def _unsign(token):
+    try:
+        body, sig = token.rsplit(".", 1)
+    except ValueError:
+        raise HTTPException(400, "malformed exercise token")
+    expect = hmac.new(_EX_SECRET, body.encode(), hashlib.sha256).hexdigest()[:32]
+    if not hmac.compare_digest(sig, expect):
+        raise HTTPException(400, "exercise token failed verification (was it edited?)")
+    pad = "=" * (-len(body) % 4)
+    return _json.loads(base64.urlsafe_b64decode(body + pad))
+
+
+class ExerciseReq(BaseModel):
+    source: str
+    target: str
+    source_id: Optional[str] = Field(None, description="omit to be given a random control")
+    distractors: int = Field(8, ge=2, le=20,
+                             description="plausible wrong options mixed in with the correct ones")
+
+
+@app.post("/exercise")
+def exercise(req: ExerciseReq):
+    """Set a graded control-mapping exercise. Returns candidates in random order and no answer.
+
+    The candidate set is every official target plus `distractors` plausible wrong ones drawn from the
+    model's nearest non-answers. Including all official targets matters: if candidates were only the
+    model's top-k, any gold target the model missed would be unreachable and a perfect score
+    impossible — that would grade the model, not the learner.
+    """
+    src = _require(req.source, "source")
+    tgt = _require(req.target, "target")
+    mapping, route = cat.resolve(src, tgt)
+    if not mapping:
+        raise HTTPException(404, f"no official mapping from '{src}' to '{tgt}' to grade against")
+
+    tgt_ctl = _controls[tgt]
+    gradable = [s for s, v in mapping.items()
+                if s in _controls[src] and any(t in tgt_ctl for t in v["targets"])]
+    if not gradable:
+        raise HTTPException(404, "no control in this pair has an official target we hold")
+
+    sid = req.source_id or random.choice(sorted(gradable))
+    if sid not in mapping or sid not in _controls[src]:
+        raise HTTPException(404, f"'{sid}' has no official mapping to grade against")
+    answer = sorted({t for t in mapping[sid]["targets"] if t in tgt_ctl})
+
+    # Distractors are the model's nearest non-answers, so wrong options are genuinely tempting rather
+    # than obviously absurd. Falls back to random sampling when no embedder is loaded.
+    wrong = []
+    if _model is not None and tgt in _emb:
+        import numpy as np
+        cids, mat = _emb[tgt]
+        q = _model.encode([_controls[src][sid]["text"]], normalize_embeddings=True,
+                          show_progress_bar=False)[0]
+        sims = mat @ np.asarray(q)
+        for i in sorted(range(len(cids)), key=lambda i: -sims[i]):
+            if cids[i] not in answer:
+                wrong.append(cids[i])
+            if len(wrong) >= req.distractors:
+                break
+    else:
+        pool = [c for c in tgt_ctl if c not in answer]
+        wrong = random.sample(pool, min(req.distractors, len(pool)))
+
+    candidates = list(answer) + wrong
+    random.shuffle(candidates)
+    token = _sign({"src": src, "tgt": tgt, "sid": sid, "cands": candidates})
+
+    return {
+        "token": token,
+        "source": src, "target": tgt,
+        "source_framework": _registry[src].get("name", src),
+        "target_framework": _registry[tgt].get("name", tgt),
+        "route": route, "authoritative": route in ("direct", "inverted"),
+        "prompt": {"id": sid, "title": _controls[src][sid]["title"],
+                   "text": _controls[src][sid]["text"]},
+        "candidates": [{"id": c, "title": tgt_ctl[c]["title"], "text": tgt_ctl[c]["text"]}
+                       for c in candidates],
+        "instructions": ("Select every provision of " + _registry[tgt].get("name", tgt) +
+                         " that this control maps to. There may be more than one, and some options do "
+                         "not map at all."),
+        "version": VERSION,
+    }
+
+
+class GradeReq(BaseModel):
+    token: str
+    selected: List[str] = Field(default_factory=list)
+
+
+@app.post("/exercise/grade")
+def exercise_grade(req: GradeReq):
+    """Score a submission against the official crosswalk and reveal the answer.
+
+    Graded on precision, recall and F1 rather than raw correctness, because the task is
+    multi-relevant: selecting everything would score perfect recall and near-zero precision, and that
+    is precisely the habit an auditor must not have.
+    """
+    p = _unsign(req.token)
+    src, tgt, sid = p["src"], p["tgt"], p["sid"]
+    if src not in _controls or tgt not in _controls:
+        raise HTTPException(409, "the catalog changed since this exercise was set")
+
+    mapping, route = cat.resolve(src, tgt)
+    answer = {t for t in (mapping or {}).get(sid, {}).get("targets", set()) if t in _controls[tgt]}
+    offered = set(p["cands"])
+    picked = {s for s in req.selected if s in offered}   # ignore anything not actually offered
+
+    tp = picked & answer
+    fp = picked - answer
+    fn = answer - picked
+    precision = len(tp) / len(picked) if picked else 0.0
+    recall = len(tp) / len(answer) if answer else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+    PASS = 0.70
+
+    ctl = _controls[tgt]
+
+    def detail(ids):
+        return [{"id": i, "title": ctl.get(i, {}).get("title", "")} for i in sorted(ids)]
+
+    return {
+        "source": src, "target": tgt, "source_id": sid, "route": route,
+        "authoritative": route in ("direct", "inverted"),
+        "score": {"precision": round(precision, 3), "recall": round(recall, 3), "f1": round(f1, 3),
+                  "pass_threshold": PASS, "passed": f1 >= PASS},
+        "counts": {"official": len(answer), "selected": len(picked),
+                   "correct": len(tp), "missed": len(fn), "incorrect": len(fp)},
+        "correct": detail(tp), "missed": detail(fn), "incorrect": detail(fp),
+        "official_answer": detail(answer),
+        "nice_task": "T0267 - assess control implementation and map to requirements",
+        "version": VERSION,
+    }

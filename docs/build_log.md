@@ -357,7 +357,40 @@ Artifacts: `models/regmap-embedder-v2/` + `MODEL_CARD.md` + `training_report.jso
 `ai-cybersecurity-portfolio/exhibits/`). Image rebuilt as **`regmap-engine:0.3-cpu`**.
 `models/regmap-embedder/` (@0.1) is deliberately untouched — the DTRAP figures need it.
 
-**NEXT ACTION — first student exercise (`web/learn.html`).** Everything needed already exists: pick a
+**A2 DONE 2026-08-04 — both audience surfaces are built.**
+
+- [x] **`web/learn.html` — the graded student exercise** (`aud-map-01`). Answer stays server-side:
+      `POST /exercise` returns shuffled candidates and an **HMAC-signed token** carrying only the question
+      and the candidate list; `POST /exercise/grade` re-derives the official answer from the catalog.
+      Verified the response leaks no answer key, the token payload is `{src,tgt,sid,cands}` only, and a
+      forged token is rejected with 400.
+      Graded on **precision/recall/F1**, pass at F1 >= 0.70 — so "select everything" scores P 0.143 /
+      F1 0.25 and **fails**, which is exactly the habit an auditor must not have. Candidates always
+      include every official target, so a perfect score is reachable (verified F1 1.0); otherwise the
+      exercise would be grading the model rather than the learner. Only pairs with an
+      **authoritative** route are offered — grading against a derived route would mark a learner against
+      a guess. Outcome colouring on reveal: correct / missed / does-not-map. Tagged NICE T0267.
+- [x] **`web/gaps.html` + `POST /map/bulk` — the GRC surface.** Maps a whole control set in one pass and
+      reports coverage plus the **official gap list**, computed by set difference over the published
+      crosswalk — so the gap number says nothing about the model and can go into a report. Controls with
+      no official entry get model suggestions, clearly labelled non-authoritative. CSV export tags every
+      row `official` / `model-suggested` / `gap`. Capped at `REGMAP_BULK_MAX` (150) because bulk encodes
+      one query per control; the response says so rather than silently truncating.
+      Measured: HIPAA -> 800-53 covers **133 of 1,016** controls, **883 gaps**, 13.1%.
+      CSF 2.0 -> 800-53 (first 150 of 207): 78 of 150 have an official mapping, 184 covered, 18.1%.
+- [x] Both wired into the nav; all six pages' JS validated; both screenshot-verified rendering real data.
+
+**NEXT ACTION — Phase B, the billing spine.** Both buyer-facing surfaces now exist, so the thing that
+gates revenue is next and it is strictly ordered: persistence -> API keys -> attributed metering -> CU
+redesign -> quotas -> Stripe. Fold in B7 (admin-gate `/docs` and `/usage`; **split** `/health` rather
+than gating it, because the k8s probes hit it) and rate-limit `/eval` and `/map/bulk`, which are now the
+two most expensive calls and both unauthenticated.
+
+**Also worth doing cheaply:** a LICENSE file (the public repo has none, which reads as all-rights-reserved
+and undercuts Exhibit 11B's "freely usable" claim) and a README refresh (it still describes the
+pre-catalog layout).
+
+**Superseded — the old next-action text, kept for context:** pick a
 random control from the source framework, hide the `official` flags, let the learner select which target
 provisions they think map, then score their selection against `official.target_ids` and reveal. That is
 **UI work only** — the answer key is already in the `/map` response, so there is no labelling and no

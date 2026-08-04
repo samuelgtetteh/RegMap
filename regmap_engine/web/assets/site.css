@@ -187,3 +187,23 @@ a.tile h3{color:var(--accent)}
 .fw .n{display:flex;flex-direction:column;gap:1px}
 .fw .sub{font-size:11.5px;color:var(--faint);font-family:var(--mono)}
 .fw.off{opacity:.55}
+
+/* ---- graded exercise outcomes (learn.html) -------------------------------- */
+.res.pick:hover{border-color:var(--accent)}
+.res.mark-correct{border-color:color-mix(in srgb,var(--ok) 55%,var(--line));
+  background:linear-gradient(90deg,rgba(61,220,132,.10),transparent 50%),var(--surface)}
+.res.mark-missed{border-color:color-mix(in srgb,var(--warn) 55%,var(--line));
+  background:linear-gradient(90deg,rgba(240,180,41,.10),transparent 50%),var(--surface)}
+.res.mark-incorrect{border-color:color-mix(in srgb,var(--crit) 55%,var(--line));
+  background:linear-gradient(90deg,rgba(255,92,122,.10),transparent 50%),var(--surface)}
+.res .sub{font-size:11.5px;color:var(--faint);font-family:var(--mono)}
+
+/* ---- gap analysis (gaps.html) -------------------------------------------- */
+.gap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-top:10px}
+.gap-chip{font-family:var(--mono);font-size:12px;padding:7px 10px;border-radius:9px;
+  background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.gap-chip b{color:var(--crit);font-size:12.5px}
+.gap-chip span{color:var(--faint);font-size:11px;font-family:var(--sans);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{height:9px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),var(--accent))}

@@ -35,6 +35,9 @@
     controls:   (fid, withText) => call(`/frameworks/${encodeURIComponent(fid)}/controls`
                                         + (withText ? "?include_text=true" : "")),
     map:        (payload)      => post("/map", payload),
+    bulk:       (payload)      => post("/map/bulk", payload),
+    exercise:   (payload)      => post("/exercise", payload),
+    grade:      (payload)      => post("/exercise/grade", payload),
     evaluate:   (payload)      => post("/eval", payload),
 
     /* Escape before interpolating control text into HTML — control statements contain quotes,
