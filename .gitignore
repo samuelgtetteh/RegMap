@@ -9,3 +9,12 @@ dist/
 
 # derived embedding vectors — rebuilt on demand from the catalog
 regmap_engine/catalog/.embeddings/
+
+# Manuscript under review at ACM DTRAP (DTRAP-2026-0121) — kept out of the public repo until the
+# venue decision. Mirrors the parent repo, which also gitignores paper.tex.
+paper/regmap/
+
+# Losing diagnostic checkpoint: the 4-epoch run scored worse held-out Recall@5 than the shipped model.
+# The finding stays reproducible from its training_report.json and data/processed/retrain-v2/eval_v2best.json,
+# so the 91 MB of weights need not be published.
+models/regmap-embedder-v2-best/
