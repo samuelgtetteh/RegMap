@@ -18,3 +18,6 @@ paper/regmap/
 # The finding stays reproducible from its training_report.json and data/processed/retrain-v2/eval_v2best.json,
 # so the 91 MB of weights need not be published.
 models/regmap-embedder-v2-best/
+
+# billing ledger (development only); production uses managed Postgres via DATABASE_URL
+*.db

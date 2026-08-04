@@ -86,27 +86,56 @@ kubectl -n regmap port-forward \
         <td>GPU-second to CPU-second ratio for the compute meter.</td></tr>
     <tr><th class="rowh mono">REGMAP_ENGINE_VERSION</th><td class="mono">0.2</td>
         <td>Stamped onto every response for reproducibility.</td></tr>
+    <tr><th class="rowh mono">DATABASE_URL</th><td class="mono">sqlite:///./regmap.db</td>
+        <td>Billing ledger. <b>Must be Postgres in production</b> — SQLite is destroyed on restart and
+            is per-replica, so usage records would be silently lost.</td></tr>
+    <tr><th class="rowh mono">REGMAP_REQUIRE_AUTH</th><td class="mono">false</td>
+        <td>Enforce API keys. Left off by default so the self-hosted tier keeps working unchanged; set
+            true for the hosted service. Admin endpoints are refused either way.</td></tr>
+    <tr><th class="rowh mono">REGMAP_BULK_MAX</th><td class="mono">150</td>
+        <td>Controls per <span class="mono">/map/bulk</span> call.</td></tr>
+    <tr><th class="rowh mono">REGMAP_RATE_BULK</th><td class="mono">10</td>
+        <td>Requests/minute per key for <span class="mono">/map/bulk</span>
+            (<span class="mono">REGMAP_RATE_EVAL</span> defaults to 4).</td></tr>
   </table></div>
 </section>
 
 <section class="band bleed">
   <div class="section pad">
-    <div class="row-head"><h2>Before this is a paid service</h2></div>
+    <div class="row-head"><h2>Metering and access control</h2></div>
     <p class="lead" style="font-size:14.5px;color:var(--muted);max-width:82ch;margin:0 0 14px">
-      The engine is deployable today, but it is not yet a billable multi-tenant service. Being straight
-      about the gap:
+      The engine now has a billing spine: accounts, hashed API keys with scopes, per-account usage
+      recorded to an immutable ledger, and monthly quotas enforced before work runs.
     </p>
     <div class="grid">
-      <div class="tile" style="box-shadow:none"><div class="body"><h3>No authentication</h3>
-        <p>Every endpoint is open to whoever can reach the port. API keys are the next piece of work.</p></div></div>
-      <div class="tile" style="box-shadow:none"><div class="body"><h3>The meter is not invoiceable</h3>
-        <p>Compute Units are recorded per request, but with no account attached, in memory, and per
-           replica — so they are diagnostics, not billing.</p></div></div>
-      <div class="tile" style="box-shadow:none"><div class="body"><h3>No quotas</h3>
-        <p>Nothing can reject a request or count it against a monthly allowance yet.</p></div></div>
+      <div class="tile" style="box-shadow:none"><div class="body"><h3>Deterministic Compute Units</h3>
+        <p>A charge is a function of the request — how many encodes, against how large a corpus — not of
+           elapsed time. The same call always costs the same, so a bill is predictable and a price per
+           call can be published. See <span class="mono">/pricing</span>.</p></div></div>
+      <div class="tile" style="box-shadow:none"><div class="body"><h3>Auditable ledger</h3>
+        <p>Every billable request writes an immutable event and increments a period counter in one
+           transaction. The events are the source of truth, so any counter can be rebuilt from them via
+           <span class="mono">/admin/reconcile</span>.</p></div></div>
+      <div class="tile" style="box-shadow:none"><div class="body"><h3>Quotas before work</h3>
+        <p>Admission is decided from an estimate, so an out-of-allowance caller gets
+           <span class="mono">402</span> without consuming compute. Plans may permit metered overage.</p></div></div>
+    </div>
+
+    <div class="row-head" style="margin-top:26px"><h2>Still outstanding</h2></div>
+    <div class="grid">
+      <div class="tile" style="box-shadow:none"><div class="body"><h3>No payment capture</h3>
+        <p>The ledger computes what is owed, including overage, but nothing charges a card. Stripe
+           integration and self-serve signup are the next phase.</p></div></div>
+      <div class="tile" style="box-shadow:none"><div class="body"><h3>Rate limiting is per replica</h3>
+        <p>An in-process token bucket, so with N replicas a caller effectively gets N times the limit.
+           Honest protection against a runaway script; real multi-tenant limiting needs shared state.</p></div></div>
+      <div class="tile" style="box-shadow:none"><div class="body"><h3>Postgres required in production</h3>
+        <p>The default SQLite ledger lives in the container's writable layer and this Deployment mounts
+           no volume — it is destroyed on restart and is per-replica. Set
+           <span class="mono">DATABASE_URL</span> before charging anyone.</p></div></div>
     </div>
     <p style="font-size:13px;color:var(--faint);margin-top:14px">
-      Tracked in <span class="mono">docs/hosted_saas_roadmap.md</span> (Phase B) and
+      Tracked in <span class="mono">docs/hosted_saas_roadmap.md</span> and
       <span class="mono">docs/build_log.md</span>.
     </p>
   </div>

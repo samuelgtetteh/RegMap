@@ -37,12 +37,17 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+import auth
+import billing
 import catalog as cat
+import compute_units as cu
 from eval_crosswalk import rank_tfidf, rank_bm25, score, aggregate
 
 HERE = Path(__file__).resolve().parent
@@ -67,7 +72,10 @@ GPU_CU_MULT = float(os.environ.get("REGMAP_GPU_CU_MULT", "8"))
 BILLABLE = {"/map", "/eval"}   # endpoints that consume model compute
 _usage = {"requests": 0, "cpu_seconds": 0.0, "gpu_seconds": 0.0, "compute_units": 0.0, "by_path": {}}
 
-app = FastAPI(title="RegMap crosswalk engine", version=VERSION["engine"])
+# /docs, /redoc and /openapi.json expose the whole API surface, so they are served from
+# admin-gated routes below rather than mounted publicly by FastAPI.
+app = FastAPI(title="RegMap crosswalk engine", version=VERSION["engine"],
+              docs_url=None, redoc_url=None, openapi_url=None)
 
 # --- website (this product's UI is part of regmap_engine) -----------------------------------------
 if (WEB / "assets").is_dir():
@@ -102,22 +110,46 @@ def _on_gpu():
 
 @app.middleware("http")
 async def _meter(request: Request, call_next):
+    """Record attributed usage after a billable request completes.
+
+    The Compute Unit is computed by the ENDPOINT (it depends on corpus size and how much work was
+    actually done) and left on `request.state.work_units`; this middleware turns that into a charge,
+    persists it against the account, and returns the derivation in headers. Wall-clock is still
+    measured but only as cost-of-goods telemetry -- it is never the billed quantity.
+    """
     t0 = time.perf_counter()
     resp = await call_next(request)
-    if request.url.path in BILLABLE:
-        dt = time.perf_counter() - t0
-        gpu = _on_gpu()
-        cu = dt * (GPU_CU_MULT if gpu else 1.0)
-        _usage["requests"] += 1
-        _usage["gpu_seconds" if gpu else "cpu_seconds"] += dt
-        _usage["compute_units"] += cu
-        _usage["by_path"][request.url.path] = _usage["by_path"].get(request.url.path, 0) + 1
-        resp.headers["x-regmap-compute-units"] = f"{cu:.4f}"
-        resp.headers["x-regmap-device"] = "gpu" if gpu else "cpu"
-        # NOTE: no account id — this cannot be invoiced from. See Phase B in the roadmap.
-        print("METER " + _json.dumps({"path": request.url.path, "seconds": round(dt, 4),
-              "device": "gpu" if gpu else "cpu", "compute_units": round(cu, 4),
-              "engine": VERSION["engine"]}), flush=True)
+    units = getattr(request.state, "work_units", None)
+    if units is None:
+        return resp
+
+    dt = time.perf_counter() - t0
+    gpu = _on_gpu()
+    charge = cu.quantise(units, gpu)
+    principal = getattr(request.state, "principal", None)
+
+    if principal:
+        try:
+            billing.record_usage(
+                principal, request.url.path, charge, units, "gpu" if gpu else "cpu", round(dt, 4),
+                detail=getattr(request.state, "billed_detail", None),
+                engine_version=VERSION["engine"], model_version=VERSION["model"])
+        except Exception as e:
+            # A ledger failure must be loud: unbilled usage is lost revenue, not a cosmetic problem.
+            print(f"BILLING-ERROR could not record usage for {principal.get('account_id')}: {e}",
+                  flush=True)
+            resp.headers["x-regmap-billing"] = "record-failed"
+
+    resp.headers["x-regmap-compute-units"] = f"{charge:.4f}"
+    resp.headers["x-regmap-work-units"] = f"{units:.4f}"
+    resp.headers["x-regmap-device"] = "gpu" if gpu else "cpu"
+    resp.headers["x-regmap-account"] = str(principal.get("account_id")) if principal else "unknown"
+    print("METER " + _json.dumps({
+        "account_id": principal.get("account_id") if principal else None,
+        "api_key_id": principal.get("id") if principal else None,
+        "path": request.url.path, "compute_units": charge, "work_units": round(units, 4),
+        "device": "gpu" if gpu else "cpu", "seconds": round(dt, 4),
+        "engine": VERSION["engine"], "model": VERSION["model"]}), flush=True)
     return resp
 
 
@@ -193,6 +225,10 @@ def _embed_framework(fid, controls):
 def _startup():
     global _registry
     t0 = time.perf_counter()
+    for w in billing.startup():
+        print(f"[regmap] WARNING: {w}", flush=True)
+    print(f"[regmap] billing: {'ENFORCED' if auth.REQUIRE_AUTH else 'open (REGMAP_REQUIRE_AUTH=false)'}"
+          f" · db={'sqlite' if billing.is_sqlite() else 'postgres'}", flush=True)
     _load_model()
     _registry = cat.load_registry()
     stats = []
@@ -270,20 +306,74 @@ def _tfidf_scored(query, corpus, top_k):
 
 @app.get("/health")
 def health():
+    """Liveness only, deliberately minimal and unauthenticated.
+
+    k8s startup, readiness AND liveness probes all target this path, so requiring a credential here
+    would leave every pod permanently unready and take the deployment down. The detail that used to
+    live here -- model filesystem path, device, framework list -- moved to /health/detail behind the
+    admin scope, because it is operator information.
+    """
+    return {"status": "ok"}
+
+
+@app.get("/health/detail")
+def health_detail(principal=Depends(auth.require_admin)):
+    """Full diagnostic state. Admin scope."""
     return {"status": "ok", "version": VERSION, "embedder": bool(_model),
             "model": MODEL if _model else None,
             "device": str(_model.device) if _model is not None else None,
             "frameworks": list(_controls), "pairs": len(cat.reachable_pairs()),
-            "method": "embed" if _model else "tfidf"}
+            "method": "embed" if _model else "tfidf",
+            "auth_enforced": auth.REQUIRE_AUTH,
+            "billing_db": "sqlite" if billing.is_sqlite() else "postgres",
+            "cu_model": cu.explain(cu.map_units(1000, 5), _on_gpu())}
 
 
 @app.get("/usage")
-def usage():
-    """Cumulative metered compute since start. NOT invoiceable — in-memory, per-replica, and CU is
-    wall-clock. The customer-attributed meter is Phase B (docs/hosted_saas_roadmap.md)."""
-    return {"version": VERSION, "gpu_cu_multiplier": GPU_CU_MULT,
-            "billable": False, "billing_note": "in-memory, per-replica, no account attribution",
+def usage(principal=Depends(auth.require_admin)):
+    """Operator view of this replica. Admin scope.
+
+    Per-account billing figures come from the ledger via /me or /admin/accounts, not from here -- this
+    is process-local and tells you nothing authoritative about a customer.
+    """
+    return {"version": VERSION, "scope": "this replica, since start",
+            "billable": False,
+            "billing_note": "process-local. Authoritative usage is in the ledger (see /me).",
             **{k: (round(v, 4) if isinstance(v, float) else v) for k, v in _usage.items()}}
+
+
+@app.get("/me")
+def me(principal=Depends(auth.require_key)):
+    """The caller's own account, plan, keys and current-period usage — read from the ledger.
+
+    This is the figure a customer can reconcile a bill against, because it is derived from the same
+    immutable usage_events rows the invoice is.
+    """
+    if principal["account_id"] == "anonymous":
+        return {"account_id": "anonymous", "authenticated": False,
+                "note": "auth is disabled on this instance (REGMAP_REQUIRE_AUTH=false); usage is "
+                        "recorded against a shared anonymous account.",
+                "usage": billing.period_usage("anonymous"),
+                "plan": {"id": principal["plan_id"], "monthly_cu": principal["monthly_cu"]}}
+    summary = billing.account_summary(principal["account_id"])
+    if not summary:
+        raise HTTPException(404, "account not found")
+    a = summary["account"]
+    used = summary["usage"]["compute_units"]
+    allowance = float(a["monthly_cu"])
+    return {
+        "account_id": a["id"], "email": a["email"], "authenticated": True,
+        "plan": {"id": a["plan_id"], "name": a["plan_name"], "monthly_cu": allowance,
+                 "allow_overage": bool(a["allow_overage"]),
+                 "overage_cu_price": float(a["overage_cu_price"])},
+        "usage": summary["usage"],
+        "remaining_cu": (None if allowance == float("inf") else round(max(0.0, allowance - used), 4)),
+        "pct_used": (None if allowance == float("inf") else round(100 * used / allowance, 1)
+                     if allowance else None),
+        "by_path": summary["by_path"],
+        "keys": [{k: v for k, v in key.items() if k != "key_hash"} for key in summary["keys"]],
+        "version": VERSION,
+    }
 
 
 @app.get("/frameworks")
@@ -352,7 +442,8 @@ class MapReq(BaseModel):
 
 
 @app.post("/map")
-def map_control(req: MapReq):
+def map_control(req: MapReq, request: Request,
+                principal=Depends(auth.require_key)):
     """Rank a target framework's controls for a control or free-text intent.
 
     Pass `source` + `source_id` and the response also carries the **official** mapping and flags which
@@ -376,6 +467,10 @@ def map_control(req: MapReq):
     if lookup_only:
         if not src:
             raise HTTPException(400, "a mapping-only target needs `source` and `source_id`")
+        # No encoding happens on this path -- it is a crosswalk lookup, so it must not be billed as
+        # though the model ran.
+        request.state.work_units = cu.MIN_CU
+        request.state.billed_detail = f"{src}->{tgt} official-mapping lookup"
         ids, route = cat.official_targets(src, tgt, req.source_id)
         if ids is None:
             raise HTTPException(404, f"no mapping and no hub route from '{src}' to '{tgt}'")
@@ -418,6 +513,13 @@ def map_control(req: MapReq):
                         "provenance": (m.get(req.source_id) or {}).get("provenance"),
                         "target_ids": sorted(official_ids)}
 
+    # Charge for the retrieval this request implies, and refuse up front if the caller is out of
+    # allowance -- so an over-quota request cannot consume the compute first.
+    units = cu.map_units(len(_controls[tgt]), req.top_k)
+    auth.enforce_quota(principal, cu.quantise(units, _on_gpu()))
+    request.state.work_units = units
+    request.state.billed_detail = f"{src or '-'}->{tgt} top_k={req.top_k}"
+
     ctl = _controls[tgt]
     if _model is not None and tgt in _emb:
         import numpy as np
@@ -451,7 +553,8 @@ class EvalReq(BaseModel):
 
 
 @app.post("/eval")
-def eval_pair(req: EvalReq):
+def eval_pair(req: EvalReq, request: Request,
+              principal=Depends(auth.require_key)):
     """Retrieval metrics for a pair. NOTE: this scores every gold query with no held-out split, so on a
     pair the embedder was fine-tuned on the numbers are inflated by leakage. It is a smoke test, not a
     benchmark — see docs/build_log.md Findings."""
@@ -466,6 +569,18 @@ def eval_pair(req: EvalReq):
         meta, source, corpus, gold = cat.as_pair(src, tgt)
     except KeyError as e:
         raise HTTPException(404, str(e))
+
+    # Evaluation encodes EVERY query against the whole corpus, making it the most expensive call in
+    # the service. It is rate-limited in auth.RATE_LIMITS and bounded here.
+    if len(gold) > EVAL_MAX_QUERIES:
+        raise HTTPException(413, detail={
+            "error": "evaluation set too large for a single request",
+            "queries": len(gold), "max": EVAL_MAX_QUERIES,
+            "remedy": "use regmap_engine/eval_retrain.py offline for full-corpus evaluation"})
+    units = cu.eval_units(len(gold), len(corpus))
+    auth.enforce_quota(principal, cu.quantise(units, _on_gpu()))
+    request.state.work_units = units
+    request.state.billed_detail = f"{src}->{tgt} queries={len(gold)} corpus={len(corpus)}"
 
     out = {"source": src, "target": tgt, "route": meta["route"], "provenance": meta["provenance"],
            "queries": len(gold), "version": VERSION, "benchmark": False,
@@ -504,10 +619,13 @@ class BulkReq(BaseModel):
 # Bulk encodes one query per control, so it is by far the heaviest endpoint. Cap it rather than let a
 # single request tie up a worker for minutes — the UI pages through instead.
 BULK_MAX = int(os.environ.get("REGMAP_BULK_MAX", "150"))
+# /eval encodes every query in the set against the full corpus, so it is bounded too.
+EVAL_MAX_QUERIES = int(os.environ.get("REGMAP_EVAL_MAX_QUERIES", "200"))
 
 
 @app.post("/map/bulk")
-def map_bulk(req: BulkReq):
+def map_bulk(req: BulkReq, request: Request,
+             principal=Depends(auth.require_key)):
     """Map a whole control set in one pass and report coverage and gaps.
 
     Answers the question a GRC team actually has — "we comply with X, so where does that leave us
@@ -528,6 +646,11 @@ def map_bulk(req: BulkReq):
     ids = ids[:BULK_MAX]
 
     tgt_ctl = _controls.get(tgt, {})
+    # Worst case is every submitted control needing a ranking pass; gate on that so admission is
+    # decided before any encoding happens.
+    auth.enforce_quota(principal, cu.quantise(
+        cu.bulk_units(len(ids), len(tgt_ctl) or 1, req.top_k), _on_gpu()))
+
     rows, covered = [], set()
     for sid in ids:
         if sid not in _controls[src]:
@@ -548,6 +671,13 @@ def map_bulk(req: BulkReq):
             order = sorted(range(len(cids)), key=lambda i: -sims[i])[:req.top_k]
             row["suggested"] = [{"id": cids[i], "score": round(float(sims[i]), 4)} for i in order]
         rows.append(row)
+
+    # Bill for what actually reached the encoder, not for every control submitted: controls answered
+    # from the crosswalk cost a dictionary lookup, and charging model rates for them would overbill.
+    ranked = sum(1 for r in rows if r["suggested"])
+    units = cu.bulk_units(len(rows), len(tgt_ctl) or 1, req.top_k, n_ranked=ranked)
+    request.state.work_units = units
+    request.state.billed_detail = f"{src}->{tgt} controls={len(rows)} ranked={ranked}"
 
     universe = set(tgt_ctl) if tgt_ctl else {t for v in (mapping or {}).values() for t in v["targets"]}
     gaps = sorted(universe - covered)
@@ -617,7 +747,8 @@ class ExerciseReq(BaseModel):
 
 
 @app.post("/exercise")
-def exercise(req: ExerciseReq):
+def exercise(req: ExerciseReq, request: Request,
+             principal=Depends(auth.require_key)):
     """Set a graded control-mapping exercise. Returns candidates in random order and no answer.
 
     The candidate set is every official target plus `distractors` plausible wrong ones drawn from the
@@ -636,6 +767,11 @@ def exercise(req: ExerciseReq):
                 if s in _controls[src] and any(t in tgt_ctl for t in v["targets"])]
     if not gradable:
         raise HTTPException(404, "no control in this pair has an official target we hold")
+
+    units = cu.exercise_units(len(tgt_ctl), req.distractors)
+    auth.enforce_quota(principal, cu.quantise(units, _on_gpu()))
+    request.state.work_units = units
+    request.state.billed_detail = f"exercise {src}->{tgt} distractors={req.distractors}"
 
     sid = req.source_id or random.choice(sorted(gradable))
     if sid not in mapping or sid not in _controls[src]:
@@ -687,7 +823,8 @@ class GradeReq(BaseModel):
 
 
 @app.post("/exercise/grade")
-def exercise_grade(req: GradeReq):
+def exercise_grade(req: GradeReq,
+                   principal=Depends(auth.require_key)):
     """Score a submission against the official crosswalk and reveal the answer.
 
     Graded on precision, recall and F1 rather than raw correctness, because the task is
@@ -728,4 +865,93 @@ def exercise_grade(req: GradeReq):
         "official_answer": detail(answer),
         "nice_task": "T0267 - assess control implementation and map to requirements",
         "version": VERSION,
+    }
+
+
+# =====================================================================================================
+# OPERATOR SURFACE  — admin scope only
+# =====================================================================================================
+# FastAPI's built-in /docs was disabled at construction because it publishes the entire API surface.
+# These re-serve it behind the admin scope rather than removing the capability altogether.
+
+@app.get("/openapi.json", include_in_schema=False)
+def openapi_json(principal=Depends(auth.require_admin)):
+    return JSONResponse(get_openapi(title=app.title, version=app.version, routes=app.routes))
+
+
+@app.get("/docs", include_in_schema=False)
+def docs(principal=Depends(auth.require_admin)):
+    return get_swagger_ui_html(openapi_url="/openapi.json", title=app.title + " — API")
+
+
+@app.get("/admin/accounts", include_in_schema=False)
+def admin_accounts(principal=Depends(auth.require_admin)):
+    """Every account and its current-period consumption."""
+    out = []
+    for a in billing.list_accounts():
+        out.append({**a, "usage": billing.period_usage(a["id"])})
+    return {"count": len(out), "accounts": out, "period": billing.period_now()}
+
+
+@app.get("/admin/accounts/{account_id}", include_in_schema=False)
+def admin_account(account_id: str, principal=Depends(auth.require_admin)):
+    s = billing.account_summary(account_id)
+    if not s:
+        raise HTTPException(404, "account not found")
+    s["keys"] = [{k: v for k, v in key.items() if k != "key_hash"} for key in s["keys"]]
+    return s
+
+
+class RebuildReq(BaseModel):
+    account_id: str
+    period: str = Field(..., description="YYYY-MM")
+
+
+@app.post("/admin/reconcile", include_in_schema=False)
+def admin_reconcile(req: RebuildReq, principal=Depends(auth.require_admin)):
+    """Recompute a period counter from the immutable event log.
+
+    This is the reconciliation path that makes the ledger trustworthy rather than merely believed: the
+    event log is the source of truth, so a counter that has drifted for any reason — a partial write, a
+    restore, a manual correction — can be rebuilt from the events an invoice cites.
+    """
+    before = billing.period_usage(req.account_id, req.period)
+    after = billing.rebuild_period(req.account_id, req.period)
+    return {"account_id": req.account_id, "before": before, "after": after,
+            "drift_cu": round(after["compute_units"] - before["compute_units"], 6)}
+
+
+@app.get("/pricing")
+def pricing():
+    """How a Compute Unit is derived, and what each call costs. Public on purpose.
+
+    A metered API that will not state its cost function cannot be budgeted against, so the formula and
+    worked examples are published rather than being something a customer has to take on trust.
+    """
+    gpu = _on_gpu()
+    examples = {}
+    for fid in list(_controls)[:6]:
+        n = len(_controls[fid])
+        examples[f"/map into {fid} ({n} controls)"] = cu.quantise(cu.map_units(n, 5), gpu)
+    return {
+        "version": VERSION,
+        "unit": "Compute Unit (CU)",
+        "formula": "compute_units = work_units x device_rate",
+        "work_units": {
+            "per_query_encode": cu.ENCODE_UNITS,
+            "per_1000_corpus_vectors_scored": cu.SCORE_UNITS_PER_1K,
+            "per_returned_result": cu.RESULT_UNITS_PER_ITEM,
+        },
+        "device_rate": {"cpu": 1.0, "gpu": cu.GPU_RATE},
+        "minimum_charge_cu": cu.MIN_CU,
+        "deterministic": True,
+        "billed_on": "the shape of the request",
+        "not_billed_on": ("elapsed time — so server load, queueing and cold caches never change what "
+                          "you are charged"),
+        "examples_cu": examples,
+        "free_endpoints": ["/health", "/frameworks", "/pairs", "/frameworks/{id}/controls",
+                           "/pricing", "/me"],
+        "plans": [{"id": pid, "name": name, "monthly_cu": (None if mc == float("inf") else mc),
+                   "allow_overage": ov, "overage_cu_price": pr}
+                  for pid, name, mc, ov, pr in billing.DEFAULT_PLANS],
     }

@@ -380,7 +380,7 @@ Artifacts: `models/regmap-embedder-v2/` + `MODEL_CARD.md` + `training_report.jso
       CSF 2.0 -> 800-53 (first 150 of 207): 78 of 150 have an official mapping, 184 covered, 18.1%.
 - [x] Both wired into the nav; all six pages' JS validated; both screenshot-verified rendering real data.
 
-**NEXT ACTION — Phase B, the billing spine.** Both buyer-facing surfaces now exist, so the thing that
+**PHASE B — DONE 2026-08-04. (Superseded next-action text below.)** Both buyer-facing surfaces now exist, so the thing that
 gates revenue is next and it is strictly ordered: persistence -> API keys -> attributed metering -> CU
 redesign -> quotas -> Stripe. Fold in B7 (admin-gate `/docs` and `/usage`; **split** `/health` rather
 than gating it, because the k8s probes hit it) and rate-limit `/eval` and `/map/bulk`, which are now the
@@ -579,3 +579,83 @@ Images built: `regmap-engine:0.3-cpu` (current, `@0.2` model) · `regmap-engine:
 `C:\Users\User\regmap-platform-backup_2026-08-02_2214.zip` — 167.9 MB, 343 entries, `.git` verified
 inside. **Predates the retrain**, so it does not contain `models/regmap-embedder-v2/` or the documents.
 Still **no git remote** — this tree plus that zip are the only copies.
+
+---
+
+## Phase B — billing spine · DONE 2026-08-04
+
+Built and end-to-end verified. New modules: `billing.py` (ledger), `auth.py` (keys, scopes, rate
+limits, quota gate), `compute_units.py` (the billable unit), `scripts/regmap_admin.py` (operator CLI).
+
+### B1 Persistence — `billing.py`
+- [x] SQLAlchemy Core (no ORM), dual-dialect. `DATABASE_URL` selects SQLite (dev) or Postgres (prod).
+      Tables: `plans · accounts · api_keys · usage_events · usage_periods`. Plans are **rows not code**,
+      so pricing changes without a deploy.
+- [x] ⚠️ **Startup warns loudly on SQLite**, because `k8s/deployment.yaml` mounts **no volume** — a
+      SQLite ledger lives in the container's writable layer, is destroyed on every restart/rollout, and
+      is per-replica. That would silently discard the records you bill from. Verified the warning fires.
+
+### B2 API keys
+- [x] `Authorization: Bearer rk_…` or `X-API-Key`. **Only sha256 is stored** — plaintext is shown once
+      at creation and is unrecoverable, so a leaked database yields no usable credential.
+- [x] Scopes (`admin`), revocation, `last_used_at`. Verified: no key **401**, bogus key **401**, valid
+      key **200**, revoked key **401**. Deactivating an *account* also invalidates its keys.
+- [x] `REGMAP_REQUIRE_AUTH` defaults **false** so the self-hosted tier keeps working unchanged; that
+      tier pays for a licence, not per request. Verified both modes, and **admin endpoints are refused
+      even with auth disabled** — otherwise turning auth off would expose the operator surface.
+
+### B4 Compute Units — deterministic *(the important correction)*
+- [x] `CU = work_units(request) × device_rate`. Work units count encodes and corpus vectors scored.
+      The old meter was whole-request **wall-clock**, which charged the customer for *our* queueing,
+      could not be predicted, and could not be estimated before the work ran.
+- [x] **Measured proof**: the same request billed **0.5500 CU** three times while wall-clock varied
+      **2.4×** (0.038s → 0.092s). CU scales with corpus as designed: 60 controls → 0.55, 1,016 → 1.028.
+- [x] Wall-clock is still recorded per event, but as **cost-of-goods telemetry**, never the billed figure.
+- [x] `GET /pricing` publishes the formula and worked examples. A metered API that will not state its
+      cost function cannot be budgeted against.
+
+### B3 Attributed metering
+- [x] Every billable request writes an immutable `usage_events` row **and** bumps `usage_periods` in one
+      transaction. Events are the source of truth; the counter makes quota checks a single indexed read.
+- [x] `POST /admin/reconcile` rebuilds a counter from the events. **Verified**: corrupted a counter to
+      99,999 CU and rebuilt it to the correct 4.9520.
+- [x] A ledger write failure logs `BILLING-ERROR` and sets `x-regmap-billing: record-failed` — unbilled
+      usage is lost revenue, not a cosmetic problem.
+- [x] `GET /me` gives a customer their own plan, usage and remaining allowance, from the same rows an
+      invoice would cite. `key_hash` is never exposed.
+
+### B5 Quotas
+- [x] Checked from an **estimate before the work runs**, so an out-of-allowance caller cannot consume
+      GPU and then be told no. **402** (not 403 — authenticated and permitted, simply owes money).
+- [x] Verified: free account at 299.9/300 CU → **402**, and the rejected call **consumed nothing**.
+      A pro account at 4999.9/5000 with overage enabled → **200**.
+- [x] `/map/bulk` gates on the worst case before looping, then bills only the controls that actually
+      reached the encoder — charging model rates for a crosswalk dictionary hit would overbill.
+
+### B6 Hardening
+- [x] Rate limits per key per endpoint: `/map` 120/min, `/map/bulk` 10/min, `/eval` 4/min. Verified
+      **429 with `Retry-After: 59`** on the 5th `/eval` call.
+- [x] `/eval` bounded by `REGMAP_EVAL_MAX_QUERIES` (200) → **413** with a pointer to the offline harness.
+- [x] ⚠️ **The limiter is per process.** With N replicas a caller gets N× the limit and restarts forget
+      all state. Honest protection against a runaway script; real multi-tenant limiting needs Redis.
+
+### B7 Admin gating
+- [x] **`/health` split, not gated** — all three k8s probes target it, so requiring a credential would
+      leave every pod unready. Public `/health` now returns `{"status":"ok"}` **only**; the model
+      filesystem path, device and framework list moved to `/health/detail` behind `admin`.
+- [x] `/docs`, `/openapi.json` disabled at construction and re-served behind `admin` (401 unauth,
+      200 with an admin key). `/usage` → admin. New `/admin/accounts`, `/admin/accounts/{id}`,
+      `/admin/reconcile`.
+
+### NOT done — and deliberately not faked
+- [ ] **No payment capture.** The ledger computes what is owed including overage, but nothing charges a
+      card. Stripe needs a real account and keys; scaffolding an untested webhook would be worse than
+      leaving it absent. **This is Phase C.**
+- [ ] No self-serve signup — accounts are created by the operator CLI on purpose, since a public route
+      that mints credentials is an abuse surface until payment and email verification exist.
+- [ ] Postgres is untested here (no server available); only the SQLite path has been exercised.
+- [ ] The image has not been rebuilt with the billing deps yet.
+
+**NEXT ACTION — Phase C: payments.** Stripe subscriptions plus usage records for overage, webhooks →
+`subscriptions`, self-serve signup, and a usage dashboard. Needs your Stripe account. Also outstanding
+and cheap: a LICENSE file, and a README refresh.

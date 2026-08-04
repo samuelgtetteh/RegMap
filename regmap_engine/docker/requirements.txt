@@ -8,3 +8,9 @@ numpy>=1.26,<3
 # BM25 baseline: eval_crosswalk.py / POST /eval advertise it, and silently skip the method without
 # this. It was missing, so the container could never report the BM25 column the CLI documents.
 rank_bm25>=0.2.2
+
+# Billing ledger (accounts, API keys, attributed usage, quotas). SQLAlchemy Core only -- no ORM.
+sqlalchemy>=2.0
+# Postgres driver. SQLite (stdlib) is fine for development, but the k8s Deployment mounts no volume,
+# so a SQLite ledger is destroyed on every restart and is per-replica -- production must use Postgres.
+psycopg[binary]>=3.1
