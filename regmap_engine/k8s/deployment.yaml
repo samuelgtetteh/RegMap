@@ -9,6 +9,13 @@ spec:
   # fail to mount the ReadWriteOnce volume or corrupt/split the billing ledger. The HPA must stay
   # disabled for the same reason — see hpa.yaml. Switch DATABASE_URL to managed Postgres before scaling.
   replicas: 1
+  # Recreate, NOT RollingUpdate. With a single-writer SQLite ledger on a ReadWriteOnce volume, a
+  # rolling update starts the new pod before the old one exits (maxSurge rounds to 1 at one replica),
+  # so two processes would briefly hold the same database file open for writing -- a corruption window
+  # on every single deploy. Recreate terminates the old pod first: a few seconds of downtime instead.
+  # Switch back to RollingUpdate once DATABASE_URL points at managed Postgres.
+  strategy:
+    type: Recreate
   selector:
     matchLabels: { app: regmap-engine, tier: cpu }
   template:
@@ -27,8 +34,10 @@ spec:
         - name: engine
           # Digest-pinned (reproducible): the CPU-tier image pushed to GHCR.
           # Rebuild+repush changes the digest — update it here (build slim-CPU: --build-arg TORCH_INDEX=.../cpu).
-          image: regmap-engine:0.4-cpu
-          imagePullPolicy: Never
+          image: ghcr.io/samuelgtetteh/regmap-engine@sha256:c2caeb3388dfc290918a6d1d49d88358c35ebcdd3f7add77f398894ffb2bd2c3
+          # Digest-pinned so a rollout is reproducible: a tag can be moved, a digest cannot.
+          # For local kind testing instead: image: regmap-engine:0.6-cpu + imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: ledger
               mountPath: /data
@@ -37,6 +46,12 @@ spec:
           env:
             - { name: REGMAP_DEVICE, value: "cpu" }
             - { name: REGMAP_GPU_CU_MULT, value: "8" }
+            # Hosted deployment: enforce accounts. Guests can still browse the catalog; anything that
+            # runs the model requires a login or an API key.
+            - { name: REGMAP_REQUIRE_AUTH, value: "true" }
+            # Set to "true" once TLS terminates in front of this Service, so session cookies are only
+            # ever sent over HTTPS. Left false here because kind has no ingress TLS.
+            - { name: REGMAP_SECURE_COOKIES, value: "false" }
           resources:
             requests: { cpu: "250m", memory: "768Mi" }
             limits: { cpu: "2", memory: "2Gi" }

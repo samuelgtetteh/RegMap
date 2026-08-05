@@ -778,3 +778,57 @@ in open mode.
 
 - [ ] Not done: email verification, password reset, and payment capture. A registered user is
       authenticated, not paid — which matches the current requirement but must change before charging.
+
+---
+
+## Deployment aligned: k8s on 0.6, pushed to GHCR — 2026-08-04
+
+### A real upgrade bug, found only because an existing volume was upgraded
+Registration returned **500** in the cluster while working perfectly in a fresh container:
+
+```
+sqlalchemy.exc.OperationalError: table accounts has no column named password_hash
+```
+
+`metadata.create_all()` creates missing **tables** but never alters existing ones. The PVC held a ledger
+created by an earlier build, so `sessions` (a new table) appeared but `accounts.password_hash` (a new
+column) did not. **Fresh installs worked; every upgrade broke.** A fresh-container test can never surface
+this — only replaying an upgrade does.
+
+- [x] Added `billing._migrate()`, run from `startup()` after `create_all`. It inspects each existing
+      table and `ALTER TABLE ADD COLUMN`s anything missing from the model, reporting what it did.
+      Deliberately conservative: **nullable columns only**. A NOT NULL addition needs a default and a
+      backfill, which is a real migration and is reported as `MANUAL MIGRATION REQUIRED` rather than
+      guessed at.
+- [x] Proved it against a hand-built old-schema database: `accounts.password_hash` added, registration
+      and login then worked, and the **pre-existing account was preserved**.
+- [x] Confirmed in-cluster on the real PVC:
+      `[regmap] WARNING: schema migrated, added column(s): accounts.password_hash`, and the account
+      created by the previous build survived.
+
+### Rolling update would have corrupted the ledger
+- [x] `strategy: Recreate` (was RollingUpdate). At `replicas: 1`, `maxSurge` rounds to 1, so a rolling
+      update starts the new pod **before** the old one exits — two processes holding the same
+      single-writer SQLite file open for writing, a corruption window on **every deploy**. Observed both
+      pods Running simultaneously during the 0.4→0.5 rollout. Recreate trades a few seconds of downtime
+      for correctness; revert once the ledger is Postgres.
+- [x] Auth config moved onto the Deployment: `REGMAP_REQUIRE_AUTH=true`,
+      `REGMAP_SECURE_COOKIES=false` (set true once TLS terminates in front of the Service).
+      A duplicate `env:` key silently failed the first `apply` — YAML-validated now.
+
+### Published
+- [x] **`ghcr.io/samuelgtetteh/regmap-engine:0.6-cpu`** and `:latest`, digest
+      `sha256:c2caeb33…bd2c3`.
+- [x] Deployment **re-pinned to that digest** rather than a tag — a tag can be moved, a digest cannot, so
+      a rollout is reproducible. The local-kind alternative is recorded inline.
+- [x] Stale `0.4-cpu` container and volume removed.
+
+### Verified in Kubernetes, end to end
+guest browses **200** · guest `POST /map` **401** · register **200** · signed-in `/map`, `/exercise`,
+`/map/bulk` **200** · `/admin/accounts` **403** · logout **200** then `/map` **401** · all seven pages
+**200** · session shows `Free, 1.122 CU used, 298.878 left`.
+
+### Test-harness gotcha (cost time twice, in opposite directions)
+`MSYS_NO_PATHCONV=1` is needed for `docker exec /app/...` to work in Git Bash, but it *also* stops curl's
+`-c /tmp/jar` being translated, so the cookie jar silently was not written and a working session looked
+like a 401. Use relative paths for curl files when that variable is set.

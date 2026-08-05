@@ -36,7 +36,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import (Boolean, Column, DateTime, Float, ForeignKey, Integer, MetaData, String,
-                        Table, Text, create_engine, func, insert, select, update)
+                        Table, Text, create_engine, func, insert, inspect, select, text, update)
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./regmap.db")
 
@@ -136,9 +136,42 @@ def is_sqlite():
     return DATABASE_URL.startswith("sqlite")
 
 
+def _migrate():
+    """Add columns that exist in the model but not yet in the database.
+
+    `metadata.create_all()` creates missing TABLES but never alters existing ones, so a deployment that
+    upgrades across a schema change keeps its old table definitions and fails at insert time. That is a
+    bug only an UPGRADE reveals -- a fresh install works perfectly -- and it is exactly how
+    `password_hash` broke registration on a volume created by an earlier build.
+
+    Deliberately conservative: it only ever ADDs nullable columns. Adding NOT NULL to a populated table
+    needs a default and a backfill, which is a real migration and should be written explicitly rather
+    than guessed at here. Anything it cannot handle safely is reported instead of attempted.
+    """
+    insp = inspect(engine())
+    existing_tables = set(insp.get_table_names())
+    added, needs_attention = [], []
+    for table in metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue                                  # create_all handles brand-new tables
+        have = {c["name"] for c in insp.get_columns(table.name)}
+        for col in table.columns:
+            if col.name in have:
+                continue
+            if not col.nullable and col.default is None and col.server_default is None:
+                needs_attention.append(f"{table.name}.{col.name} (NOT NULL, needs a backfill)")
+                continue
+            ddl = col.type.compile(engine().dialect)
+            with engine().begin() as c:
+                c.execute(text(f'ALTER TABLE {table.name} ADD COLUMN {col.name} {ddl}'))
+            added.append(f"{table.name}.{col.name}")
+    return added, needs_attention
+
+
 def startup(replicas_hint=None):
-    """Create tables if absent, seed plans, and warn loudly about unsafe configurations."""
+    """Create tables if absent, migrate columns, seed plans, and warn about unsafe configurations."""
     metadata.create_all(engine())
+    added, needs_attention = _migrate()
     with engine().begin() as c:
         have = {r[0] for r in c.execute(select(plans.c.id))}
         for pid, name, cu, over, price in DEFAULT_PLANS:
@@ -146,6 +179,10 @@ def startup(replicas_hint=None):
                 c.execute(insert(plans).values(id=pid, name=name, monthly_cu=cu,
                                                allow_overage=over, overage_cu_price=price))
     warnings = []
+    if added:
+        warnings.append("schema migrated, added column(s): " + ", ".join(added))
+    for item in needs_attention:
+        warnings.append("MANUAL MIGRATION REQUIRED for " + item)
     if is_sqlite():
         warnings.append(
             "billing ledger is SQLite. Durable only if it sits on a mounted volume (the image "
