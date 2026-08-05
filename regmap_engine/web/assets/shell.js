@@ -14,6 +14,7 @@
     { id: "learn",      label: "Practise",   href: "/learn.html" },
     { id: "frameworks", label: "Frameworks", href: "/frameworks.html" },
     { id: "deploy",     label: "Deploy",     href: "/deploy.html" },
+    { id: "account",    label: "Account",    href: "/account.html" },
   ];
 
   const page = document.body.dataset.page || "";
@@ -28,6 +29,7 @@
        <nav class="nav-links">${links}</nav>
        <span class="nav-sp"></span>
        <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
+       <span id="sessionBox" style="display:flex;align-items:center;gap:10px"></span>
        <a class="btn primary sm" href="/crosswalk.html">Open crosswalk</a>
      </div>`;
   document.body.prepend(header);
@@ -39,6 +41,27 @@
       (matchMedia("(prefers-color-scheme:light)").matches ? "light" : "dark");
     root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
   });
+
+  /* Show who is signed in on every page. Uses /auth/session, which never 401s — a guest is a valid
+     answer, so this must not be treated as an error state. */
+  (async function () {
+    const box = document.getElementById("sessionBox");
+    if (!box || !window.RegMap) return;
+    try {
+      const s = await RegMap.session();
+      if (s.authenticated) {
+        const left = s.remaining_cu == null ? "unlimited"
+          : Number(s.remaining_cu).toLocaleString(undefined, { maximumFractionDigits: 0 }) + " CU left";
+        box.innerHTML = `<a href="/account.html" style="font-size:13px;color:var(--muted)" `
+          + `title="${RegMap.esc(s.email || "")} — ${RegMap.esc(s.plan.name || "")}">`
+          + `<span class="pill ok">${RegMap.esc(left)}</span></a>`;
+      } else {
+        box.innerHTML = `<a class="btn ghost sm" href="/account.html">Sign in</a>`;
+      }
+    } catch (e) {
+      box.innerHTML = "";   // engine unreachable: stay quiet rather than shouting in the header
+    }
+  })();
 
   // scroll-reveal for anything with .reveal
   const io = new IntersectionObserver(es => es.forEach(e => {

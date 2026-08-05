@@ -10,6 +10,11 @@ Serves the compliance control catalog as a microservice:
   POST /map/bulk            — map a whole control set; coverage % and the official gap list
   POST /exercise            — set a graded mapping exercise (candidates only, no answer)
   POST /exercise/grade      — score a submission against the official crosswalk and reveal
+  POST /auth/register       — self-serve signup (free plan); sets an HttpOnly session cookie
+  POST /auth/login          — sign in
+  POST /auth/logout         — end the session server-side
+  GET  /auth/session        — who am I (never 401s; a guest is a valid answer)
+  POST /auth/keys           — issue an API key for the signed-in account
   GET  /usage               — cumulative metered compute (see the billing caveat below)
 
 Backed by `catalog.py` (hub-and-spoke: control text once per framework, mappings by id), so a pair is
@@ -37,7 +42,7 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -955,3 +960,135 @@ def pricing():
                    "allow_overage": ov, "overage_cu_price": pr}
                   for pid, name, mc, ov, pr in billing.DEFAULT_PLANS],
     }
+
+
+# =====================================================================================================
+# ACCOUNTS — self-serve registration and login
+# =====================================================================================================
+# Guests may browse the catalog freely (/frameworks, /pairs, /pricing, control listings and every page).
+# Anything that runs the model — mapping, gap analysis, graded practice — requires an account, because
+# it consumes compute that has to be attributed to someone.
+#
+# The session lives in an HttpOnly cookie rather than in localStorage: script on the page cannot read
+# it, so an XSS bug cannot exfiltrate a login. API keys remain available for programmatic use.
+
+SESSION_COOKIE = "regmap_session"
+# Secure cookies require HTTPS. Left off by default so http://localhost works during development; turn
+# it on for any real deployment, which is what REGMAP_SECURE_COOKIES exists for.
+SECURE_COOKIES = os.environ.get("REGMAP_SECURE_COOKIES", "false").lower() in ("1", "true", "yes")
+
+
+def _set_session_cookie(resp, token):
+    resp.set_cookie(
+        SESSION_COOKIE, token,
+        max_age=billing.SESSION_DAYS * 86400,
+        httponly=True,          # unreadable from JavaScript
+        samesite="lax",         # sent on top-level navigation, not on cross-site POSTs
+        secure=SECURE_COOKIES,
+        path="/")
+
+
+class RegisterReq(BaseModel):
+    email: str
+    password: str = Field(..., min_length=10,
+                          description="at least 10 characters; stored only as an scrypt hash")
+    name: Optional[str] = None
+
+
+@app.post("/auth/register")
+def auth_register(req: RegisterReq, request: Request):
+    """Create an account and sign in. Lands on the free plan, so the new user is metered from the start."""
+    aid, err = billing.register(req.email, req.password, req.name)
+    if err:
+        raise HTTPException(400, detail=err)
+    token, _, lerr = billing.login(req.email, req.password,
+                                   request.headers.get("user-agent"))
+    if lerr:
+        raise HTTPException(500, detail="account created but sign-in failed; try logging in")
+    body = {"account_id": aid, "email": req.email.strip().lower(), "plan": "free",
+            "message": "account created"}
+    resp = JSONResponse(body)
+    _set_session_cookie(resp, token)
+    return resp
+
+
+class LoginReq(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/auth/login")
+def auth_login(req: LoginReq, request: Request):
+    if not billing.verify_session(request.cookies.get(SESSION_COOKIE)):
+        pass  # no existing session; continue to authenticate
+    token, aid, err = billing.login(req.email, req.password, request.headers.get("user-agent"))
+    if err:
+        # 401 with a deliberately vague message — see billing.login: the same text is returned for an
+        # unknown email and a wrong password, so this cannot be used to enumerate accounts.
+        raise HTTPException(401, detail=err)
+    resp = JSONResponse({"account_id": aid, "email": req.email.strip().lower(),
+                         "message": "signed in"})
+    _set_session_cookie(resp, token)
+    return resp
+
+
+@app.post("/auth/logout")
+def auth_logout(request: Request):
+    """End the session server-side and clear the cookie.
+
+    The session row is deleted rather than merely un-cookied, so a copied cookie stops working too.
+    """
+    n = billing.logout(request.cookies.get(SESSION_COOKIE))
+    resp = JSONResponse({"message": "signed out", "sessions_ended": n})
+    resp.delete_cookie(SESSION_COOKIE, path="/")
+    return resp
+
+
+@app.get("/auth/session")
+def auth_session(request: Request,
+                 authorization: str = Header(None),
+                 x_api_key: str = Header(None)):
+    """Who am I? Never 401s — a guest is a valid state, not an error.
+
+    The UI calls this on every page load to decide whether to show "Sign in" or the account, so it has
+    to answer for anonymous visitors too.
+    """
+    p = auth.resolve(authorization, x_api_key, request.cookies.get(SESSION_COOKIE))
+    if not p:
+        return {"authenticated": False, "guest": True,
+                "auth_enforced": auth.REQUIRE_AUTH,
+                "guest_can": ["browse frameworks", "view coverage and pair routes", "read pricing"],
+                "requires_account": ["/map", "/map/bulk", "/eval", "/exercise"]}
+    used = billing.period_usage(p["account_id"])["compute_units"]
+    allowance = float(p["monthly_cu"])
+    return {
+        "authenticated": True, "guest": False,
+        "auth_enforced": auth.REQUIRE_AUTH,
+        "account_id": p["account_id"], "email": p.get("email"),
+        "via": p.get("auth", "session"),
+        "admin": "admin" in {s.strip() for s in (p.get("scopes") or "").split(",") if s.strip()},
+        "plan": {"id": p.get("plan_id"), "name": p.get("name"),
+                 "monthly_cu": (None if allowance == float("inf") else allowance),
+                 "allow_overage": bool(p.get("allow_overage"))},
+        "usage_cu": round(used, 4),
+        "remaining_cu": (None if allowance == float("inf") else round(max(0.0, allowance - used), 4)),
+        "pct_used": (None if allowance in (0, float("inf")) else round(100 * used / allowance, 1)),
+    }
+
+
+class KeyReq(BaseModel):
+    label: Optional[str] = None
+
+
+@app.post("/auth/keys")
+def auth_create_key(req: KeyReq, principal=Depends(auth.require_key)):
+    """Issue an API key for the signed-in account, for programmatic use.
+
+    Deliberately cannot grant the admin scope: an admin key is an operator action, issued through the
+    CLI. Otherwise any registered user could self-elevate to the operator surface.
+    """
+    if principal["account_id"] == "anonymous":
+        raise HTTPException(401, detail="sign in to create an API key")
+    kid, raw = billing.create_key(principal["account_id"], req.label or "web", scopes="")
+    return {"key_id": kid, "api_key": raw,
+             "note": "Copy this now — only its hash is stored, so it cannot be shown again."}

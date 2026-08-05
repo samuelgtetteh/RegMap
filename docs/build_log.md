@@ -721,3 +721,60 @@ volume and account, and removes both on exit.
 - [ ] **Postgres** — untested by design for now; multi-replica and HPA stay disabled until then.
 - [ ] **Payment capture** — the ledger computes what is owed; nothing charges a card (Phase C).
 - [ ] GPU tier, KEDA scale-to-zero, multi-replica behaviour.
+
+---
+
+## Accounts: registration, login, guest browsing — DONE 2026-08-04
+
+Requirement: registration and login, guests can audit the site, and paywalled items need only a login
+for now (not payment).
+
+### The gap this closed
+`api.js` sent **no credential at all**. With `REGMAP_REQUIRE_AUTH=true` the pages loaded but every
+billable call 401'd, so the paywall worked for curl and broke the website. The product was only usable
+in open mode.
+
+### Built
+- [x] **Passwords** — `hashlib.scrypt` (stdlib, memory-hard), per-user salt, stored as
+      `scrypt$n$r$p$salt$hash`. Never the password itself. `verify_password` reads the stored cost
+      factors, so they can be raised later without invalidating existing hashes.
+- [x] **Sessions** — a `sessions` table holding **sha256 of an opaque random token**, not signed claims.
+      Chosen so logout and revocation are immediate: deleting the row ends the session, whereas a signed
+      cookie cannot be un-issued.
+- [x] **HttpOnly cookie** (`SameSite=Lax`, `Secure` via `REGMAP_SECURE_COOKIES`). Script cannot read it,
+      so an XSS bug cannot exfiltrate a login — which is exactly why the session is a cookie and not a
+      token in localStorage.
+- [x] **`auth.resolve()`** accepts an API key **or** a session cookie and returns the same principal
+      shape, so quota, metering and scope checks never care which was used. An explicit key wins over an
+      ambient cookie.
+- [x] Endpoints: `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/session`, `/auth/keys`.
+      `/auth/session` **never 401s** — a guest is a valid answer, and the nav calls it on every page.
+- [x] **`web/account.html`** — sign in / register side by side when signed out; plan, allowance,
+      remaining CU, usage-by-endpoint, API keys and sign-out when signed in.
+- [x] Session state in the header on every page (remaining CU, or a Sign in button).
+- [x] `api.js` sends `credentials: "same-origin"` and turns 401/402/403/429/413 into sentences a user
+      can act on instead of a bare status code.
+
+### Verified end to end (container, auth enforced, :8400)
+| | |
+|---|---|
+| guest browses `/frameworks`, `/pairs`, `/pricing`, all pages | **200** |
+| guest hits `POST /map` | **401** |
+| weak password / bad email / duplicate email | **422 / 400 / 400** |
+| registration → session cookie | **200**, `HttpOnly` confirmed |
+| signed in: `/map`, `/exercise`, `/map/bulk` | **200** |
+| signed in: `/admin/accounts`, `/docs` | **403** — login is not admin |
+| logout, then `/map` | **200 → 401** (session deleted server-side) |
+| wrong password vs unknown email | both **401**, *identical* message — no account enumeration |
+| self-issued API key on `/map` | **200** |
+| self-issued API key on `/admin/accounts` | **403** — a user cannot self-elevate |
+
+### Deliberate boundaries
+- **Login grants access, not admin.** `verify_session` hard-codes empty scopes, so admin is API-key-only
+  and issued by the operator CLI. Otherwise anyone who registered could reach the operator surface.
+- **`/auth/keys` cannot mint an admin key** for the same reason.
+- Registration lands on the **free plan (300 CU)**, so a new user is metered from the first request —
+  there is no unmetered path into the system.
+
+- [ ] Not done: email verification, password reset, and payment capture. A registered user is
+      authenticated, not paid — which matches the current requirement but must change before charging.

@@ -8,11 +8,12 @@ This is the layer the engine was missing: before it, compute was metered but att
     DATABASE_URL=postgresql+psycopg://user:pass@host/regmap   # production
     DATABASE_URL=sqlite:///./regmap.db                        # default (development ONLY)
 
-⚠️ SQLITE IS NOT SAFE FOR PRODUCTION HERE. `k8s/deployment.yaml` mounts no volume, so a SQLite file
-lives in the container's writable layer and is destroyed on every restart, rollout and scale event —
-silently discarding the usage records you bill from. Worse, with more than one replica each pod would
-keep its own private ledger. Set DATABASE_URL to managed Postgres before charging anyone. `startup()`
-logs a warning when it detects this combination.
+SQLITE IS USABLE FOR NOW, BUT ONLY BECAUSE THE LEDGER IS ON A VOLUME. The image declares `/data` and
+`k8s/pvc.yaml` binds a PersistentVolumeClaim there, so the database survives restarts and rescheduling
+(verified by deleting the pod and reading the ledger back unchanged). The remaining limit is
+concurrency: SQLite is single-writer, so `deployment.yaml` is pinned to `replicas: 1` and the HPA is
+deliberately excluded from the kustomization. Point DATABASE_URL at managed Postgres before scaling
+past one replica.
 
 DESIGN NOTES
 
@@ -29,9 +30,10 @@ rejected without consuming GPU; the actual cost is recorded once the work is don
 charge use the same deterministic function, so they agree unless the request changed shape.
 """
 import hashlib
+import hmac
 import os
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import (Boolean, Column, DateTime, Float, ForeignKey, Integer, MetaData, String,
                         Table, Text, create_engine, func, insert, select, update)
@@ -60,6 +62,9 @@ accounts = Table(
     Column("name", String(255)),
     Column("plan_id", String(32), ForeignKey("plans.id"), nullable=False),
     Column("active", Boolean, nullable=False, default=True),
+    # Null for accounts created by the operator CLI (API-key only). Set by self-serve
+    # registration. Never stores the password itself -- see hash_password().
+    Column("password_hash", String(255)),
     Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
 )
 
@@ -143,9 +148,9 @@ def startup(replicas_hint=None):
     warnings = []
     if is_sqlite():
         warnings.append(
-            "billing DB is SQLite. The k8s Deployment mounts no volume, so this file is destroyed on "
-            "every restart/rollout and is per-replica. DO NOT BILL FROM THIS. Set DATABASE_URL to "
-            "managed Postgres for production.")
+            "billing ledger is SQLite. Durable only if it sits on a mounted volume (the image "
+            "declares /data and k8s/pvc.yaml binds it). SQLite is single-writer, so keep replicas at 1 "
+            "and the HPA disabled; move DATABASE_URL to managed Postgres before scaling.")
     return warnings
 
 
@@ -325,3 +330,137 @@ def list_accounts():
         rows = c.execute(select(accounts.c.id, accounts.c.email, accounts.c.name,
                                 accounts.c.plan_id, accounts.c.active)).mappings().all()
     return [dict(r) for r in rows]
+
+
+# ---- passwords + sessions ------------------------------------------------------------------------
+# Browser users log in; programmatic callers use API keys. Both resolve to the same principal, so every
+# downstream check (quota, metering, scopes) is identical regardless of how the caller authenticated.
+#
+# Passwords are hashed with scrypt from the standard library -- memory-hard, so a stolen database is
+# expensive to attack offline, and no third-party dependency is needed. Never store or log the password.
+#
+# Sessions are opaque random tokens stored server-side rather than signed claims, because that makes
+# logout and revocation immediate: deleting the row ends the session. A signed cookie cannot be
+# un-issued.
+
+SCRYPT_N, SCRYPT_R, SCRYPT_P = 2 ** 14, 8, 1
+SESSION_DAYS = int(os.environ.get("REGMAP_SESSION_DAYS", "14"))
+
+sessions = Table(
+    "sessions", metadata,
+    Column("token_hash", String(64), primary_key=True),   # sha256 of the cookie value
+    Column("account_id", String(40), ForeignKey("accounts.id"), nullable=False, index=True),
+    Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("user_agent", String(255)),
+)
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    dk = hashlib.scrypt(password.encode(), salt=salt, n=SCRYPT_N, r=SCRYPT_R, p=SCRYPT_P, dklen=32)
+    return f"scrypt${SCRYPT_N}${SCRYPT_R}${SCRYPT_P}${salt.hex()}${dk.hex()}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    """Constant-time comparison against the stored parameters, so old hashes keep working if the cost
+    factors are raised later."""
+    try:
+        scheme, n, r, p, salt_hex, want = stored.split("$")
+        if scheme != "scrypt":
+            return False
+        dk = hashlib.scrypt(password.encode(), salt=bytes.fromhex(salt_hex),
+                            n=int(n), r=int(r), p=int(p), dklen=len(want) // 2)
+        return hmac.compare_digest(dk.hex(), want)
+    except Exception:
+        return False
+
+
+def register(email, password, name=None, plan_id="free"):
+    """Create an account with a password. Returns (account_id, error).
+
+    Registration is self-serve and lands on the free plan, so a new user immediately has a quota and is
+    metered like anyone else -- there is no unmetered path into the system.
+    """
+    email = (email or "").strip().lower()
+    if "@" not in email or len(email) < 5:
+        return None, "enter a valid email address"
+    if not password or len(password) < 10:
+        return None, "password must be at least 10 characters"
+    with engine().begin() as c:
+        if c.execute(select(accounts.c.id).where(accounts.c.email == email)).first():
+            return None, "an account with that email already exists"
+        aid = "acct_" + secrets.token_hex(10)
+        c.execute(insert(accounts).values(id=aid, email=email, name=name, plan_id=plan_id,
+                                          active=True, password_hash=hash_password(password)))
+    return aid, None
+
+
+def set_password(account_id, password):
+    with engine().begin() as c:
+        c.execute(update(accounts).where(accounts.c.id == account_id)
+                  .values(password_hash=hash_password(password)))
+
+
+def login(email, password, user_agent=None):
+    """Verify credentials and open a session. Returns (raw_token, account_id, error)."""
+    email = (email or "").strip().lower()
+    with engine().begin() as c:
+        row = c.execute(select(accounts.c.id, accounts.c.password_hash, accounts.c.active)
+                        .where(accounts.c.email == email)).mappings().first()
+    # Deliberately identical message for "no such user" and "wrong password", so the endpoint cannot be
+    # used to discover which email addresses are registered.
+    if not row or not row["password_hash"] or not verify_password(password, row["password_hash"]):
+        return None, None, "email or password is incorrect"
+    if not row["active"]:
+        return None, None, "this account is deactivated"
+    raw = secrets.token_urlsafe(32)
+    with engine().begin() as c:
+        c.execute(insert(sessions).values(
+            token_hash=hashlib.sha256(raw.encode()).hexdigest(), account_id=row["id"],
+            expires_at=datetime.now(timezone.utc) + timedelta(days=SESSION_DAYS),
+            user_agent=(user_agent or "")[:255]))
+    return raw, row["id"], None
+
+
+def verify_session(raw):
+    """Resolve a session cookie to the same principal shape verify_key() returns, or None."""
+    if not raw:
+        return None
+    th = hashlib.sha256(raw.encode()).hexdigest()
+    with engine().begin() as c:
+        row = c.execute(
+            select(sessions.c.account_id, sessions.c.expires_at, accounts.c.active, accounts.c.email,
+                   accounts.c.plan_id, plans.c.monthly_cu, plans.c.allow_overage,
+                   plans.c.overage_cu_price, plans.c.name)
+            .select_from(sessions.join(accounts, sessions.c.account_id == accounts.c.id)
+                                 .join(plans, accounts.c.plan_id == plans.c.id))
+            .where(sessions.c.token_hash == th)).mappings().first()
+        if not row or not row["active"]:
+            return None
+        exp = row["expires_at"]
+        if exp.tzinfo is None:                      # SQLite returns naive datetimes
+            exp = exp.replace(tzinfo=timezone.utc)
+        if exp < datetime.now(timezone.utc):
+            c.execute(sessions.delete().where(sessions.c.token_hash == th))
+            return None
+    d = dict(row)
+    d["id"] = None                    # a session is not an API key
+    d["scopes"] = ""                  # admin scope is deliberately key-only, never granted by login
+    d["auth"] = "session"
+    return d
+
+
+def logout(raw):
+    if not raw:
+        return 0
+    with engine().begin() as c:
+        r = c.execute(sessions.delete()
+                      .where(sessions.c.token_hash == hashlib.sha256(raw.encode()).hexdigest()))
+    return r.rowcount
+
+
+def purge_expired_sessions():
+    with engine().begin() as c:
+        r = c.execute(sessions.delete().where(sessions.c.expires_at < datetime.now(timezone.utc)))
+    return r.rowcount

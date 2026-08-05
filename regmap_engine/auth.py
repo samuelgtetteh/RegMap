@@ -23,7 +23,7 @@ import threading
 import time
 from collections import defaultdict
 
-from fastapi import Depends, Header, HTTPException, Request
+from fastapi import Cookie, Depends, Header, HTTPException, Request
 
 import billing
 
@@ -78,28 +78,47 @@ def rate_limit(identity, path):
         _buckets[key] = hits
 
 
-def require_key(request: Request,
-                authorization: str = Header(None),
-                x_api_key: str = Header(None)):
-    """Resolve the caller, enforce the rate limit, and check quota before any work runs.
+SESSION_COOKIE = "regmap_session"
 
-    Attaches the principal and the quota verdict to `request.state` so the endpoint and the metering
-    middleware can both see them without re-querying.
+
+def resolve(authorization=None, x_api_key=None, session=None):
+    """Identify the caller from either credential type, or return None.
+
+    Browser users log in and carry a session cookie; programmatic callers send an API key. Both produce
+    the same principal shape, so quota, metering and scope checks downstream never need to care which
+    was used. The API key is tried first, so an explicit key always wins over an ambient cookie.
     """
     raw = _bearer(authorization, x_api_key)
+    if raw:
+        p = billing.verify_key(raw)
+        if p:
+            p["auth"] = "api_key"
+            return p
+    if session:
+        return billing.verify_session(session)
+    return None
+
+
+def require_key(request: Request,
+                authorization: str = Header(None),
+                x_api_key: str = Header(None),
+                regmap_session: str = Cookie(None)):
+    """Resolve the caller, enforce the rate limit, and check quota before any work runs.
+
+    Attaches the principal to `request.state` so the endpoint and the metering middleware can both see
+    it without re-querying.
+    """
+    principal = resolve(authorization, x_api_key, regmap_session)
 
     if REQUIRE_AUTH:
-        if not raw:
-            raise HTTPException(401, detail="missing API key — send 'Authorization: Bearer rk_...'",
-                                headers={"WWW-Authenticate": "Bearer"})
-        principal = billing.verify_key(raw)
         if not principal:
-            raise HTTPException(401, detail="invalid, revoked, or inactive API key",
-                                headers={"WWW-Authenticate": "Bearer"})
+            raise HTTPException(401, detail=(
+                "sign in or send an API key. Guests can browse the catalog, but mapping, gap analysis "
+                "and practice require an account."), headers={"WWW-Authenticate": "Bearer"})
     else:
-        # Auth disabled: still resolve a key if one was sent, so a self-hosted operator can opt into
-        # per-account attribution without flipping the whole service into enforced mode.
-        principal = (billing.verify_key(raw) if raw else None) or dict(ANONYMOUS)
+        # Auth not enforced: still honour a credential when one is present, so a self-hosted operator
+        # can opt into per-account attribution without switching the whole service into enforced mode.
+        principal = principal or dict(ANONYMOUS)
 
     identity = principal.get("id") or principal["account_id"]
     rate_limit(identity, request.url.path)

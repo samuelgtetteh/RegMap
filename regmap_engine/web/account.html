@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegMap — account</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="account">
+
+<section class="section pad bleed" style="padding-top:34px">
+  <div class="eyebrow">Account</div>
+  <h1 id="title" style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Sign in</h1>
+  <p class="lead" id="blurb" style="color:var(--muted);font-size:15.5px;margin:10px 0 0;max-width:70ch">
+    Browsing the framework catalog needs no account. Mapping controls, running gap analysis and graded
+    practice all run the model, so they need one — that is how usage gets attributed and metered.
+  </p>
+</section>
+
+<hr class="divider">
+
+<section class="section pad bleed" id="out" style="padding-top:24px">
+  <div class="note"><span class="spin"></span> checking your session…</div>
+</section>
+
+<footer class="site-footer pad bleed">
+  RegMap · sessions are HttpOnly cookies · passwords stored as scrypt hashes, never in plain text.
+</footer>
+
+<script src="assets/api.js"></script>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const out = $("out"), esc = RegMap.esc;
+
+  const fmt = n => n == null ? "unlimited" : Number(n).toLocaleString(undefined, {maximumFractionDigits: 2});
+
+  async function render() {
+    let s;
+    try { s = await RegMap.session(); }
+    catch (e) { out.innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+    if (s.authenticated) { renderAccount(s); } else { renderAuthForms(s); }
+  }
+
+  /* ---- signed out: register or sign in ------------------------------------ */
+  function renderAuthForms(s) {
+    $("title").textContent = "Sign in or create an account";
+    out.innerHTML = `
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(330px,1fr));max-width:1000px">
+        <div class="tile" style="box-shadow:none"><div class="body">
+          <h3>Sign in</h3>
+          <label class="fld" style="margin-top:10px">Email
+            <input type="email" id="li_email" autocomplete="username"></label>
+          <label class="fld" style="margin-top:10px">Password
+            <input type="password" id="li_pw" autocomplete="current-password"></label>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
+            <button class="btn primary" id="li_go">Sign in</button>
+            <span id="li_msg" style="font-size:13px;color:var(--crit)"></span>
+          </div>
+        </div></div>
+
+        <div class="tile" style="box-shadow:none"><div class="body">
+          <h3>Create an account</h3>
+          <p style="font-size:13px;color:var(--muted);margin:2px 0 0">Free plan — 300 compute units a
+             month, no card required.</p>
+          <label class="fld" style="margin-top:10px">Email
+            <input type="email" id="rg_email" autocomplete="username"></label>
+          <label class="fld" style="margin-top:10px">Name <span style="text-transform:none;font-weight:400">(optional)</span>
+            <input type="text" id="rg_name" autocomplete="name"></label>
+          <label class="fld" style="margin-top:10px">Password
+            <input type="password" id="rg_pw" autocomplete="new-password"
+                   placeholder="at least 10 characters"></label>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
+            <button class="btn primary" id="rg_go">Create account</button>
+            <span id="rg_msg" style="font-size:13px;color:var(--crit)"></span>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="note" style="margin-top:22px;max-width:1000px">
+        <b>As a guest you can already:</b> ${s.guest_can ? s.guest_can.map(esc).join(" · ") : ""}.
+        <br><b>An account is needed for:</b>
+        ${(s.requires_account || []).map(x => `<span class="mono">${esc(x)}</span>`).join(" · ")} —
+        these run the embedding model, so the compute has to be attributed to someone.
+        ${s.auth_enforced ? "" :
+          `<div class="sub" style="margin-top:8px">This instance is running with
+            <span class="mono">REGMAP_REQUIRE_AUTH=false</span>, so those endpoints currently answer
+            without an account too. Usage is recorded against a shared anonymous account.</div>`}
+      </div>`;
+
+    const go = async (btn, msg, fn) => {
+      const b = $(btn), m = $(msg);
+      b.disabled = true; m.style.color = "var(--muted)"; m.textContent = "working…";
+      try { await fn(); location.reload(); }
+      catch (e) { b.disabled = false; m.style.color = "var(--crit)"; m.textContent = e.message; }
+    };
+    $("li_go").addEventListener("click", () => go("li_go", "li_msg", () =>
+      RegMap.login($("li_email").value, $("li_pw").value)));
+    $("rg_go").addEventListener("click", () => go("rg_go", "rg_msg", () =>
+      RegMap.register($("rg_email").value, $("rg_pw").value, $("rg_name").value)));
+    $("li_pw").addEventListener("keydown", e => { if (e.key === "Enter") $("li_go").click(); });
+    $("rg_pw").addEventListener("keydown", e => { if (e.key === "Enter") $("rg_go").click(); });
+  }
+
+  /* ---- signed in: plan, usage, keys --------------------------------------- */
+  async function renderAccount(s) {
+    $("title").textContent = s.email || "Your account";
+    $("blurb").textContent = `Signed in via ${s.via === "api_key" ? "an API key" : "a browser session"}`
+      + (s.admin ? " · admin scope" : "") + ".";
+
+    const pct = s.pct_used == null ? 0 : s.pct_used;
+    const cls = pct >= 90 ? "bad" : pct >= 60 ? "mid" : "good";
+    out.innerHTML = `
+      <div class="cov" style="max-width:900px">
+        <div><span class="k">plan</span><span class="v" style="font-size:16px;padding-top:3px">${esc(s.plan.name || s.plan.id)}</span></div>
+        <div><span class="k">allowance</span><span class="v">${fmt(s.plan.monthly_cu)}<span
+          style="font-size:12px;color:var(--faint);font-weight:400"> CU/mo</span></span></div>
+        <div><span class="k">used this month</span><span class="v ${cls}">${fmt(s.usage_cu)}</span></div>
+        <div><span class="k">remaining</span><span class="v ${cls}">${fmt(s.remaining_cu)}</span></div>
+        <div><span class="k">overage</span><span class="v" style="font-size:15px;padding-top:4px">${
+          s.plan.allow_overage ? "allowed" : "off"}</span></div>
+      </div>
+      ${s.pct_used == null ? "" : `<div class="bar" style="margin-top:10px;max-width:900px"><i style="width:${Math.min(100,pct)}%"></i></div>`}
+      <p style="font-size:13px;color:var(--muted);margin-top:10px">
+        A Compute Unit is a function of the request, not of elapsed time — see
+        <a href="/pricing" style="color:var(--accent)">/pricing</a> for the formula. The same call always
+        costs the same.</p>
+
+      <div class="row-head" style="margin-top:30px"><h2 style="font-size:18px">Usage by endpoint</h2></div>
+      <div id="byPath"><div class="note">loading…</div></div>
+
+      <div class="row-head" style="margin-top:30px"><h2 style="font-size:18px">API keys</h2>
+        <span style="font-size:13px;color:var(--muted)">for scripts and CI</span></div>
+      <div id="keys"><div class="note">loading…</div></div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
+        <input type="text" id="k_label" placeholder="label, e.g. laptop" style="max-width:220px">
+        <button class="btn ghost" id="k_new">Create a key</button>
+        <button class="btn ghost" id="signout">Sign out</button>
+      </div>
+      <div id="k_out" style="margin-top:12px"></div>`;
+
+    // /me carries the per-endpoint breakdown and the key list
+    try {
+      const me = await RegMap.me();
+      const rows = me.by_path || [];
+      $("byPath").innerHTML = rows.length
+        ? `<div style="overflow-x:auto;max-width:900px"><table class="mtx">
+             <tr><th class="rowh">Period</th><th>Endpoint</th><th>Compute units</th><th>Calls</th></tr>
+             ${rows.map(r => `<tr><th class="rowh">${esc(r.period)}</th>
+               <td class="mono">${esc(r.path)}</td><td>${fmt(r.cu)}</td><td>${r.n}</td></tr>`).join("")}
+           </table></div>`
+        : `<div class="note">No usage yet. Try the <a href="/crosswalk.html"
+             style="color:var(--accent)">crosswalk</a> or <a href="/learn.html"
+             style="color:var(--accent)">practice</a>.</div>`;
+      const ks = me.keys || [];
+      $("keys").innerHTML = ks.length
+        ? `<div style="overflow-x:auto;max-width:900px"><table class="mtx">
+             <tr><th class="rowh">Key</th><th>Label</th><th>Scopes</th><th>State</th><th>Last used</th></tr>
+             ${ks.map(k => `<tr><th class="rowh mono">${esc(k.prefix)}…</th>
+               <td>${esc(k.label || "-")}</td><td class="mono">${esc(k.scopes || "-")}</td>
+               <td>${k.active ? '<span class="pill ok">active</span>' : '<span class="pill crit">revoked</span>'}</td>
+               <td class="mono" style="font-size:11px">${esc(String(k.last_used_at || "never")).slice(0,19)}</td></tr>`).join("")}
+           </table></div>`
+        : `<div class="note">No API keys yet. You do not need one to use the website — only for scripts.</div>`;
+    } catch (e) {
+      $("byPath").innerHTML = `<div class="note err">${esc(e.message)}</div>`;
+      $("keys").innerHTML = "";
+    }
+
+    $("k_new").addEventListener("click", async () => {
+      const b = $("k_new"); b.disabled = true;
+      try {
+        const r = await RegMap.createKey($("k_label").value || "web");
+        $("k_out").innerHTML = `<div class="note"><b>Copy this now — it is not shown again.</b>
+          <pre class="code" style="margin-top:8px">${esc(r.api_key)}</pre>
+          <div class="sub">Use it as <span class="mono">Authorization: Bearer …</span>. It carries no
+          admin scope: admin keys are issued by an operator.</div></div>`;
+      } catch (e) { $("k_out").innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+      b.disabled = false;
+    });
+    $("signout").addEventListener("click", async () => {
+      try { await RegMap.logout(); } catch (e) {}
+      location.reload();
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
