@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RegMap: map any control to any framework</title>
-<link rel="stylesheet" href="assets/site.css?v=9">
-<link rel="stylesheet" href="assets/app.css?v=9">
+<link rel="stylesheet" href="assets/site.css?v=10">
+<link rel="stylesheet" href="assets/app.css?v=10">
 <style>
   /* page-local: the two-mode tab switch (uses the shell tokens) */
   .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
@@ -170,8 +170,8 @@
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=9"></script>
-<script src="assets/shell.js?v=9"></script>
+<script src="assets/api.js?v=10"></script>
+<script src="assets/shell.js?v=10"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -533,6 +533,9 @@
         pDel = $("pDel"), pStatus = $("pStatus"), pExport = $("pExport");
   const projData = () => ({ kind: "custom", target: cTgt.value, top_k: Number(cTopk.value),
                             controls: cText.value, decisions: DECISIONS });
+  const signInPrompt = action => `<div class="note err">Sign in to ${esc(action)}. ` +
+    `<a href="/account.html" style="color:var(--accent);font-weight:600">Sign in or create an account</a>` +
+    (action === "download files" ? ". Having it emailed instead is coming soon." : ".") + `</div>`;
 
   async function loadProjects(selectId) {
     let d; try { d = await RegMap.projects(); } catch (e) { return; }
@@ -547,7 +550,9 @@
       curProj.name = name;
       pStatus.textContent = "saved " + new Date().toLocaleTimeString();
       await loadProjects(curProj.id);
-    } catch (e) { if (!silent) cOut.innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+    } catch (e) {
+      if (!silent) cOut.innerHTML = e.status === 401 ? signInPrompt("save your work") : `<div class="note err">${esc(e.message)}</div>`;
+    }
   }
   async function openProject(id) {
     let p; try { p = await RegMap.projectGet(id); } catch (e) { return; }
@@ -582,7 +587,7 @@
     pExport.value = "";
     if (!cText.value.trim()) { cOut.innerHTML = `<div class="note err">Add controls and map them first, then export.</div>`; return; }
     await saveProject(true);                 // flush current state (creates the project if new)
-    if (!curProj) return;
+    if (!curProj) { cOut.innerHTML = signInPrompt("download files"); return; }
     const a = document.createElement("a");
     a.href = "/projects/" + encodeURIComponent(curProj.id) + "/export?fmt=" + encodeURIComponent(fmt);
     a.download = ""; document.body.appendChild(a); a.click(); a.remove();

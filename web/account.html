@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RegMap account</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css?v=10">
+<link rel="stylesheet" href="assets/app.css?v=10">
+<style>
+  .auth-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;max-width:860px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:22px}
+  .card h3{font-size:17px;margin-bottom:4px}
+  .card .sub{color:var(--muted);font-size:13px;margin-bottom:14px}
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .kv:last-child{border-bottom:0}
+  .kv .k{color:var(--muted)}
+  .mut{color:var(--muted);font-size:13px}
+  .qr{background:#fff;padding:12px;border-radius:12px;width:max-content}
+  .codes{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-family:var(--mono);font-size:13px;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:8px}
+  .link{color:var(--accent);cursor:pointer;font-size:13px;background:none;border:0;padding:0}
+</style>
+</head>
+<body data-page="account">
+
+<section class="section pad bleed" style="padding-top:34px">
+  <div class="eyebrow">Account</div>
+  <h1 id="title" style="font-size:clamp(26px,3.6vw,34px);margin-top:6px">Your account</h1>
+  <p class="lead" id="lead" style="color:var(--muted);font-size:15px;margin:8px 0 0;max-width:70ch">
+    Sign in to save your work and download files. You can use every feature as a guest; an account just
+    keeps your projects and lets you export.</p>
+</section>
+
+<section class="section tight pad bleed" id="app"></section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="assets/api.js?v=10"></script>
+<script src="assets/shell.js?v=10"></script>
+<script>
+(function () {
+  const app = document.getElementById("app");
+  const esc = RegMap.esc;
+  const q = new URLSearchParams(location.search);
+  const el = h => { const d = document.createElement("div"); d.innerHTML = h.trim(); return d.firstChild; };
+  const msg = (m, ok) => `<div class="note${ok ? "" : " err"}" style="margin-top:10px">${esc(m)}</div>`;
+
+  async function boot() {
+    // Handle a verification link: /account.html?verify=<token>
+    if (q.get("verify")) {
+      try { await RegMap.verify(q.get("verify")); app.innerHTML = `<div class="card">${msg("Email verified. Thanks.", true)}</div>`; }
+      catch (e) { app.innerHTML = `<div class="card">${msg(e.message)}</div>`; }
+      setTimeout(render, 1200); return;
+    }
+    // Handle a reset link: /account.html?reset=<token>
+    if (q.get("reset")) return renderReset(q.get("reset"));
+    render();
+  }
+
+  async function session() { try { return await RegMap.session(); } catch (e) { return { authenticated: false }; } }
+
+  async function render() {
+    const s = await session();
+    if (s.authenticated) return renderAccount(s);
+    renderSignedOut();
+  }
+
+  /* ---------------- signed out: sign in + register ---------------- */
+  function renderSignedOut() {
+    document.getElementById("title").textContent = "Sign in or create an account";
+    app.innerHTML = `
+      <div class="auth-grid">
+        <div class="card"><h3>Sign in</h3><div class="sub">Welcome back.</div>
+          <div class="stack">
+            <label class="fld">Email<input id="li-email" type="email" autocomplete="email"></label>
+            <label class="fld">Password<input id="li-pw" type="password" autocomplete="current-password"></label>
+            <div id="li-totp" hidden><label class="fld">Authenticator code<input id="li-code" inputmode="numeric" placeholder="6-digit code or recovery code"></label></div>
+            <div class="row"><button class="btn primary" id="li-go">Sign in</button>
+              <button class="link" id="li-forgot" type="button">Forgot password?</button></div>
+            <div id="li-out"></div>
+          </div>
+        </div>
+        <div class="card"><h3>Create account</h3><div class="sub">Free plan, no card. Metered fairly.</div>
+          <div class="stack">
+            <label class="fld">Name (optional)<input id="rg-name" autocomplete="name"></label>
+            <label class="fld">Email<input id="rg-email" type="email" autocomplete="email"></label>
+            <label class="fld">Password<input id="rg-pw" type="password" autocomplete="new-password" placeholder="at least 10 characters"></label>
+            <div class="row"><button class="btn primary" id="rg-go">Create account</button></div>
+            <div id="rg-out"></div>
+          </div>
+        </div>
+      </div>`;
+    const $ = id => document.getElementById(id);
+    let pending = null;
+    $("li-go").addEventListener("click", async () => {
+      const out = $("li-out");
+      try {
+        if (pending) {
+          await RegMap.loginTotp(pending, $("li-code").value.trim());
+        } else {
+          const r = await RegMap.login($("li-email").value.trim(), $("li-pw").value);
+          if (r.totp_required) { pending = r.pending; $("li-totp").hidden = false; out.innerHTML = msg("Enter the code from your authenticator app.", true); $("li-code").focus(); return; }
+        }
+        location.href = "/account.html";
+      } catch (e) { out.innerHTML = msg(e.message); }
+    });
+    $("li-forgot").addEventListener("click", () => renderForgot());
+    $("rg-go").addEventListener("click", async () => {
+      const out = $("rg-out");
+      try {
+        const r = await RegMap.register($("rg-email").value.trim(), $("rg-pw").value, $("rg-name").value.trim() || null);
+        out.innerHTML = msg("Account created. " + (r.verify_link ? "Verify your email from the account page." : "Check your email to verify."), true);
+        setTimeout(() => location.href = "/account.html", 900);
+      } catch (e) { out.innerHTML = msg(e.message); }
+    });
+  }
+
+  function renderForgot() {
+    document.getElementById("title").textContent = "Reset your password";
+    app.innerHTML = `<div class="card" style="max-width:420px"><h3>Reset password</h3>
+      <div class="sub">We will send a reset link to your email.</div>
+      <div class="stack">
+        <label class="fld">Email<input id="fp-email" type="email"></label>
+        <div class="row"><button class="btn primary" id="fp-go">Send reset link</button>
+          <button class="link" id="fp-back" type="button">Back to sign in</button></div>
+        <div id="fp-out"></div></div></div>`;
+    document.getElementById("fp-back").addEventListener("click", renderSignedOut);
+    document.getElementById("fp-go").addEventListener("click", async () => {
+      const out = document.getElementById("fp-out");
+      try {
+        const r = await RegMap.resetRequest(document.getElementById("fp-email").value.trim());
+        out.innerHTML = msg(r.reset_link ? ("Dev link (no email sender yet): " + r.reset_link) : "If that email has an account, a reset link is on its way.", true);
+      } catch (e) { out.innerHTML = msg(e.message); }
+    });
+  }
+
+  function renderReset(token) {
+    document.getElementById("title").textContent = "Set a new password";
+    app.innerHTML = `<div class="card" style="max-width:420px"><h3>New password</h3>
+      <div class="stack">
+        <label class="fld">New password<input id="np" type="password" placeholder="at least 10 characters"></label>
+        <div class="row"><button class="btn primary" id="np-go">Update password</button></div>
+        <div id="np-out"></div></div></div>`;
+    document.getElementById("np-go").addEventListener("click", async () => {
+      const out = document.getElementById("np-out");
+      try { await RegMap.reset(token, document.getElementById("np").value); out.innerHTML = msg("Password updated. You can sign in now.", true); setTimeout(() => location.href = "/account.html", 1000); }
+      catch (e) { out.innerHTML = msg(e.message); }
+    });
+  }
+
+  /* ---------------- signed in: account + security ---------------- */
+  async function renderAccount(s) {
+    document.getElementById("title").textContent = "Your account";
+    let me = {}; try { me = await RegMap.me(); } catch (e) { }
+    const plan = s.plan || {};
+    const remain = s.remaining_cu == null ? "unlimited" : s.remaining_cu;
+    const keys = (me.keys || []);
+    app.innerHTML = `
+      <div class="auth-grid" style="max-width:900px">
+        <div class="card"><h3>Profile</h3>
+          <div class="kv"><span class="k">Email</span><span>${esc(s.email || "")}</span></div>
+          <div class="kv"><span class="k">Verified</span><span id="verified"></span></div>
+          <div class="kv"><span class="k">Plan</span><span>${esc(plan.name || "Free")}</span></div>
+          <div class="kv"><span class="k">Usage</span><span>${esc(String(s.usage_cu ?? 0))} CU used${s.remaining_cu == null ? "" : ", " + remain + " left"}</span></div>
+          <div class="row" style="margin-top:14px"><a class="btn ghost sm" href="/pricing.html">Plans</a>
+            <button class="btn ghost sm" id="signout">Sign out</button></div>
+        </div>
+
+        <div class="card"><h3>Two-factor authentication</h3>
+          <div class="sub">Protect your account with an authenticator app (Google Authenticator, Authy, 1Password).</div>
+          <div id="totp"></div>
+        </div>
+
+        <div class="card"><h3>Password</h3>
+          <div class="stack">
+            <label class="fld">Current password<input id="cp-cur" type="password"></label>
+            <label class="fld">New password<input id="cp-new" type="password" placeholder="at least 10 characters"></label>
+            <div class="row"><button class="btn ghost sm" id="cp-go">Change password</button></div>
+            <div id="cp-out"></div>
+          </div>
+        </div>
+
+        <div class="card"><h3>API keys</h3>
+          <div class="sub">For programmatic access. Shown once at creation.</div>
+          <div id="keys">${keys.length ? keys.map(k => `<div class="kv"><span class="mono">${esc(k.prefix || "")}…</span><span class="mut">${esc(k.label || "")}</span></div>`).join("") : `<div class="mut">No keys yet.</div>`}</div>
+          <div class="row" style="margin-top:12px"><input class="fld" id="k-label" placeholder="label (optional)" style="width:200px;padding:8px 10px"><button class="btn ghost sm" id="k-go">Create key</button></div>
+          <div id="k-out"></div>
+        </div>
+      </div>`;
+
+    const $ = id => document.getElementById(id);
+    // verification
+    const vspan = $("verified");
+    if (s.email_verified) vspan.innerHTML = `<span class="pill ok">verified</span>`;
+    else { vspan.innerHTML = `<span class="pill warn">unverified</span> <button class="link" id="resend">Resend</button>`;
+      $("resend").addEventListener("click", async () => { try { const r = await RegMap.verifyResend(); vspan.insertAdjacentHTML("beforeend", msg(r.verify_link ? ("Dev link: " + r.verify_link) : "Verification email sent.", true)); } catch (e) { vspan.insertAdjacentHTML("beforeend", msg(e.message)); } }); }
+    // 2FA
+    renderTotp(s.totp_enabled);
+    $("signout").addEventListener("click", async () => { try { await RegMap.logout(); } catch (e) { } location.href = "/account.html"; });
+    $("cp-go").addEventListener("click", async () => { const o = $("cp-out"); try { await RegMap.passwordChange($("cp-cur").value, $("cp-new").value); o.innerHTML = msg("Password changed.", true); $("cp-cur").value = $("cp-new").value = ""; } catch (e) { o.innerHTML = msg(e.message); } });
+    $("k-go").addEventListener("click", async () => { const o = $("k-out"); try { const r = await RegMap.createKey($("k-label").value.trim() || null); o.innerHTML = `<div class="note" style="margin-top:10px">Copy this now, it will not be shown again:<br><span class="mono">${esc(r.api_key)}</span></div>`; } catch (e) { o.innerHTML = msg(e.message); } });
+  }
+
+  function renderTotp(enabled) {
+    const box = document.getElementById("totp");
+    if (enabled) {
+      box.innerHTML = `<div class="row"><span class="pill ok">on</span></div>
+        <div class="stack" style="margin-top:12px">
+          <label class="fld">Password to disable<input id="td-pw" type="password"></label>
+          <div class="row"><button class="btn ghost sm" id="td-go">Disable two-factor</button></div><div id="td-out"></div></div>`;
+      document.getElementById("td-go").addEventListener("click", async () => { const o = document.getElementById("td-out"); try { await RegMap.totpDisable(document.getElementById("td-pw").value); o.innerHTML = msg("Two-factor disabled.", true); setTimeout(render, 800); } catch (e) { o.innerHTML = msg(e.message); } });
+      return;
+    }
+    box.innerHTML = `<div class="row"><span class="pill warn">off</span>
+      <button class="btn primary sm" id="ts-start">Set up two-factor</button></div><div id="ts-body" style="margin-top:14px"></div>`;
+    document.getElementById("ts-start").addEventListener("click", async () => {
+      const body = document.getElementById("ts-body");
+      let d; try { d = await RegMap.totpSetup(); } catch (e) { body.innerHTML = msg(e.message); return; }
+      body.innerHTML = `<p class="mut">Scan this with your authenticator app, or enter the key manually, then type the 6-digit code to confirm.</p>
+        <div id="qr" class="qr"></div>
+        <p class="mut" style="margin-top:8px">Key: <span class="mono">${esc(d.secret)}</span></p>
+        <div class="row"><input class="fld" id="ts-code" placeholder="6-digit code" inputmode="numeric" style="width:160px;padding:8px 10px"><button class="btn primary sm" id="ts-confirm">Confirm</button></div>
+        <div id="ts-out"></div>`;
+      try { new QRCode(document.getElementById("qr"), { text: d.otpauth_uri, width: 160, height: 160 }); }
+      catch (e) { document.getElementById("qr").innerHTML = `<div class="mut" style="color:#333">QR unavailable, use the key above.</div>`; }
+      document.getElementById("ts-confirm").addEventListener("click", async () => {
+        const o = document.getElementById("ts-out");
+        try { const r = await RegMap.totpEnable(document.getElementById("ts-code").value.trim());
+          o.innerHTML = `<div class="note" style="margin-top:10px">Two-factor is on. Save these one-time recovery codes:</div><div class="codes">${r.recovery_codes.map(c => `<span>${esc(c)}</span>`).join("")}</div>`;
+        } catch (e) { o.innerHTML = msg(e.message); }
+      });
+    });
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

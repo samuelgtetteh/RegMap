@@ -49,16 +49,21 @@ roadmap items.
       (finish a 2FA login with a code or recovery code). `totp_enabled` surfaced in the session. Verified:
       enrol, login prompts for the code, TOTP and recovery-code logins work, wrong code is rejected.
 
-### B. Account UI on the new shell
-- [ ] `web/account.html` (data-page="account"): signed-out = sign in + register; signed-in = account
-      (email, verification status, plan, usage/remaining CU, API keys, sign out), password change, and a
-      reset flow. Uses the existing `/auth/*` + `/me`.
-- [ ] Nav auth state in `shell.js`: "Sign in" when a guest, the account (email / remaining CU) when
-      signed in; add an Account entry. Call `/auth/session` on load.
+### B. Account UI on the new shell DONE 2026-09-25, verified
+- [x] `web/account.html`: signed-out = sign in + register (with the 2FA code step and forgot-password);
+      signed-in = Profile (email, verification + Resend, plan, usage/remaining CU, sign out), Two-factor
+      (set up with a QR + confirm + recovery codes / disable), Password change, and API keys. Also handles
+      `?verify=` and `?reset=` links. Uses `/auth/*` + `/me`.
+- [x] Nav auth state in `shell.js`: "Sign in" for guests, "Account" when signed in (calls `/auth/session`);
+      mobile menu too.
 
-### C. Billing link
-- [ ] Account page shows plan, CU used and remaining, and API keys from `/me` (already billing-backed);
-      an Upgrade call to action (Stripe is Phase C in build_log.md).
+### C. Billing link DONE 2026-09-25
+- [x] Account Profile card shows the plan, CU used and remaining (from the session/`/me`), and API keys.
+      An Upgrade path to /pricing is linked; Stripe is Phase C in build_log.md.
+
+### Gating UX DONE 2026-09-25
+- [x] Compliance save/export show a "Sign in to save your work / download files" prompt (with a link to
+      /account.html) when a guest hits the 401 gate; export notes email delivery is coming.
 
 ## The only gate (product rule, 2026-09-25)
 

@@ -24,12 +24,14 @@
        <nav class="nav-links">${links}</nav>
        <span class="nav-sp"></span>
        <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
+       <a class="nav-desk" id="acctLink" href="/account.html" style="color:var(--muted);font-size:14px;font-weight:600;padding:0 4px">Sign in</a>
        <a class="btn ghost sm nav-desk" href="/labs.html">Learning Hub</a>
        <a class="btn primary sm nav-desk" href="/compliance.html">Start free</a>
        <button class="icon-btn nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">≡</button>
      </div>
      <div class="mobile-menu pad" id="mobileMenu" hidden>
        ${mlinks}
+       <a href="/account.html" class="m-link" id="acctLinkM">Sign in</a>
        <div class="m-cta">
          <a class="btn ghost sm" href="/labs.html">Learning Hub</a>
          <a class="btn primary sm" href="/compliance.html">Start free</a>
@@ -121,4 +123,15 @@
   const observe = () => document.querySelectorAll(".reveal:not(.in)").forEach(el => io.observe(el));
   document.addEventListener("DOMContentLoaded", observe);
   observe();
+
+  // Reflect sign-in state in the header: "Sign in" for guests, "Account" when signed in.
+  fetch("/auth/session", { credentials: "same-origin" })
+    .then(r => (r.ok ? r.json() : null))
+    .then(s => {
+      if (!s || !s.authenticated) return;
+      const a = document.getElementById("acctLink"), am = document.getElementById("acctLinkM");
+      if (a) a.textContent = "Account";
+      if (am) am.textContent = "Account";
+    })
+    .catch(() => {});
 })();
