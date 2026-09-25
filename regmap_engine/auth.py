@@ -29,6 +29,13 @@ import billing
 
 REQUIRE_AUTH = os.environ.get("REGMAP_REQUIRE_AUTH", "false").lower() in ("1", "true", "yes")
 
+# Enforcement switches for quota (402) and rate limiting (429).
+# PRE-LAUNCH: these default to OFF so nothing is blocked while we build. The live deployment turns them
+# back ON explicitly (see regmap_engine/k8s/deployment.yaml). BEFORE PUBLISHING a live site, either keep
+# them set to true in the deploy env or flip these defaults back to "true".
+ENFORCE_QUOTA = os.environ.get("REGMAP_ENFORCE_QUOTA", "false").lower() in ("1", "true", "yes")
+ENFORCE_RATE_LIMIT = os.environ.get("REGMAP_ENFORCE_RATE_LIMIT", "false").lower() in ("1", "true", "yes")
+
 # Requests per minute per key, per endpoint class. Cheap reads are ungated.
 RATE_LIMITS = {
     "/map": int(os.environ.get("REGMAP_RATE_MAP", "120")),
@@ -61,6 +68,8 @@ def _bearer(authorization, x_api_key):
 
 def rate_limit(identity, path):
     """Sliding-window limiter. Raises 429 with Retry-After when exceeded."""
+    if not ENFORCE_RATE_LIMIT:
+        return
     limit = RATE_LIMITS.get(path)
     if not limit:
         return
@@ -141,6 +150,9 @@ def enforce_quota(principal, estimate_cu):
     402 rather than 403: the caller is authenticated and permitted, they simply owe money — which is
     the distinction a client library needs in order to react correctly.
     """
+    if not ENFORCE_QUOTA:
+        # Development / pre-launch: never block on allowance. Usage is still metered for visibility.
+        return {"allowance": float("inf"), "used": 0.0, "estimate": estimate_cu, "remaining": float("inf")}
     allowed, info = billing.check_quota(principal, estimate_cu)
     if not allowed:
         raise HTTPException(402, detail={

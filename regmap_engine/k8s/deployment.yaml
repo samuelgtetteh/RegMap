@@ -49,6 +49,10 @@ spec:
             # Hosted deployment: enforce accounts. Guests can still browse the catalog; anything that
             # runs the model requires a login or an API key.
             - { name: REGMAP_REQUIRE_AUTH, value: "true" }
+            # Enforce metering/quota and rate limits on the live site. The app defaults these OFF for
+            # pre-launch development; the live deployment turns them ON explicitly here.
+            - { name: REGMAP_ENFORCE_QUOTA, value: "true" }
+            - { name: REGMAP_ENFORCE_RATE_LIMIT, value: "true" }
             # Set to "true" once TLS terminates in front of this Service, so session cookies are only
             # ever sent over HTTPS. Left false here because kind has no ingress TLS.
             - { name: REGMAP_SECURE_COOKIES, value: "false" }

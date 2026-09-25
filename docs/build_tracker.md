@@ -52,6 +52,13 @@ quiz. Every component maps to the same graded ground truth so progress is object
 - [ ] Build OT/ICS control monitoring: watch telemetry against control thresholds, flag breaches.
 - [ ] Tie monitor findings back to the mapped controls and the evidence/report layer.
 
+### Pre-launch checklist (do before publishing a live site)
+- [ ] **Re-enable enforcement.** During pre-launch, quota (402) and rate limits (429) default OFF so
+      nothing is blocked while we build (`REGMAP_ENFORCE_QUOTA` / `REGMAP_ENFORCE_RATE_LIMIT`, in
+      `regmap_engine/auth.py`). The k8s deployment already sets both to `true`; make sure any other live
+      deploy path (docker run, another host) sets them true too, or flip the defaults back to `true`.
+- [ ] Turn on `REGMAP_REQUIRE_AUTH` and `REGMAP_SECURE_COOKIES` (behind TLS) for the live site.
+
 ### Front end
 - [x] **LAYOUT LOCKED (2026-09-25, git tag `design-baseline-v1`).** The current layout is the final
       baseline. Spec + change protocol: `docs/design_system.md`. All future front-end work extends this
