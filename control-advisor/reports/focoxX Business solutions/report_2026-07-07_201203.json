@@ -1,0 +1,572 @@
+{
+  "cidr": "10.0.0.0/24",
+  "context": {
+    "business_name": "focoxX Business solutions",
+    "sector": "general_business",
+    "regulated_data": [
+      "phi_hipaa"
+    ],
+    "internet_facing": "yes",
+    "maturity": "unsure",
+    "file_share_permissions": "no",
+    "web_intended_public": "no",
+    "written_policy_check": "no"
+  },
+  "hosts": [
+    {
+      "ip": "10.0.0.1",
+      "categories": [
+        "dns",
+        "web",
+        "web_insecure"
+      ],
+      "recommended_controls": {
+        "dns": [
+          {
+            "control_id": "SI-4",
+            "control_text": "System Monitoring: Monitor the system to detect: Attacks and indicators of potential attacks in accordance with the following monitoring objectives: [Assignment: org-defined] ; and Unauthorized local, network, and remote connections; Identify unauthorized use of the system through the following tech",
+            "score": 0.2735,
+            "priority": "High",
+            "adjusted_score": 0.6035,
+            "reasons": [
+              "Semantic match to 'dns' (similarity 0.27)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "IA-3",
+            "control_text": "Device Identification and Authentication: Uniquely identify and authenticate [Assignment: org-defined] before establishing a [Assignment: org-defined] connection.",
+            "score": 0.2538,
+            "priority": "High",
+            "adjusted_score": 0.5838,
+            "reasons": [
+              "Semantic match to 'dns' (similarity 0.25)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "CA-9",
+            "control_text": "Internal System Connections: Authorize internal connections of [Assignment: org-defined] to the system; Document, for each internal connection, the interface characteristics, security and privacy requirements, and the nature of the information communicated; Terminate internal system connections afte",
+            "score": 0.2846,
+            "priority": "Medium",
+            "adjusted_score": 0.5346,
+            "reasons": [
+              "Semantic match to 'dns' (similarity 0.28)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI"
+            ]
+          }
+        ],
+        "web": [
+          {
+            "control_id": "AC-17",
+            "control_text": "Remote Access: Establish and document usage restrictions, configuration/connection requirements, and implementation guidance for each type of remote access allowed; and Authorize each type of remote access to the system prior to allowing such connections.",
+            "score": 0.3515,
+            "priority": "High",
+            "adjusted_score": 0.6815,
+            "reasons": [
+              "Semantic match to 'web' (similarity 0.35)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "IA-1",
+            "control_text": "Policy and Procedures: Develop, document, and disseminate to [Assignment: org-defined]: [Assignment: org-defined] identification and authentication policy that: Addresses purpose, scope, roles, responsibilities, management commitment, coordination among organizational entities, and compliance; and I",
+            "score": 0.3172,
+            "priority": "High",
+            "adjusted_score": 0.6472,
+            "reasons": [
+              "Semantic match to 'web' (similarity 0.32)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "SI-4",
+            "control_text": "System Monitoring: Monitor the system to detect: Attacks and indicators of potential attacks in accordance with the following monitoring objectives: [Assignment: org-defined] ; and Unauthorized local, network, and remote connections; Identify unauthorized use of the system through the following tech",
+            "score": 0.3088,
+            "priority": "High",
+            "adjusted_score": 0.6388,
+            "reasons": [
+              "Semantic match to 'web' (similarity 0.31)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          }
+        ],
+        "web_insecure": [
+          {
+            "control_id": "SC-8",
+            "control_text": "Transmission Confidentiality and Integrity: Protect the [Assignment: org-defined] of transmitted information.",
+            "score": 0.5332,
+            "priority": "Critical",
+            "adjusted_score": 1.3632,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.53)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity",
+              "This web service was NOT supposed to be internet-facing - likely a misconfiguration exposing it unintentionally"
+            ]
+          },
+          {
+            "control_id": "SC-28",
+            "control_text": "Protection of Information at Rest: Protect the [Assignment: org-defined] of the following information at rest: [Assignment: org-defined].",
+            "score": 0.3331,
+            "priority": "Critical",
+            "adjusted_score": 1.1631,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.33)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity",
+              "This web service was NOT supposed to be internet-facing - likely a misconfiguration exposing it unintentionally"
+            ]
+          },
+          {
+            "control_id": "AT-3",
+            "control_text": "Role-based Training: Provide role-based security and privacy training to personnel with the following roles and responsibilities: [Assignment: org-defined]: Before authorizing access to the system, information, or performing assigned duties, and [Assignment: org-defined] thereafter; and When require",
+            "score": 0.3475,
+            "priority": "Critical",
+            "adjusted_score": 1.0975,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.35)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "This web service was NOT supposed to be internet-facing - likely a misconfiguration exposing it unintentionally"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ip": "10.0.0.71",
+      "categories": [
+        "file_sharing",
+        "windows_rpc"
+      ],
+      "recommended_controls": {
+        "file_sharing": [
+          {
+            "control_id": "AC-17",
+            "control_text": "Remote Access: Establish and document usage restrictions, configuration/connection requirements, and implementation guidance for each type of remote access allowed; and Authorize each type of remote access to the system prior to allowing such connections.",
+            "score": 0.477,
+            "priority": "Critical",
+            "adjusted_score": 1.157,
+            "reasons": [
+              "Semantic match to 'file_sharing' (similarity 0.48)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "'file_sharing' internet exposure is yes (risk weighting applied)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity",
+              "File share permission enforcement is 'no'"
+            ]
+          },
+          {
+            "control_id": "CA-9",
+            "control_text": "Internal System Connections: Authorize internal connections of [Assignment: org-defined] to the system; Document, for each internal connection, the interface characteristics, security and privacy requirements, and the nature of the information communicated; Terminate internal system connections afte",
+            "score": 0.357,
+            "priority": "Critical",
+            "adjusted_score": 0.957,
+            "reasons": [
+              "Semantic match to 'file_sharing' (similarity 0.36)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "'file_sharing' internet exposure is yes (risk weighting applied)",
+              "File share permission enforcement is 'no'"
+            ]
+          },
+          {
+            "control_id": "MP-7",
+            "control_text": "Media Use: [Assignment: org-defined] the use of [Assignment: org-defined] on [Assignment: org-defined] using [Assignment: org-defined] ; and Prohibit the use of portable storage devices in organizational systems when such devices have no identifiable owner.",
+            "score": 0.3296,
+            "priority": "Critical",
+            "adjusted_score": 0.9296,
+            "reasons": [
+              "Semantic match to 'file_sharing' (similarity 0.33)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "'file_sharing' internet exposure is yes (risk weighting applied)",
+              "File share permission enforcement is 'no'"
+            ]
+          }
+        ],
+        "windows_rpc": [
+          {
+            "control_id": "SC-15",
+            "control_text": "Collaborative Computing Devices and Applications: Prohibit remote activation of collaborative computing devices and applications with the following exceptions: [Assignment: org-defined] ; and Provide an explicit indication of use to users physically present at the devices.",
+            "score": 0.3438,
+            "priority": "High",
+            "adjusted_score": 0.6738,
+            "reasons": [
+              "Semantic match to 'windows_rpc' (similarity 0.34)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "AC-17",
+            "control_text": "Remote Access: Establish and document usage restrictions, configuration/connection requirements, and implementation guidance for each type of remote access allowed; and Authorize each type of remote access to the system prior to allowing such connections.",
+            "score": 0.3358,
+            "priority": "High",
+            "adjusted_score": 0.6658,
+            "reasons": [
+              "Semantic match to 'windows_rpc' (similarity 0.34)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "CA-9",
+            "control_text": "Internal System Connections: Authorize internal connections of [Assignment: org-defined] to the system; Document, for each internal connection, the interface characteristics, security and privacy requirements, and the nature of the information communicated; Terminate internal system connections afte",
+            "score": 0.2819,
+            "priority": "Medium",
+            "adjusted_score": 0.5319,
+            "reasons": [
+              "Semantic match to 'windows_rpc' (similarity 0.28)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ip": "10.0.0.119",
+      "categories": [
+        "web_insecure"
+      ],
+      "recommended_controls": {
+        "web_insecure": [
+          {
+            "control_id": "SC-8",
+            "control_text": "Transmission Confidentiality and Integrity: Protect the [Assignment: org-defined] of transmitted information.",
+            "score": 0.5332,
+            "priority": "Critical",
+            "adjusted_score": 1.3632,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.53)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity",
+              "This web service was NOT supposed to be internet-facing - likely a misconfiguration exposing it unintentionally"
+            ]
+          },
+          {
+            "control_id": "SC-28",
+            "control_text": "Protection of Information at Rest: Protect the [Assignment: org-defined] of the following information at rest: [Assignment: org-defined].",
+            "score": 0.3331,
+            "priority": "Critical",
+            "adjusted_score": 1.1631,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.33)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity",
+              "This web service was NOT supposed to be internet-facing - likely a misconfiguration exposing it unintentionally"
+            ]
+          },
+          {
+            "control_id": "AT-3",
+            "control_text": "Role-based Training: Provide role-based security and privacy training to personnel with the following roles and responsibilities: [Assignment: org-defined]: Before authorizing access to the system, information, or performing assigned duties, and [Assignment: org-defined] thereafter; and When require",
+            "score": 0.3475,
+            "priority": "Critical",
+            "adjusted_score": 1.0975,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.35)",
+              "Maps to a HIPAA-relevant control - environment reports handling PHI",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "This web service was NOT supposed to be internet-facing - likely a misconfiguration exposing it unintentionally"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "baseline_controls": [
+    {
+      "control_id": "AC-2",
+      "control_text": "Account Management: Define and document the types of accounts allowed and specifically prohibited for use within the system; Assign account managers; Require [Assignment: org-defined] for group and role membership; Specify: Authorized users of the system; Group and role membership; and Access author",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "AC-6",
+      "control_text": "Least Privilege: Employ the principle of least privilege, allowing only authorized accesses for users (or processes acting on behalf of users) that are necessary to accomplish assigned organizational tasks.",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "AC-7",
+      "control_text": "Unsuccessful Logon Attempts: Enforce a limit of [Assignment: org-defined] consecutive invalid logon attempts by a user during a [Assignment: org-defined] ; and Automatically [Assignment: org-defined] when the maximum number of unsuccessful attempts is exceeded.",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "AT-2",
+      "control_text": "Literacy Training and Awareness: Provide security and privacy literacy training to system users (including managers, senior executives, and contractors): As part of initial training for new users and [Assignment: org-defined] thereafter; and When required by system changes or following [Assignment: ",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "AU-2",
+      "control_text": "Event Logging: Identify the types of events that the system is capable of logging in support of the audit function: [Assignment: org-defined]; Coordinate the event logging function with other organizational entities requiring audit-related information to guide and inform the selection criteria for e",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "AU-6",
+      "control_text": "Audit Record Review, Analysis, and Reporting: Review and analyze system audit records [Assignment: org-defined] for indications of [Assignment: org-defined] and the potential impact of the inappropriate or unusual activity; Report findings to [Assignment: org-defined] ; and Adjust the level of audit",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "CM-2",
+      "control_text": "Baseline Configuration: Develop, document, and maintain under configuration control, a current baseline configuration of the system; and Review and update the baseline configuration of the system: [Assignment: org-defined]; When required due to [Assignment: org-defined] ; and When system components ",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "CM-8",
+      "control_text": "System Component Inventory: Develop and document an inventory of system components that: Accurately reflects the system; Includes all components within the system; Does not include duplicate accounting of components or components assigned to any other system; Is at the level of granularity deemed ne",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "CP-2",
+      "control_text": "Contingency Plan: Develop a contingency plan for the system that: Identifies essential mission and business functions and associated contingency requirements; Provides recovery objectives, restoration priorities, and metrics; Addresses contingency roles, responsibilities, assigned individuals with c",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "CP-9",
+      "control_text": "System Backup: Conduct backups of user-level information contained in [Assignment: org-defined] [Assignment: org-defined]; Conduct backups of system-level information contained in the system [Assignment: org-defined]; Conduct backups of system documentation, including security- and privacy-related d",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "IA-2",
+      "control_text": "Identification and Authentication (Organizational Users): Uniquely identify and authenticate organizational users and associate that unique identification with processes acting on behalf of those users.",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "IA-5",
+      "control_text": "Authenticator Management: Manage system authenticators by: Verifying, as part of the initial authenticator distribution, the identity of the individual, group, role, service, or device receiving the authenticator; Establishing initial authenticator content for any authenticators issued by the organi",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "IR-4",
+      "control_text": "Incident Handling: Implement an incident handling capability for incidents that is consistent with the incident response plan and includes preparation, detection and analysis, containment, eradication, and recovery; Coordinate incident handling activities with contingency planning activities; Incorp",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "IR-8",
+      "control_text": "Incident Response Plan: Develop an incident response plan that: Provides the organization with a roadmap for implementing its incident response capability; Describes the structure and organization of the incident response capability; Provides a high-level approach for how the incident response capab",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "PL-2",
+      "control_text": "System Security and Privacy Plans: Develop security and privacy plans for the system that: Are consistent with the organization\u2019s enterprise architecture; Explicitly define the constituent system components; Describe the operational context of the system in terms of mission and business processes; I",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "PS-3",
+      "control_text": "Personnel Screening: Screen individuals prior to authorizing access to the system; and Rescreen individuals in accordance with [Assignment: org-defined].",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "RA-3",
+      "control_text": "Risk Assessment: Conduct a risk assessment, including: Identifying threats to and vulnerabilities in the system; Determining the likelihood and magnitude of harm from unauthorized access, use, disclosure, disruption, modification, or destruction of the system, the information it processes, stores, o",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "RA-5",
+      "control_text": "Vulnerability Monitoring and Scanning: Monitor and scan for vulnerabilities in the system and hosted applications [Assignment: org-defined] and when new vulnerabilities potentially affecting the system are identified and reported; Employ vulnerability monitoring tools and techniques that facilitate ",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "SC-7",
+      "control_text": "Boundary Protection: Monitor and control communications at the external managed interfaces to the system and at key internal managed interfaces within the system; Implement subnetworks for publicly accessible system components that are [Assignment: org-defined] separated from internal organizational",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "SI-2",
+      "control_text": "Flaw Remediation: Identify, report, and correct system flaws; Test software and firmware updates related to flaw remediation for effectiveness and potential side effects before installation; Install security-relevant software and firmware updates within [Assignment: org-defined] of the release of th",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "SI-3",
+      "control_text": "Malicious Code Protection: Implement [Assignment: org-defined] malicious code protection mechanisms at system entry and exit points to detect and eradicate malicious code; Automatically update malicious code protection mechanisms as new releases are available in accordance with organizational config",
+      "score": 0.5,
+      "priority": "Critical",
+      "adjusted_score": 0.83,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Maps to a HIPAA-relevant control - environment reports handling PHI",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    }
+  ],
+  "executive_summary": "The security assessment identified several critical vulnerabilities across various systems within our environment. Specifically:\n\n- **SC-8** and **SC-28** were found on two different hosts with high similarity scores indicating potential web-insecure content exposure.\n- **AT-3**, **CA-9**, and **MP-7** were detected on another host, suggesting file-sharing issues that could lead to data breaches if exploited.\n\nThese findings highlight significant risks related to web-based threats and unauthorized access to sensitive files. The high similarity scores indicate that these vulnerabilities are likely to be exploited by malicious actors seeking to compromise our network. Given the current security program's uncertain state, addressing these critical vulnerabilities promptly is crucial to protect against potential cyber attacks and maintain operational integrity.",
+  "draft_language": {
+    "SC-8": "**Policy Paragraph:**\n\nTo ensure the confidentiality and integrity of all PHI/ HIPAA-transmitted information during transmission over the internet, we have implemented the following measures:\n\n1. **Encryption:** All PHI/ HIPAA transmissions will be encrypted using industry-standard protocols such as TLS/SSL to protect against eavesdropping and unauthorized access.\n2. **Access Controls:** Access to PHI/ HIPAA data will be strictly controlled through role-based access controls (RBAC), ensuring that only authorized personnel can view or modify sensitive information.\n3. **Regular Audits:** Periodic audits will be conducted to verify compliance with encryption standards and RBAC policies, identifying and addressing any vulnerabilities promptly.\n\nBy adhering to these measures, our organization aims to safeguard PHI/ HIPAA data from potential breaches while maintaining operational efficiency and regulatory compliance.",
+    "SC-28": "**Policy Paragraph:**\n\nOur organization is committed to protecting sensitive PHI and HIPAA data at rest through robust encryption mechanisms that ensure confidentiality and integrity. We will implement AES-256-bit encryption for all electronic health records stored in our cloud infrastructure. Additionally, we will conduct regular audits and backups to maintain the availability and accessibility of this critical data. Our goal is to safeguard patient information from unauthorized access while ensuring compliance with federal regulations such as HIPAA.",
+    "AC-17": "**Policy Paragraph:**\n\nOur organization recognizes the importance of controlling remote access to ensure secure operations and protect sensitive PHI/HIPAA data. We have established that all remote access should be restricted to authorized personnel only during business hours. Additionally, we require that all remote access configurations adhere to industry-standard security protocols, including but not limited to encryption and multi-factor authentication. Prior to granting remote access permissions, we will conduct thorough background checks and verify the identity of users through multiple verification methods. This ensures that only individuals who meet our stringent criteria are granted access to our systems. By following these guidelines, we aim to maintain the confidentiality, integrity, and availability of our PHI/ HIPAA data while facilitating efficient remote work processes within our organization.",
+    "AT-3": "**Policy Paragraph:**\n\nTo ensure that all personnel are adequately trained on their roles and responsibilities regarding security and privacy, we hereby mandate that each employee undergoes role-specific security and privacy training before they are authorized to access our systems, information, or perform any assigned duties. This training will cover essential topics such as data protection, compliance requirements, and incident response procedures. Following the initial training, regular refresher sessions will be conducted to reinforce knowledge and address any new developments in security best practices. By adhering to this policy, we aim to maintain high standards of security awareness across all departments within our organization.",
+    "CA-9": "**Policy Paragraph:**\n\nOur organization is committed to ensuring secure and compliant handling of PHI/ HIPAA by authorizing all internal connections to our systems through a formalized process that includes detailed documentation of interface characteristics, security and privacy requirements, and the nature of the information exchanged. We will terminate all internal system connections upon completion of their intended purpose or when no longer required due to changes in business needs or regulatory compliance. This approach aligns with industry best practices while maintaining operational efficiency within our defined organizational boundaries.",
+    "MP-7": "**Policy Paragraph:**\n\nOur organization hereby implements the Media Use control from NIST Special Publication 800-53, Revision 4, ensuring that all media used within our systems are securely managed and protected against unauthorized access or misuse. We prohibit the use of portable storage devices in organizational systems unless they are specifically approved by management and have an identifiable owner. Additionally, we ensure compliance with HIPAA regulations regarding the handling and transmission of Protected Health Information (PHI), thereby safeguarding sensitive patient data both internally and externally. This policy aligns with our commitment to maintaining a robust cybersecurity posture and adhering to industry best practices.",
+    "AU-2": "**Policy Paragraph:**\n\nOur organization shall implement an event logging system capable of capturing detailed records of all critical activities within our systems. These logs will include but are not limited to login attempts, changes to user permissions, system crashes, and access to sensitive PHI or HIPAA data. The logs will be stored securely and accessible only by authorized personnel who have been granted explicit permission to view them. This measure ensures compliance with regulatory requirements such as HIPAA and supports comprehensive auditing of system operations, facilitating timely identification and resolution of issues. Coordination with relevant stakeholders will ensure that the selected mechanisms align with the needs of both internal and external auditors, thereby enhancing overall accountability and transparency.",
+    "CM-2": "**Policy Paragraph:**\n\nOur organization has determined that the development, documentation, and maintenance of a current baseline configuration of our systems are critical for ensuring compliance with HIPAA regulations and maintaining the integrity of our information assets. We will establish a formal process to review and update the baseline configuration of our systems when necessary, either due to changes in regulatory requirements or updates to our technology infrastructure. This ensures that our systems remain secure and aligned with industry best practices.",
+    "SI-3": "**Policy Paragraph:**\n\nOur organization is committed to safeguarding PHI/ HIPAA by employing robust malicious code protection measures across all systems. We implement advanced detection and eradication technologies at both system entry and exit points to identify and neutralize malicious software. Additionally, we ensure that our malicious code protection mechanisms are regularly updated to stay ahead of emerging threats, aligning with our established configuration management practices. This proactive approach helps protect sensitive information from unauthorized access or exploitation, thereby maintaining compliance with regulatory requirements such as HIPAA.",
+    "AC-6": "**Policy Paragraph:**\n\nOur organization adheres to the principle of least privilege by granting access rights to individuals and systems only as needed to perform their designated responsibilities. We ensure that all user accounts have minimal permissions required to complete their work assignments without unnecessary exposure or risk. Additionally, we implement robust authentication mechanisms and continuous monitoring to prevent unauthorized access attempts and promptly address any breaches. This approach helps maintain the confidentiality, integrity, and availability of PHI/HIPAA data while ensuring compliance with regulatory requirements.",
+    "SC-7": "**Policy Paragraph:**\n\nOur organization recognizes the importance of securing our external managed interfaces and key internal managed interfaces within the system through effective communication monitoring and control measures. To ensure compliance with NIST SP 800-53 Control SC-7, we have decided to implement subnetworks for publicly accessible system components that are logically isolated from internal organizational resources. This separation will enhance the overall security posture by mitigating potential risks associated with unauthorized access or malicious activities originating from external systems. Regular audits and updates will be conducted to maintain the integrity and effectiveness of this boundary protection strategy.",
+    "IA-2": "**Policy Paragraph:**\n\nOur organization is committed to ensuring the secure identification and authentication of all organizational users, including both internal staff and external partners who may act on our behalf. We will implement a robust user identity management system that uniquely identifies each individual and associates their activities with authorized processes. This includes requiring multifactor authentication for access to sensitive PHI/HIPAA data, which will be enforced across all internet-facing systems. Regular audits and updates to our authentication mechanisms will be conducted to maintain compliance with regulatory requirements and evolving security standards. Our goal is to create a secure environment where every interaction involving PHI/ HIPAA data is transparently traceable back to its originating user, thereby enhancing accountability and reducing risk.",
+    "PS-3": "**Policy Paragraph:**\n\nOur organization adheres to stringent personnel screening protocols to ensure that only authorized individuals have access to our systems. Prior to granting access, all employees will undergo rigorous background checks and security assessments conducted by qualified personnel. Additionally, we rescreen all users annually or upon request to maintain ongoing vigilance against potential threats. This comprehensive approach is designed to safeguard sensitive PHI/HIPAA data from unauthorized access while fostering a secure work environment.",
+    "IA-5": "**Policy Paragraph:**\n\nOur organization will manage system authenticators through the following steps:\n\n1. **Initial Distribution Verification:** We will verify the identity of individuals, groups, roles, services, or devices that receive authenticators during their initial distribution.\n2. **Content Establishment:** For any authenticators issued by our organization, we will establish initial content upon issuance.\n3. **Regular Audits and Updates:** We will conduct regular audits and updates to ensure the integrity and effectiveness of our authentication mechanisms.\n\nThis approach aligns with industry best practices and ensures secure access management within our organization.",
+    "AT-2": "**Policy Paragraph:**\n\nOur organization recognizes the importance of ensuring that all system users, including managers, senior executives, and contractors, are well-informed about cybersecurity best practices and their responsibilities regarding PHI/HIPAA compliance. We will provide comprehensive security and privacy literacy training to new users upon their first login to our systems. Additionally, we will conduct periodic refresher courses to ensure ongoing awareness and understanding of relevant policies and procedures. These sessions will be tailored to address any updates or changes to our security protocols, thereby maintaining our commitment to protecting sensitive information.",
+    "AU-6": "**Policy Paragraph:**\n\nOur organization will conduct periodic reviews and analyses of all system audit records to identify any indications of unauthorized access, malicious activities, or other suspicious behavior that may compromise PHI/HIPAA compliance. These findings will be reported to senior management immediately upon discovery. Based on the severity of each incident, we will adjust our audit procedures accordingly to enhance overall security measures. This process ensures that we remain vigilant against potential threats and promptly address any issues that could jeopardize patient privacy and confidentiality.",
+    "CP-2": "**Policy Paragraph:**\n\nOur organization has identified its essential mission and business functions critical to our operations. We have established recovery objectives and restoration priorities to ensure that we can quickly resume normal operations after an incident or disruption. Our contingency plan includes addressing various roles and responsibilities, assigning individuals who will be responsible for executing the plan during a crisis. Metrics will be used to measure the effectiveness of our response and recovery efforts. This plan is designed to minimize downtime and restore services as soon as possible, ensuring continuity of our core operations.",
+    "RA-3": "**Policy Paragraph:**\n\nOur organization will conduct a comprehensive risk assessment annually to identify potential threats and vulnerabilities within our systems. This assessment will include evaluating the likelihood and impact of various risks such as unauthorized access, use, disclosure, disruption, modification, or destruction of PHI/HIPAA data. By conducting regular risk assessments, we aim to proactively address potential security issues before they escalate into significant incidents. The results of these assessments will be used to inform our ongoing security measures and enhance overall system resilience.",
+    "CM-8": "**Policy Paragraph:**\n\nOur organization has developed and documented an accurate and comprehensive inventory of all system components necessary for our operations. This inventory includes all relevant hardware, software, and firmware elements within our systems, ensuring no duplication is accounted for and none are misassigned to other systems. The inventory is maintained at the highest level of detail deemed necessary to support our cybersecurity efforts and regulatory compliance requirements, particularly those related to PHI/HIPAA. Regular updates will be conducted to ensure the inventory remains current and aligned with organizational needs and technological advancements.",
+    "CP-9": "**Policy Paragraph:**\n\nOur organization shall implement a robust backup strategy that ensures the integrity and availability of all user-level information stored within our systems. This includes backing up sensitive PHI/HIPAA data at least annually by creating secure, encrypted copies on both local storage devices and cloud-based repositories accessible only through approved access controls. Additionally, we will conduct regular system-level backups every six months, preserving critical configurations and settings necessary for system recovery. Furthermore, comprehensive backups of system documentation, such as security policies, compliance reports, and incident response plans, will be performed quarterly to maintain traceability and ensure regulatory compliance. These measures are designed to safeguard against potential loss or corruption of data, thereby protecting our stakeholders' rights and interests.",
+    "IR-8": "**Incident Response Plan**\n\nThis organization shall develop and maintain an incident response plan that provides a comprehensive roadmap for establishing and executing its incident response capabilities. The plan should outline the organizational structure and responsibilities for managing incidents, including designated roles and authorities. It shall also detail a structured approach for responding to potential threats or breaches, ensuring rapid identification, containment, investigation, and recovery processes are clearly defined. This document will serve as a foundational guide for all employees involved in incident management, ensuring consistent and effective responses across the organization.",
+    "AC-7": "**Policy Title:** Access Control Management\n\n**Purpose:** To ensure that unauthorized access attempts are detected and mitigated promptly, thereby enhancing the overall security posture of our organization.\n\n**Scope:** This policy applies to all employees, contractors, and third-party personnel who have been granted access to sensitive information systems or applications within our organization.\n\n**Control Implementation:**\n\n1. **Limitation of Consecutive Invalid Logon Attempts:** We will enforce a limit of [Assignment: org-defined] consecutive invalid logon attempts by a user during a [Assignment: org-defined] window.\n   \n2. **Automatic Lockout Mechanism:** When the maximum number of unsuccessful attempts exceeds the established threshold, we will automatically lock out the account for [Assignment: org-defined] hours until the user can reset their password through secure means such as a recovery phone call or email verification.\n\n**Verification and Review:** The effectiveness of this policy will be periodically reviewed and updated as necessary to align with evolving threats and organizational needs. Regular audits will",
+    "RA-5": "**Vulnerability Monitoring and Scanning Policy**\n\nOur organization will monitor and scan our systems and hosted applications for vulnerabilities using established vulnerability scanning tools and techniques. When new vulnerabilities potentially affecting our systems are identified and reported, we will promptly address them to mitigate risks and ensure compliance with regulatory requirements such as HIPAA. This proactive approach helps maintain the integrity and confidentiality of sensitive PHI stored within our network. Regular audits and updates to our vulnerability management strategy will be conducted to enhance our security posture continuously.",
+    "IR-4": "**Incident Handling Capability**\n\nOur organization shall establish and maintain an incident handling capability that is aligned with our incident response plan. This will include comprehensive preparation, thorough detection and analysis, effective containment measures, timely eradication actions, and secure recovery processes. We will coordinate all incident handling activities with our contingency plans to ensure seamless integration and robust preparedness against potential threats. By adhering to this policy, we aim to minimize disruptions and mitigate the impact of any incidents that may occur within our operations.",
+    "SI-2": "**Policy Paragraph:**\n\nOur organization is committed to ensuring the integrity and confidentiality of PHI/ HIPAA by promptly identifying, reporting, and correcting system flaws that may compromise patient information. We will conduct regular vulnerability assessments and penetration testing to identify potential weaknesses in our systems and applications. For each identified flaw, we will report the findings to relevant stakeholders and implement necessary mitigations within [Assignment: org-defined] days of discovery. Additionally, prior to installing any security-relevant software or firmware updates, we will thoroughly test their effectiveness and potential side effects using controlled environments to minimize risks to patient privacy and data security. This proactive approach ensures that all updates are rigorously evaluated and implemented safely, maintaining compliance with regulatory requirements such as HIPAA.",
+    "PL-2": "**Policy Paragraph:**\n\nOur organization has developed comprehensive security and privacy plans for our systems, ensuring they are aligned with our enterprise architecture. These plans explicitly outline all system components and their interactions within our mission-critical operations. By detailing the operational context through mission and business processes, we ensure that our security measures are tailored to protect sensitive PHI/HIPAA data effectively. This approach enhances our ability to maintain compliance while supporting our core business objectives.",
+    "AC-2": "**Account Management Policy**\n\nThis organization shall define and document the types of accounts that are permitted or restricted within our systems. We will assign account managers responsible for managing user access and ensuring compliance with organizational policies. For group and role membership, we require explicit approval from authorized personnel before adding new members. Our policy specifies who is eligible to use the system, including both individual users and groups, along with detailed guidelines on accessing resources securely. This ensures that all activities conducted through our systems adhere to strict security standards and regulatory requirements such as HIPAA.",
+    "SC-15": "**Policy Paragraph:**\n\nOur organization prohibits the remote activation of collaborative computing devices and applications unless specifically authorized by the IT department. Users are required to log into their accounts locally or via secure connections before accessing any collaborative tools. Additionally, all instances of remote activation will be logged and monitored to ensure compliance with regulatory requirements such as HIPAA. This measure helps maintain the integrity and confidentiality of our PHI/PHI data stored within our network infrastructure.",
+    "IA-1": "**Policy Paragraph:**\n\nOur organization has established an identification and authentication policy aimed at ensuring secure access to our systems and sensitive PHI/HIPAA data. This policy outlines the purpose, scope, roles, responsibilities, management commitment, and coordination among organizational entities necessary for effective identity verification processes. It mandates adherence to industry standards while also considering local regulatory requirements such as HIPAA. The policy is designed to be comprehensive, covering all aspects from user registration through logout procedures, ensuring seamless integration with existing security measures. Management commits to regular review and updates to maintain its relevance and effectiveness. Coordination with other departments ensures that no gaps exist in the authentication process, thereby enhancing overall system security.",
+    "SI-4": "**Policy Paragraph:**\n\nOur organization will monitor its systems continuously to detect attacks and indicators of potential attacks in accordance with the following monitoring objectives:\n\n1. **System Integrity:** We will ensure that all access attempts are logged and monitored for suspicious activity.\n2. **Network Security:** We will implement intrusion detection systems to identify unauthorized local, network, and remote connections.\n3. **Unauthorized Use Detection:** We will employ advanced threat intelligence feeds to alert us promptly when unusual patterns or behaviors indicate an unauthorized use of our systems.\n\nBy adhering to these measures, we aim to maintain the integrity and confidentiality of PHI/HIPAA data stored within our systems, thereby protecting sensitive information from malicious actors. Regular audits and updates to our monitoring tools will be conducted to ensure they remain effective against evolving threats.",
+    "IA-3": "**Policy Paragraph:**\n\nOur organization is committed to ensuring that all devices connected to our network are uniquely identified and authenticated prior to establishing any secure connections. This requirement aligns with industry best practices and regulatory compliance standards such as HIPAA. We will conduct thorough assessments to determine an effective method for device identification and authentication, which may include but is not limited to leveraging unique identifiers, cryptographic techniques, or biometric verification methods. By adhering to this policy, we aim to enhance the overall security posture of our infrastructure while maintaining operational efficiency."
+  }
+}

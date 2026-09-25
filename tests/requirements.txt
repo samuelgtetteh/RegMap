@@ -1,0 +1,4 @@
+# Test-only dependencies. Install alongside backend/requirements.txt +
+# control-advisor/requirements.txt, then run `pytest` from the repo root.
+pytest==9.1.1
+httpx==0.28.1

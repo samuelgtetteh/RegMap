@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Environment Login</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .card { background: #111827; padding: 24px; border-radius: 12px; width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+    h1 { margin-top: 0; font-size: 1.3rem; }
+    label { display: block; margin-top: 10px; font-size: 0.95rem; }
+    input { width: 100%; padding: 10px; margin-top: 6px; border-radius: 8px; border: 1px solid #334155; background: #020617; color: #fff; box-sizing: border-box; }
+    button { width: 100%; padding: 10px; margin-top: 16px; border: 0; border-radius: 8px; background: #2563eb; color: white; cursor: pointer; font-weight: 600; }
+    button:hover { background: #1d4ed8; }
+    .secondary { background: #334155; }
+    .secondary:hover { background: #475569; }
+    .status { margin-top: 12px; font-size: 0.95rem; min-height: 1.2em; }
+    .status.error { color: #f87171; }
+    .status.ok { color: #4ade80; }
+    .small { margin-top: 10px; font-size: 0.85rem; color: #94a3b8; }
+    .link { color: #60a5fa; cursor: pointer; text-decoration: underline; display: inline-block; margin-top: 10px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="loginForm">
+      <h1>Sign in to the environment</h1>
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" />
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" />
+      <button onclick="doLogin()">Log in</button>
+      <div class="link" onclick="showRegister()">Create new account</div>
+      <div class="link" onclick="showReset()">Forgotten password</div>
+    </div>
+
+    <div id="registerForm" class="hidden">
+      <h1>Create a new account</h1>
+      <label for="newUsername">Username</label>
+      <input id="newUsername" name="newUsername" autocomplete="username" minlength="3" />
+      <label for="newPassword">Password</label>
+      <input id="newPassword" name="newPassword" type="password" minlength="8" />
+      <button onclick="doRegister()">Create account</button>
+      <div class="link" onclick="showLogin()">Back to login</div>
+    </div>
+
+    <div id="resetForm" class="hidden">
+      <h1>Reset password</h1>
+      <label for="resetUsername">Username</label>
+      <input id="resetUsername" name="resetUsername" autocomplete="username" minlength="3" />
+      <label for="resetPassword">New password</label>
+      <input id="resetPassword" name="resetPassword" type="password" minlength="8" />
+      <button onclick="doReset()">Reset password</button>
+      <div class="link" onclick="showLogin()">Back to login</div>
+    </div>
+
+    <div id="status" class="status"></div>
+    <div class="small">This page talks to the local auth_service API on port 8002.</div>
+  </div>
+
+  <script>
+    function setMode(mode) {
+      document.getElementById('loginForm').classList.toggle('hidden', mode !== 'login');
+      document.getElementById('registerForm').classList.toggle('hidden', mode !== 'register');
+      document.getElementById('resetForm').classList.toggle('hidden', mode !== 'reset');
+      document.getElementById('status').className = 'status';
+      document.getElementById('status').textContent = '';
+    }
+
+    function showRegister() { setMode('register'); }
+    function showReset() { setMode('reset'); }
+    function showLogin() { setMode('login'); }
+
+    async function doLogin() {
+      const statusEl = document.getElementById('status');
+      statusEl.className = 'status';
+      statusEl.textContent = 'Signing in...';
+
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const response = await fetch('http://127.0.0.1:8002/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || 'Login failed');
+        }
+
+        statusEl.className = 'status ok';
+        statusEl.textContent = 'Login successful.';
+        localStorage.setItem('auth_token', data.access_token);
+        localStorage.setItem('auth_username', data.username);
+        window.location.href = '/tools.html';
+      } catch (err) {
+        statusEl.className = 'status error';
+        statusEl.textContent = err.message || 'Unable to reach the auth service.';
+      }
+    }
+
+    async function doRegister() {
+      const statusEl = document.getElementById('status');
+      statusEl.className = 'status';
+      statusEl.textContent = 'Creating account...';
+      const username = document.getElementById('newUsername').value.trim();
+      const password = document.getElementById('newPassword').value;
+
+      if (!username || username.length < 3) {
+        statusEl.className = 'status error';
+        statusEl.textContent = 'Username must be at least 3 characters.';
+        return;
+      }
+      if (!password || password.length < 8) {
+        statusEl.className = 'status error';
+        statusEl.textContent = 'Password must be at least 8 characters.';
+        return;
+      }
+
+      try {
+        const response = await fetch('http://127.0.0.1:8002/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.detail || data.message || 'Registration failed');
+        }
+        statusEl.className = 'status ok';
+        statusEl.textContent = data.message || 'Account created.';
+      } catch (err) {
+        statusEl.className = 'status error';
+        const message = err && err.message ? err.message : 'Registration failed';
+        statusEl.textContent = message;
+      }
+    }
+
+    async function doReset() {
+      const statusEl = document.getElementById('status');
+      statusEl.className = 'status';
+      statusEl.textContent = 'Resetting password...';
+      const username = document.getElementById('resetUsername').value.trim();
+      const password = document.getElementById('resetPassword').value;
+
+      if (!username || username.length < 3) {
+        statusEl.className = 'status error';
+        statusEl.textContent = 'Username must be at least 3 characters.';
+        return;
+      }
+      if (!password || password.length < 8) {
+        statusEl.className = 'status error';
+        statusEl.textContent = 'Password must be at least 8 characters.';
+        return;
+      }
+
+      try {
+        const response = await fetch('http://127.0.0.1:8002/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, new_password: password })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.detail || data.message || 'Password reset failed');
+        }
+        statusEl.className = 'status ok';
+        statusEl.textContent = data.message || 'Password reset.';
+      } catch (err) {
+        statusEl.className = 'status error';
+        const message = err && err.message ? err.message : 'Password reset failed';
+        statusEl.textContent = message;
+      }
+    }
+  </script>
+</body>
+</html>

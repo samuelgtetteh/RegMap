@@ -1,0 +1,11 @@
+# Control Advisor dependencies. Versions pinned to what the tool was developed
+# and tested against, so a fresh install reproduces a known-good environment.
+# torch/transformers are large — they power the local Qwen2.5 interview model.
+boto3==1.43.40
+openpyxl==3.1.5
+pandas==3.0.3
+psutil==7.2.2
+python-docx==1.2.0
+sentence-transformers==5.6.0
+torch==2.12.1
+transformers==5.13.0

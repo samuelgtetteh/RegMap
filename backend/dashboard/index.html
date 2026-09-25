@@ -1,0 +1,1161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegMap — Live Security Decisioning</title>
+<style>
+  :root{
+    --bg:#0b0f17; --panel:#131a26; --panel2:#0f1622; --line:#243044; --txt:#e6edf6;
+    --muted:#8aa0bd; --accent:#4da3ff; --ok:#2ecc71; --warn:#ffb020; --crit:#ff5470; --pill:#1b2536;
+    --flash:rgba(77,163,255,.18);
+  }
+  :root[data-theme="light"]{
+    --bg:#f4f6fb; --panel:#ffffff; --panel2:#eef2f8; --line:#d9e0ec; --txt:#16202e;
+    --muted:#5b6b82; --accent:#2563eb; --ok:#17a34a; --warn:#b26a00; --crit:#d92d4b; --pill:#eef2f8;
+    --flash:rgba(37,99,235,.12);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+  a{color:var(--accent)}
+  header{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel2);position:sticky;top:0;z-index:5}
+  header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.2px}
+  .live{display:flex;align-items:center;gap:7px;font-weight:600}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}
+  .dot.on{background:var(--ok);box-shadow:0 0 0 0 rgba(46,204,113,.6);animation:pulse 1.6s infinite}
+  .dot.off{background:var(--crit)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(46,204,113,.5)}70%{box-shadow:0 0 0 8px rgba(46,204,113,0)}100%{box-shadow:0 0 0 0 rgba(46,204,113,0)}}
+  header .stat{display:flex;flex-direction:column;line-height:1.2}
+  header .stat b{font-size:15px}
+  header .stat span{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  header .spacer{flex:1}
+  .muted{color:var(--muted)}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:16px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .card h3{margin:0 0 10px;font-size:13px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .card .big{font-size:28px;font-weight:700}
+  .card .row{display:flex;justify-content:space-between;margin-top:8px;color:var(--muted)}
+  .card .row b{color:var(--txt)}
+  .light{width:9px;height:9px;border-radius:50%;background:var(--ok)}
+  .light.alert{background:var(--crit)}
+  main{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;padding:0 0 22px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+  .panel .head{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .panel .head h2{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.6px}
+  .panel .head .spacer{flex:1}
+  .btn{background:var(--pill);border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer}
+  .btn:hover{border-color:var(--accent)}
+  .feed{max-height:62vh;overflow:auto}
+  .ev{display:grid;grid-template-columns:64px 78px 1fr auto;gap:8px;align-items:center;padding:7px 14px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .ev:first-child{animation:flash .8s}
+  @keyframes flash{from{background:var(--flash)}to{background:transparent}}
+  .ev.flag{background:rgba(255,84,112,.07)}
+  .ev .t{color:var(--muted);font-size:12px}
+  .badge{padding:1px 7px;border-radius:20px;font-size:11px;font-weight:700}
+  .badge.ok{background:rgba(46,204,113,.15);color:var(--ok)}
+  .badge.alert{background:rgba(255,84,112,.18);color:var(--crit)}
+  .tag{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:1px 6px;border:1px solid var(--line);border-radius:5px}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px}
+  th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  .sev{font-weight:700}.sev.high{color:var(--crit)}.sev.medium{color:var(--warn)}.sev.low{color:var(--muted)}
+  .prio{display:inline-block;min-width:20px;text-align:center;border-radius:6px;background:var(--pill);padding:1px 6px;font-weight:700}
+  .why{color:var(--muted);font-size:12px;padding:0 10px 10px}
+  .acts{max-height:26vh;overflow:auto}
+  .act{display:flex;gap:8px;align-items:center;padding:6px 14px;border-bottom:1px solid var(--line);font-size:12px}
+  .act .s.ok{color:var(--ok)}.act .s.skipped{color:var(--muted)}.act .s.failed{color:var(--crit)}
+  @media(max-width:1000px){.cards{grid-template-columns:1fr}main{grid-template-columns:1fr}}
+  .alertrow{cursor:pointer}.alertrow:hover{background:var(--flash)}
+  .pill{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;background:var(--pill);color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .pill.open{color:var(--warn)}.pill.acknowledged{color:var(--accent)}
+  /* --- alert case drawer --- */
+  #backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .18s;z-index:20}
+  #backdrop.show{opacity:1;pointer-events:auto}
+  #drawer{position:fixed;top:0;right:0;height:100%;width:min(560px,100%);background:var(--panel);border-left:1px solid var(--line);
+    transform:translateX(100%);transition:transform .2s;z-index:21;display:flex;flex-direction:column}
+  #drawer.show{transform:translateX(0)}
+  #drawer .dhead{display:flex;align-items:flex-start;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  #drawer .dhead h2{margin:0;font-size:15px}
+  #drawer .dhead .x{margin-left:auto;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
+  #drawer .dbody{overflow:auto;padding:14px 16px;flex:1}
+  #drawer .meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-bottom:12px}
+  #drawer .meta div{font-size:12px;color:var(--muted)}#drawer .meta b{color:var(--txt);font-size:13px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .toolbar .btn{font-size:12px}
+  .btn.good{border-color:var(--crit);color:var(--crit)}.btn.fp{border-color:var(--ok);color:var(--ok)}
+  .sec{margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+  .kv{display:flex;gap:14px;font-size:13px}.kv b.mal{color:var(--crit)}.kv b.ben{color:var(--ok)}
+  #drawer table td,#drawer table th{padding:6px 8px;font-size:12px}
+  .trail .e{padding:7px 0;border-bottom:1px solid var(--line);font-size:12px}
+  .trail .e .a{font-weight:700;text-transform:capitalize}.trail .e .m{color:var(--muted)}
+  .triage{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px}
+  /* --- settings panel --- */
+  #setpanel{position:fixed;top:0;right:0;height:100%;width:min(540px,100%);background:var(--panel);border-left:1px solid var(--line);
+    transform:translateX(100%);transition:transform .2s;z-index:22;display:flex;flex-direction:column}
+  #setpanel.show{transform:translateX(0)}
+  #setpanel .dhead{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  #setpanel .dhead h2{margin:0;font-size:15px}#setpanel .dhead .x{margin-left:auto;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
+  #setpanel .dbody{overflow:auto;padding:6px 16px;flex:1}
+  .setgrp{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:16px 0 4px}
+  .setrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+  .setrow .lab{font-size:13px}.setrow .lab .h{color:var(--muted);font-size:11px;display:block;margin-top:2px;font-weight:400}
+  .setrow .lab .ov{color:var(--warn);font-size:10px;margin-left:6px;text-transform:uppercase;letter-spacing:.4px}
+  .setrow input[type=number]{width:120px;background:var(--pill);border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:6px 8px;font-size:13px;font-variant-numeric:tabular-nums}
+  .setrow input[type=number]:focus{outline:none;border-color:var(--accent)}
+  .switch{position:relative;width:42px;height:22px}.switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;cursor:pointer;inset:0;background:var(--line);border-radius:22px;transition:.15s}
+  .slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+  .switch input:checked+.slider{background:var(--accent)}.switch input:checked+.slider:before{transform:translateX(20px)}
+  .setfoot{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);background:var(--panel2)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  #set-msg{font-size:12px;color:var(--ok)}
+  /* --- app menu + tool navigation + views --- */
+  .menu{position:relative}
+  .menu .items{position:absolute;top:calc(100% + 6px);left:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;min-width:230px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none;z-index:30;padding:6px}
+  .menu.open .items{display:block}
+  .menu .items a{display:block;padding:7px 10px;font-size:13px;color:var(--txt);text-decoration:none;border-radius:6px;cursor:pointer}
+  .menu .items a:hover{background:var(--pill)}
+  .menu .items .sep{height:1px;background:var(--line);margin:5px 4px}
+  nav.nav{display:flex;gap:2px}
+  nav.nav a{padding:9px 13px;font-size:13px;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+  nav.nav a:hover{color:var(--txt)}
+  nav.nav a.active{color:var(--txt);border-bottom-color:var(--accent)}
+  .view{display:none}.view.active{display:block}
+  .page{padding:16px 0;max-width:none}
+  .page h2{margin:0 0 4px;font-size:17px}
+  .page .lead{color:var(--muted);font-size:13px;margin:0 0 14px;max-width:80ch}
+  .note{font-size:12px;color:var(--muted)}
+  .form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:6px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+  .field input,.field select{background:var(--pill);border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:7px 9px;font-size:13px;min-width:120px}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+  .sevpill{padding:1px 7px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+  .sev-critical{background:rgba(255,84,112,.20);color:var(--crit)} .sev-high{background:rgba(255,84,112,.12);color:var(--crit)}
+  .sev-medium{background:rgba(255,176,32,.16);color:var(--warn)} .sev-low{background:var(--pill);color:var(--muted)}
+  .rescard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+  .rescard h3{margin:0 0 8px;font-size:14px}
+  .cve{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:5px 0;border-top:1px solid var(--line);font-size:12px}
+  .st{padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;white-space:nowrap}
+  .st.ready{background:rgba(46,204,113,.16);color:var(--ok)} .st.install{background:var(--pill);color:var(--muted)}
+  .kevchip{background:rgba(255,84,112,.22);color:var(--crit);padding:1px 6px;border-radius:20px;font-size:10px;font-weight:700}
+  .catgrp{margin:10px 0 3px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .catrow{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .catrow .en{color:var(--muted);font-size:11px}
+  .sev-info{background:var(--pill);color:var(--muted)}
+  .qcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+  .qcard .q{font-weight:600;margin-bottom:8px}
+  .qopt{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:13px;cursor:pointer}
+  .qopt .d{color:var(--muted);font-size:12px}
+  .chat{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--panel);display:flex;flex-direction:column;gap:8px}
+  .bubble{max-width:82%;padding:8px 12px;border-radius:13px;font-size:13px;line-height:1.5;white-space:pre-wrap}
+  .bubble.a{align-self:flex-start;background:var(--panel2);border:1px solid var(--line);border-bottom-left-radius:3px}
+  .bubble.u{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:3px}
+  .chatinput{display:flex;gap:8px;margin-top:10px}
+  .chatinput input{flex:1;background:var(--pill);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:9px 11px;font-size:13px}
+  .chatinput input:focus{outline:none;border-color:var(--accent)}
+  .factchip{display:inline-block;background:var(--pill);border:1px solid var(--line);border-radius:20px;padding:2px 9px;font-size:11px;margin:2px;color:var(--muted)}
+  .factchip b{color:var(--txt)}
+  .qta{width:100%;background:var(--pill);border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:8px 9px;font-size:13px;resize:vertical;font-family:inherit}
+  .qta:focus{outline:none;border-color:var(--accent)}
+  .understood{font-size:12px;color:var(--ok);margin-top:5px;min-height:1px}
+  .qcard details summary{cursor:pointer;color:var(--muted);font-size:12px;margin-top:6px}
+  .steps{display:flex;gap:8px;margin-bottom:16px;max-width:640px}
+  .step{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:12px;color:var(--muted);background:var(--panel);text-align:center}
+  .step.on{border-color:var(--accent);color:var(--txt)}
+  .dlrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .warn-banner{background:rgba(255,176,32,.12);border:1px solid var(--warn);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:12.5px;margin-bottom:14px}
+  .modes{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .modecard{flex:1;min-width:250px;display:flex;flex-direction:column;gap:3px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;background:var(--panel)}
+  .modecard b{font-size:14px}.modecard .d{color:var(--muted);font-size:12px}
+  .modecard:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .ackrow{display:flex;align-items:center;gap:8px;font-size:12.5px;margin:10px 0}
+  .envbox{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:12.5px}
+  .envbox a{cursor:pointer}
+</style>
+<style>
+/* ===== global redesign: FULL-WIDTH edge-to-edge body · unified look · motion (all pages) ===== */
+/* full-screen like Datadog/Udemy — content fills the viewport with responsive side gutters, not a centered column */
+.view{max-width:none;margin:0;padding:20px clamp(18px,3vw,52px) 54px}
+@media(max-width:680px){.view{padding:16px 16px 40px}}
+.view.active{animation:viewIn .42s cubic-bezier(.2,.9,.25,1)}
+@keyframes viewIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* header as a clean full-width top bar, gutter matched to the body */
+header{padding:12px clamp(18px,3vw,52px)}
+header h1{font-size:19px;letter-spacing:-.02em}
+/* cards & panels: cleaner, lift + accent on hover */
+.card,.panel{transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 10px 26px rgba(0,0,0,.10)}
+:root[data-theme="light"] .card:hover{box-shadow:0 10px 26px rgba(16,27,48,.08)}
+/* monitor: bigger, tidier headline numbers + staggered card entrance */
+#view-monitor .cards{gap:16px}
+#view-monitor .card{animation:viewIn .5s both}
+#view-monitor .cards .card:nth-child(2){animation-delay:.06s}
+#view-monitor .cards .card:nth-child(3){animation-delay:.12s}
+#view-monitor .card > div:nth-child(2){font-size:34px;font-weight:800;letter-spacing:-.02em}
+/* nav tabs: crisp underline active state (Tenable-like) */
+.nav a{position:relative;padding-bottom:6px}
+.nav a.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);border-radius:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>RegMap</h1>
+  <div class="menu" id="appmenu">
+    <button class="btn" id="menubtn" title="menu">☰ Menu</button>
+    <div class="items">
+      <a data-view="monitor">📊 Monitor</a>
+      <a data-view="assess">🛡️ Assess (scan → compliance)</a>
+      <a data-view="help">❓ Help</a>
+      <div class="sep"></div>
+      <a onclick="openSettings()">⚙ Settings</a>
+      <a onclick="exportTrail()">⬇ Export verdict trail (JSON)</a>
+      <div class="sep"></div>
+      <a href="/docs" target="_blank">API docs</a>
+      <a onclick="about()">About</a>
+    </div>
+  </div>
+  <nav class="nav" id="nav">
+    <a data-view="monitor">Monitor</a>
+    <a data-view="assess">Assess</a>
+    <a data-view="help">Help</a>
+  </nav>
+  <div class="live"><span id="dot" class="dot"></span><span id="livetxt">connecting…</span></div>
+  <div class="spacer"></div>
+  <div class="stat"><b id="s-events">–</b><span>events</span></div>
+  <div class="stat"><b id="s-alerts">–</b><span>open alerts</span></div>
+  <div class="stat"><b id="s-updated">–</b><span>updated</span></div>
+  <button class="btn" id="cfgbtn" title="settings — personalize limits & thresholds">⚙</button>
+  <button class="btn" id="themebtn" title="toggle light / dark">☀</button>
+</header>
+
+<div id="view-monitor" class="view active">
+<section class="cards" id="cards"></section>
+
+<main>
+  <div class="panel">
+    <div class="head"><h2>Live decision feed</h2><div class="spacer"></div>
+      <span class="muted" id="s-rate" title="events/min"></span>&nbsp;<span class="muted" id="feedcount"></span></div>
+    <div class="feed" id="feed"></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:14px;min-height:0">
+    <div class="panel">
+      <div class="head"><h2>Alert queue</h2><div class="spacer"></div>
+        <button class="btn" id="reassess" title="LLM re-prioritize open alerts">Reassess</button></div>
+      <div style="overflow:auto;max-height:40vh"><table id="alerts"><thead>
+        <tr><th>Rule</th><th>Subject</th><th>Sev</th><th>Prio</th><th>Status</th><th></th></tr>
+      </thead><tbody id="alertbody"></tbody></table></div>
+    </div>
+    <div class="panel">
+      <div class="head"><h2>Response actions</h2></div>
+      <div class="acts" id="acts"></div>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- SecureScan tool -->
+<!-- Assess: unified scan -> findings(verify) -> interview -> compliance report -->
+<div id="view-assess" class="view">
+  <style>
+  :root{--sc:#ff5470;--sh:#ff9d45;--sm:#e7b008;--sl:#2ecc71}
+  :root[data-theme="light"]{--sc:#d92d4b;--sh:#c25a0e;--sm:#9a7508;--sl:#17a34a}
+  .ac-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0}
+  @media(max-width:820px){.ac-stats{grid-template-columns:repeat(2,1fr)}}
+  .ac-stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;cursor:pointer;transition:.15s;position:relative;overflow:hidden}
+  .ac-stat:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .ac-stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .ac-stat .v{font-size:26px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums}
+  .ac-stat.alert .v{color:var(--crit)}
+  .ac-stat .go{position:absolute;right:12px;bottom:9px;color:var(--muted);font-size:12px;opacity:0;transition:.15s}
+  .ac-stat:hover .go{opacity:1}
+  .ac-tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin-top:6px;overflow-x:auto}
+  .ac-tab{background:none;border:0;color:var(--muted);padding:9px 2px 11px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;font-size:13.5px;display:flex;gap:8px;align-items:center;white-space:nowrap}
+  .ac-tab.on{color:var(--txt);border-bottom-color:var(--accent);font-weight:600}
+  .ac-tab .pill{background:var(--pill);border-radius:6px;padding:1px 7px;font-size:11px;color:var(--muted)}
+  .ac-tab.on .pill{color:var(--accent)}
+  .ac-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 0}
+  .ac-search{flex:1;min-width:160px;display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 11px}
+  .ac-search input{all:unset;flex:1;color:var(--txt);font-size:13px}
+  .ac-chip{background:var(--pill);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:4px 11px;font-size:11px;cursor:pointer}
+  .ac-chip.on{color:var(--txt);border-color:var(--accent)}
+  .ac-chip.kev.on{color:#fff;background:var(--crit);border-color:transparent}
+  .ac-table{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .ac-tw{overflow-x:auto}
+  .ac-r{display:grid;grid-template-columns:var(--cols);gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);min-width:820px}
+  .ac-r:last-child{border-bottom:0}
+  .ac-r.h{background:var(--panel2)} .ac-r.h span{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .ac-r.row{cursor:pointer} .ac-r.row:hover{background:var(--panel2)}
+  .ac-cell{min-width:0}
+  .ac-mono{font-family:ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums}
+  .ac-vpr{display:inline-flex;gap:6px;align-items:center;font-weight:700;font-family:ui-monospace,monospace;cursor:help}
+  .ac-shield{width:15px;height:17px;flex:none;clip-path:polygon(50% 0,100% 22%,100% 62%,50% 100%,0 62%,0 22%)}
+  .ac-tat{display:flex;gap:9px;align-items:center}.ac-tatbar{flex:1;min-width:54px;height:6px;border-radius:4px;background:var(--pill);overflow:hidden}.ac-tatbar i{display:block;height:100%;background:var(--sm)}
+  .ac-sev{display:inline-flex;gap:6px;align-items:center;font-size:12.5px}.ac-sd{width:14px;height:14px;border-radius:4px;flex:none}
+  .ac-kev{background:var(--crit);color:#fff;font-size:9.5px;font-weight:700;border-radius:5px;padding:2px 6px;cursor:pointer}
+  .ac-cat{background:var(--pill);border:1px solid var(--line);color:var(--muted);font-size:10px;border-radius:6px;padding:2px 7px;cursor:pointer}
+  .ac-cat:hover{border-color:var(--accent);color:var(--accent)}
+  .ac-see{color:var(--accent);cursor:pointer;font-size:12.5px}
+  .ac-actions{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0;align-items:center}
+  .ac-exp{background:var(--pill);border:1px solid var(--line);border-radius:9px;padding:9px 13px;cursor:pointer;color:var(--txt);font-size:12.5px}
+  .ac-exp:hover{border-color:var(--accent)}
+  .ac-empty{padding:26px;text-align:center;color:var(--muted)}
+  .ac-guide{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:10px 14px;margin:14px 0;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+  .ac-guide b{color:var(--txt)} .ac-guide .k{color:var(--accent);cursor:pointer} .ac-guide .x{margin-left:auto;cursor:pointer;color:var(--muted);background:none;border:0;font-size:15px}
+  #ac-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:.2s;z-index:60}
+  #ac-ov.show{opacity:1;pointer-events:auto}
+  #ac-drawer{position:fixed;top:0;right:0;height:100%;width:min(480px,96vw);background:var(--panel);border-left:1px solid var(--line);transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.9,.25,1);z-index:61;display:flex;flex-direction:column}
+  #ac-drawer.show{transform:none}
+  #ac-drawer .dh{padding:16px;border-bottom:1px solid var(--line);background:var(--panel2);display:flex;gap:10px;align-items:center}
+  #ac-drawer .dh .x{margin-left:auto;background:none;border:0;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
+  #ac-drawer .db{padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:18px}
+  #ac-drawer h5{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  #ac-drawer ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:9px;font-size:13px}
+  #ac-drawer .ref{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:10px;text-decoration:none;color:var(--txt);font-size:13px;margin-bottom:7px}
+  #ac-drawer .ref:hover{border-color:var(--accent)} #ac-drawer .ref .e{margin-left:auto;color:var(--muted);font-size:11px}
+  #ac-drawer .df{padding:14px 16px;border-top:1px solid var(--line);display:flex;gap:9px;flex-wrap:wrap}
+  #ac-drawer .bd{background:var(--panel2);border-radius:9px;padding:10px 12px;font-size:12.5px;color:var(--muted)}#ac-drawer .bd b{color:var(--txt)}
+  /* --- Tenable Inventory layout (the approved design) --- */
+  .ac-tabs{gap:26px;margin-top:6px}
+  .ac-tab{font-size:14.5px;padding:9px 2px 12px;border-bottom-width:3px}
+  .ac-stats{display:flex;gap:48px;margin:20px 2px;flex-wrap:wrap}
+  .ac-stat{background:none;border:0;border-radius:0;padding:0;overflow:visible;cursor:pointer;transition:color .15s}
+  .ac-stat:hover{transform:none;border-color:transparent}
+  .ac-stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .ac-stat .v{font-size:31px;font-weight:800;margin-top:8px;color:var(--txt);line-height:1}
+  .ac-stat.alert .v{color:var(--crit)} .ac-stat:hover .v{color:var(--accent)}
+  .ac-frow{display:flex;gap:10px;align-items:center;margin:8px 2px 16px;flex-wrap:wrap}
+  .ac-dd{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 14px;color:var(--txt);font-size:13px;white-space:nowrap}
+  .ac-frow .ac-search{flex:1}
+  .ac-ic{width:40px;height:40px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;font-size:15px}
+  .ac-ic:hover{color:var(--accent);border-color:var(--accent)}
+  .ac-body2{display:grid;grid-template-columns:236px 1fr;gap:16px;align-items:start}
+  @media(max-width:820px){.ac-body2{grid-template-columns:1fr}}
+  .ac-filters{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .ac-fhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .ac-fhead b{font-size:14px} .ac-reset{background:none;border:0;color:var(--accent);cursor:pointer;font-size:12px}
+  .ac-fsearch{display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:6px;color:var(--muted)}
+  .ac-fsearch input{all:unset;flex:1;color:var(--txt);font-size:12.5px}
+  .ac-fsub{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:13px 2px 5px}
+  .ac-srcitem{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;cursor:pointer}
+  .ac-srcitem:hover{background:var(--panel2)} .ac-srcitem.on{background:color-mix(in srgb,var(--accent) 15%,transparent)}
+  .ac-srcitem .nm{flex:1;font-size:13px} .ac-srcitem.on .nm{color:var(--accent);font-weight:600}
+  .ac-srcitem .pc{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted)} .ac-srcitem.on .pc{color:var(--accent)}
+  .ac-srcitem .ac-sd{width:13px;height:13px;border-radius:3px}
+  .ac-dls{display:flex;gap:6px;flex-wrap:wrap}
+  /* --- command bar (replaces the old scan form) --- */
+  #view-assess h2, #view-assess .lead, #view-assess .warn-banner, #view-assess .modes{display:none}
+  .ac-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
+  .ac-prod{font-size:15px;color:var(--muted)} .ac-prod b{color:var(--txt);font-weight:700}
+  .ac-modetoggle{display:inline-flex;background:var(--pill);border:1px solid var(--line);border-radius:9px;padding:3px}
+  .ac-modetoggle label{font-size:12.5px;padding:6px 12px;border-radius:7px;cursor:pointer;color:var(--muted)}
+  .ac-modetoggle input{display:none}
+  .ac-modetoggle label:has(input:checked){background:var(--panel);color:var(--txt)}
+  .ac-cmd{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+  #ca-servermethod{flex:1;min-width:260px}
+  .ac-svr{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .ac-seg2{display:inline-flex;background:var(--pill);border:1px solid var(--line);border-radius:9px;padding:3px;flex:none}
+  .ac-seg2 label{font-size:12.5px;padding:7px 12px;border-radius:7px;cursor:pointer;color:var(--muted)}
+  .ac-seg2 input{display:none}
+  .ac-seg2 label:has(input:checked){background:var(--panel);color:var(--txt);font-weight:600}
+  .ac-field{display:flex;align-items:center}
+  #ca-target-field{flex:1;min-width:220px} #ca-agtwrap{flex:1;min-width:220px}
+  .ac-inp{background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px}
+  .ac-inp.grow{width:100%}
+  .ac-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer;white-space:nowrap}
+  </style>
+  <div class="page">
+    <div class="ac-hdr">
+      <div class="ac-prod"><b>Exposure Management</b> · Inventory <span id="ca-llm" class="note"></span></div>
+      <div class="ac-modetoggle">
+        <label><input type="radio" name="camode" value="scan" checked> Scan / assess</label>
+        <label><input type="radio" name="camode" value="template"> Questionnaire</label>
+      </div>
+    </div>
+
+    <div id="ca-step1">
+      <div id="ca-scanbox">
+        <div class="ac-cmd">
+          <div class="ac-seg2">
+            <label><input type="radio" name="camethod" value="server" checked> Server</label>
+            <label><input type="radio" name="camethod" value="agent"> Agent</label>
+            <label><input type="radio" name="camethod" value="import"> Import</label>
+          </div>
+          <div id="ca-servermethod"><div class="ac-svr">
+            <span class="ac-field" id="ca-target-field"><input id="ca-target" class="ac-inp grow" placeholder="Target — 10.0.0.0/24, a host, or a public IP"></span>
+            <span class="ac-field"><select id="ca-provider" class="ac-inp" title="Network type"></select></span>
+            <span class="ac-field" id="ca-maxhosts-field"><input id="ca-maxhosts" class="ac-inp" type="number" min="1" max="4096" value="256" style="width:86px" title="Max hosts"></span>
+            <span class="ac-field" id="ca-region-field" style="display:none"><input id="ca-region" class="ac-inp" value="us-east-1" style="width:118px" title="AWS region"></span>
+            <label class="ac-toggle"><input type="checkbox" id="ca-deep" checked> Deep</label>
+            <label class="ac-toggle"><input type="checkbox" id="ca-ack"> Authorized</label>
+            <button class="btn" id="ca-detect">🔍 Discover</button>
+            <button class="btn primary" id="ca-scan">▶ Scan</button>
+          </div></div>
+        </div>
+        <div id="ca-provider-note" class="note" style="margin:6px 2px"></div>
+        <div id="ca-env" class="envbox" style="margin:8px 0;display:none"></div>
+        <div id="ca-agentmethod" style="display:none">
+          <p class="note">Run a one-time agent <b>inside</b> the target network; it discovers assets locally and submits results back here. Pure-Python, no install.</p>
+          <div class="ac-cmd"><span class="ac-field" id="ca-agtwrap"><input id="ca-agent-target" class="ac-inp grow" placeholder="auto (agent's local /24) or e.g. 192.168.1.0/24"></span><button class="btn primary" id="ca-agent-create">Create agent job</button></div>
+          <div id="ca-agent-out" style="margin-top:12px"></div>
+        </div>
+        <div id="ca-importmethod" style="display:none">
+          <p class="note">Upload a Nessus / OpenVAS / nuclei report — we normalize the findings, flag known-exploited (KEV) &amp; exploit-probability (EPSS), and rank by blended risk.</p>
+          <div class="ac-cmd"><input type="file" id="sc-import-file" accept=".nessus,.xml,.json,.jsonl,.txt" style="font-size:12px"><button class="btn primary" id="sc-import-btn">Import &amp; enrich</button></div>
+          <div id="sc-import-out" style="margin-top:10px"></div>
+        </div>
+        <div id="ca-scanout" style="margin-top:14px"></div>
+        <details style="margin-top:12px"><summary class="note" style="cursor:pointer">Scan-engine catalog — what's available / how to enable</summary>
+          <div id="sc-catalog" class="note" style="margin-top:8px">loading…</div></details>
+      </div>
+      <div id="ca-templatebox" style="display:none">
+        <p class="note">Answer an expanded questionnaire (no scanning) and we produce a tailored compliance document.</p>
+        <button class="btn primary" id="ca-tmpl-start">Start questionnaire →</button>
+      </div>
+      <div class="steps" style="display:none"><span class="step on" id="cst-1"><span id="cst-1-lbl">Scan</span></span><span class="step" id="cst-2">Interview</span><span class="step" id="cst-3">Report</span></div>
+    </div>
+
+    <div id="ca-step2" style="display:none">
+      <p class="note" style="margin:0 0 8px">A quick conversation about your organization — answer in your own words; the assistant will ask one question at a time.</p>
+      <div id="ca-chat" class="chat"></div>
+      <div class="chatinput">
+        <input id="ca-msg" placeholder="Type your answer…" autocomplete="off" disabled>
+        <button class="btn primary" id="ca-send" disabled>Send</button>
+      </div>
+      <div id="ca-facts" style="margin-top:8px"></div>
+      <button class="btn" onclick="caGoStep(1)" style="margin-top:8px">Back</button>
+    </div>
+
+    <div id="ca-step3" style="display:none">
+      <div id="ca-envprofile" class="envbox" style="margin-bottom:12px;display:none"></div>
+      <p class="note"><label><input type="checkbox" id="ca-lang"> also generate written policy language &amp; executive summary (slower — uses the local LLM if available)</label></p>
+      <button class="btn primary" id="ca-generate">Generate report</button>
+      <button class="btn" onclick="caGoStep(2)">Back</button>
+      <div id="ca-report" style="margin-top:14px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Help: how to use the platform -->
+<div id="view-help" class="view">
+  <div class="page">
+    <h2>Help — how to use RegMap</h2>
+    <p class="lead">RegMap is one platform with two areas: a live security <b>Monitor</b> and an <b>Assess</b> workflow (scan → findings → compliance). Everything runs from this browser.</p>
+
+    <div class="sec">The tabs</div>
+    <div class="rescard"><h3>📊 Monitor</h3>
+      <div class="note">Real-time decisioning across the detectors (identity, OT/ICS, compliance). Watch the live event feed, the alert queue, and response actions. Click an alert to open its case: see the evidence, resolve it as true/false positive (which trains the system), suppress a noisy subject, or take a response action.</div></div>
+    <div class="rescard"><h3>🛡️ Assess — scan → findings → compliance</h3>
+      <div class="note">A guided, four-part flow:
+        <br><b>1. Scan &amp; findings.</b> Choose how to discover assets:
+        <ul>
+          <li><b>Scan from server</b> — point at a host, CIDR, or a public/WAN IP you're authorized to test. (A public IP shows the internet-facing perimeter only — not devices inside a LAN.)</li>
+          <li><b>Use an agent</b> — to scan a <i>private</i> network (home/office) a cloud console can't reach: click <b>Create agent job</b>, run the one-line command it gives you on a machine <i>inside</i> that network, and results flow back here.</li>
+          <li><b>Import a report</b> — already ran Nessus, OpenVAS, or nuclei? Upload it; we enrich and rank the findings.</li>
+        </ul>
+        Tick <b>“I am authorized to scan this target”</b>, then scan. You'll get <b>findings</b>: open ports and CVEs, each flagged with <b>KEV</b> (actively exploited) and <b>EPSS</b> (exploit probability) and a blended risk score. <b>You can stop here (“scan only”).</b>
+        <br><b>2. Verify.</b> Review the findings — that's the picture the compliance mapping will use.
+        <br><b>3. Interview.</b> Click <b>“Generate compliance package”</b> to have a short, natural conversation about your organization (the assistant asks one question at a time).
+        <br><b>4. Report.</b> Get prioritized <b>NIST SP 800-53</b> control recommendations and download <b>DOCX / XLSX / JSON</b>. (Optionally include AI-written policy language.)
+        <br><br>Prefer no scan? Pick <b>“Questionnaire only”</b> to generate a compliance template from an expanded questionnaire.</div></div>
+
+    <div class="sec">Menu &amp; settings</div>
+    <div class="note" style="line-height:1.8">
+      <b>☰ Menu</b> — jump between tabs, <b>Export the verdict trail</b> (JSON), open <b>Settings</b>, the raw <b>API docs</b>, or About.<br>
+      <b>⚙ Settings</b> — personalize operational limits (log retention, detection thresholds, AI-triage toggle) live, without a restart.<br>
+      <b>☀ / 🌙</b> — light / dark theme.
+    </div>
+
+    <div class="sec">Authorization &amp; safety</div>
+    <div class="note" style="line-height:1.8">
+      Only scan networks you own or are explicitly authorized to test. Response actions that change posture (e.g. disable account) are recorded stubs — nothing is executed against live systems. The AI is advisory only; humans make the decisions.
+    </div>
+
+    <div class="sec">Tips</div>
+    <div class="note" style="line-height:1.8">
+      • Running in Docker, “Discover environment” shows the container's network; to scan your real LAN, enter your range (e.g. <code>10.0.0.0/24</code>) or use an agent.<br>
+      • First interview reply is slower (the language model loads once), then it's quick.<br>
+      • Large ranges: raise <b>Max hosts</b>, or scan a smaller CIDR.
+    </div>
+  </div>
+</div>
+
+<!-- Settings panel: personalize the operational limits/thresholds (BC.1) -->
+<aside id="setpanel">
+  <div class="dhead"><h2>Settings</h2>
+    <span class="muted" style="font-size:12px">personalize limits &amp; thresholds</span>
+    <button class="x" onclick="closeSettings()">×</button></div>
+  <div class="dbody" id="set-body"></div>
+  <div class="setfoot">
+    <button class="btn primary" id="set-save" onclick="saveSettings()">Save changes</button>
+    <button class="btn" onclick="resetSettings()">Reset all to defaults</button>
+    <span id="set-msg"></span>
+  </div>
+</aside>
+
+<!-- Alert case drawer: opens when an analyst clicks an alert; shows evidence + full decision toolbar -->
+<div id="backdrop" onclick="closeOverlays()"></div>
+<aside id="drawer">
+  <div class="dhead"><h2 id="d-title">Alert</h2><button class="x" onclick="closeDrawer()">×</button></div>
+  <div class="dbody" id="d-body"></div>
+</aside>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+// --- theme (light/dark) : remembers the choice, defaults to OS preference ---
+const THEME_KEY='regmap_theme';
+function applyTheme(t){ document.documentElement.dataset.theme=t; $('themebtn').textContent = t==='light'?'🌙':'☀'; }
+(function initTheme(){
+  const saved=localStorage.getItem(THEME_KEY);
+  const sys = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light':'dark';
+  applyTheme(saved || sys);
+})();
+$('themebtn').onclick=()=>{ const next=document.documentElement.dataset.theme==='light'?'dark':'light';
+  localStorage.setItem(THEME_KEY,next); applyTheme(next); };
+const feed = []; const FEED_MAX = 80;
+let rateWin = [];  // {t, n} rolling 60s window for events/min
+
+function fmtTime(iso){ try{return new Date(iso).toLocaleTimeString();}catch(e){return '';} }
+function pct(x){ return x==null? '–' : (x*100).toFixed(1)+'%'; }
+
+function card(name, key, m, by){
+  const c = (by&&by[key])||{count:0,flagged:0};
+  const rate = c.count? (100*c.flagged/c.count).toFixed(1)+'%':'0%';
+  const alerting = c.flagged>0;
+  let metricRows = '';
+  if(m){ metricRows = `<div class="row"><span>precision</span><b>${pct(m.precision)}</b></div>
+    <div class="row"><span>recall</span><b>${pct(m.recall)}</b></div>`; }
+  else { metricRows = `<div class="row"><span>type</span><b>on-demand</b></div>`; }
+  return `<div class="card"><h3><span class="light ${alerting?'alert':''}"></span>${name}</h3>
+    <div class="big">${c.count.toLocaleString()}</div>
+    <div class="row"><span>flagged</span><b>${c.flagged.toLocaleString()} (${rate})</b></div>
+    ${metricRows}</div>`;
+}
+
+function renderOverview(o){
+  const st=o.stats, by=st.by_model||{}, m=o.metrics||{};
+  $('cards').innerHTML =
+    card('Identity','identity',m.identity,by) +
+    card('OT / ICS','ics',m.ics,by) +
+    card('Compliance','regmap',null,by);
+  $('s-events').textContent = (st.verdicts||0).toLocaleString();
+  $('s-alerts').textContent = (o.alerts||[]).length;
+  $('s-updated').textContent = new Date().toLocaleTimeString();
+  // alerts — each row opens the case drawer; a quick close stays inline
+  const ab = (o.alerts||[]).map(a=>{
+    const who = a.assignee? ` · ${esc(a.assignee)}`:'';
+    return `<tr class="alertrow" onclick="openAlert(${a.id})">
+      <td>${esc(a.rule)}</td><td>${esc(a.subject||'—')}</td>
+      <td class="sev ${esc(a.severity)}">${esc(a.severity)}</td>
+      <td><span class="prio">${a.priority==null?'–':a.priority}</span></td>
+      <td><span class="pill ${esc(a.status)}">${esc(a.status)}</span>${who}</td>
+      <td><button class="btn" onclick="event.stopPropagation();closeAlert(${a.id})">close</button></td></tr>`;
+  }).join('');
+  $('alertbody').innerHTML = ab || '<tr><td colspan="6" class="muted" style="padding:14px">No active alerts.</td></tr>';
+  // actions
+  $('acts').innerHTML = (o.actions||[]).map(x=>
+    `<div class="act"><span class="muted">${fmtTime(x.created_at)}</span>
+       <span>alert #${x.alert_id}</span><span class="tag">${esc(x.action_type)}</span>
+       <span class="s ${esc(x.status)}">${esc(x.status)}</span></div>`).join('')
+    || '<div class="act muted">No actions yet.</div>';
+}
+
+function pushVerdicts(list){
+  for(const v of list) feed.unshift(v);
+  feed.length = Math.min(feed.length, FEED_MAX);
+  // rolling events/min
+  const now = Date.now();
+  if(list.length) rateWin.push({t:now, n:list.length});
+  rateWin = rateWin.filter(x=> now-x.t <= 60000);
+  $('s-rate').textContent = rateWin.reduce((a,b)=>a+b.n,0);
+  $('feedcount').textContent = feed.length+' shown';
+  $('feed').innerHTML = feed.map(v=>{
+    const flag = v.flagged;
+    return `<div class="ev ${flag?'flag':''}">
+      <span class="t">${fmtTime(v.recorded_at)}</span>
+      <span class="tag">${esc(v.model)}</span>
+      <span>${esc(v.subject|| (v.detail&&v.detail.top_citation? 'mapping' : '—'))}
+        <span class="muted">${v.score==null?'':'· '+v.score}</span></span>
+      <span class="badge ${flag?'alert':'ok'}">${flag?'ALERT':'OK'}</span></div>`;
+  }).join('');
+}
+
+async function closeAlert(id){ await fetch('/decision/alerts/'+id+'/close',{method:'POST'}); }
+$('reassess').onclick = async()=>{ $('reassess').textContent='…'; try{ await fetch('/decision/reassess',{method:'POST'}); } finally { $('reassess').textContent='Reassess'; } };
+
+// ---------------- Alert case drawer (open, investigate, decide) ----------------
+let drawerId = null;
+function closeDrawer(){ drawerId=null; $('drawer').classList.remove('show'); $('backdrop').classList.remove('show'); }
+function ageStr(iso){ try{ const s=(Date.now()-new Date(iso).getTime())/1000;
+  if(s<90) return Math.round(s)+'s'; if(s<5400) return Math.round(s/60)+'m'; if(s<172800) return Math.round(s/3600)+'h'; return Math.round(s/86400)+'d'; }catch(e){return '';} }
+
+async function openAlert(id){
+  drawerId=id;
+  $('backdrop').classList.add('show'); $('drawer').classList.add('show');
+  $('d-title').textContent='Alert #'+id;
+  $('d-body').innerHTML='<p class="muted">loading case…</p>';
+  await renderCase(id);
+}
+
+async function renderCase(id){
+  let d; try{ d=await (await fetch('/decision/alerts/'+id)).json(); }
+  catch(e){ $('d-body').innerHTML='<p class="muted">could not load alert</p>'; return; }
+  if(d.detail && !d.alert){ $('d-body').innerHTML='<p class="muted">alert not found</p>'; return; }
+  const a=d.alert, det=a.detail||{}, h=d.subject_history||{};
+  $('d-title').innerHTML = esc(a.rule)+' <span class="pill '+esc(a.status)+'">'+esc(a.status)+'</span>';
+  const meta = `<div class="meta">
+    <div>Subject<br><b>${esc(a.subject||'—')}</b></div>
+    <div>Model<br><b>${esc(a.model||'—')}</b></div>
+    <div>Severity<br><b class="sev ${esc(a.severity)}">${esc(a.severity)}</b></div>
+    <div>Priority<br><b>${a.priority==null?'–':a.priority}</b></div>
+    <div>Age<br><b>${ageStr(a.created_at)}</b></div>
+    <div>Assignee<br><b>${esc(a.assignee||'—')}</b></div>
+    ${a.disposition?`<div>AI disposition<br><b>${esc(a.disposition)}</b></div>`:''}
+    ${a.resolution?`<div>Resolution<br><b>${esc(a.resolution)}</b></div>`:''}
+  </div>
+  <div class="muted" style="font-size:12px;margin:-4px 0 12px">${esc(det.reason||'')}</div>`;
+
+  const toolbar = `<div class="toolbar">
+    <button class="btn" onclick="act('acknowledge',${id})">Acknowledge</button>
+    <button class="btn" onclick="assign(${id})">Assign</button>
+    <button class="btn good" onclick="resolve(${id},'true_positive')" title="confirm real → labels evidence malicious">True positive</button>
+    <button class="btn fp" onclick="resolve(${id},'false_positive')" title="benign → labels evidence benign">False positive</button>
+    <button class="btn" onclick="suppress(${id})" title="allowlist this subject">Suppress</button>
+    <button class="btn" onclick="note(${id})">Add note</button>
+    <button class="btn" onclick="act('close',${id})">Close</button>
+  </div>
+  <div class="toolbar"><span class="muted" style="align-self:center;font-size:11px">Response:</span>
+    <button class="btn" onclick="respond(${id},'ticket')">Ticket</button>
+    <button class="btn" onclick="respond(${id},'webhook')">Webhook</button>
+    <button class="btn" onclick="respond(${id},'disable_account')" title="stub — recorded, no live effect">Disable account</button>
+    <button class="btn" onclick="respond(${id},'step_up_auth')" title="stub — recorded, no live effect">Step-up auth</button>
+  </div>`;
+
+  const triage = `<div class="sec">AI triage</div>
+    <div class="triage" id="d-triage"><button class="btn" onclick="loadTriage(${id})">Run triage</button></div>`;
+
+  const ev = (d.evidence||[]);
+  const evidence = `<div class="sec">Evidence — ${ev.length} contributing verdict(s)</div>
+    <table><thead><tr><th>Time</th><th>Model</th><th>Subject</th><th>Score</th><th></th></tr></thead><tbody>
+    ${ev.map(v=>`<tr><td>${fmtTime(v.recorded_at)}</td><td>${esc(v.model)}</td>
+      <td>${esc(v.subject||'—')}</td><td>${v.score==null?'':v.score}</td>
+      <td><span class="badge ${v.flagged?'alert':'ok'}">${v.flagged?'FLAG':'ok'}</span>${v.ground_truth?' <span class="tag">'+esc(v.ground_truth)+'</span>':''}</td></tr>`).join('')
+      || '<tr><td colspan="5" class="muted">no verdicts linked</td></tr>'}
+    </tbody></table>`;
+
+  const hist = `<div class="sec">Subject outcome history</div>
+    <div class="kv"><span>confirmed malicious <b class="mal">${h.malicious||0}</b></span>
+      <span>confirmed benign <b class="ben">${h.benign||0}</b></span></div>`;
+
+  const acts = (d.actions||[]);
+  const actsHtml = `<div class="sec">Response actions taken</div>`+
+    (acts.map(x=>`<div class="act"><span class="muted">${fmtTime(x.created_at)}</span>
+       <span class="tag">${esc(x.action_type)}</span><span class="s ${esc(x.status)}">${esc(x.status)}</span></div>`).join('')
+     || '<div class="muted" style="font-size:12px">none yet</div>');
+
+  const events = (d.events||[]);
+  const trail = `<div class="sec">Case history</div><div class="trail">`+
+    (events.map(e=>`<div class="e"><span class="a">${esc(e.action)}</span>
+       <span class="m"> · ${fmtTime(e.created_at)} · ${esc(e.actor||'—')}</span>
+       ${e.note?'<div class="m">“'+esc(e.note)+'”</div>':''}</div>`).join('')
+     || '<div class="muted" style="font-size:12px">no actions logged yet</div>')+`</div>`;
+
+  $('d-body').innerHTML = meta + toolbar + triage + evidence + hist + actsHtml + trail;
+}
+
+async function loadTriage(id){
+  const box=$('d-triage'); box.textContent='loading triage…';
+  try{ const t=await (await fetch('/decision/alerts/'+id+'/triage')).json();
+    const ctl=(t.related_controls&&t.related_controls[0])?(t.related_controls[0].provision||t.related_controls[0].hipaa_citation):'—';
+    box.innerHTML='<b>Summary:</b> '+esc(t.summary||'—')+'<br><b>Related control:</b> '+esc(ctl);
+  }catch(e){ box.textContent='triage unavailable'; }
+}
+
+// generic POST + refresh the open case
+async function post(url, body){ return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); }
+async function act(kind,id){ await post('/decision/alerts/'+id+'/'+kind,{}); if(kind==='close'){ closeDrawer(); } else { await renderCase(id); } }
+async function assign(id){ const who=prompt('Assign to analyst:'); if(who){ await post('/decision/alerts/'+id+'/assign',{assignee:who}); await renderCase(id); } }
+async function note(id){ const n=prompt('Add a note:'); if(n){ await post('/decision/alerts/'+id+'/note',{note:n}); await renderCase(id); } }
+async function resolve(id,res){ const n=prompt((res==='true_positive'?'Confirm TRUE positive':'Mark FALSE positive')+' — optional note:'); if(n===null) return;
+  await post('/decision/alerts/'+id+'/resolve',{resolution:res,note:n||null}); closeDrawer(); }
+async function suppress(id){ const hrs=prompt('Suppress this subject for how many hours? (blank = 24, 0 = indefinite)','24'); if(hrs===null) return;
+  const w = hrs===''?24:parseFloat(hrs); const reason=prompt('Reason (optional):')||null;
+  await post('/decision/alerts/'+id+'/suppress',{window_hours:w,reason:reason}); closeDrawer(); }
+async function respond(id,action){ await post('/decision/alerts/'+id+'/act',{action:action}); await renderCase(id); }
+
+// ---------------- Settings panel (personalize limits & thresholds) ----------------
+function closeSettings(){ $('setpanel').classList.remove('show'); if(!$('drawer').classList.contains('show')) $('backdrop').classList.remove('show'); }
+function closeOverlays(){ closeDrawer(); closeSettings(); }
+$('cfgbtn').onclick = openSettings;
+
+async function openSettings(){
+  $('backdrop').classList.add('show'); $('setpanel').classList.add('show');
+  $('set-msg').textContent=''; $('set-body').innerHTML='<p class="muted">loading…</p>';
+  try{ const d=await (await fetch('/decision/settings')).json(); renderSettings(d.groups); }
+  catch(e){ $('set-body').innerHTML='<p class="muted">could not load settings</p>'; }
+}
+
+function renderSettings(groups){
+  $('set-body').innerHTML = (groups||[]).map(g=>{
+    const rows = g.settings.map(s=>{
+      const ov = s.overridden? '<span class="ov">overridden</span>':'';
+      const help = s.help? `<span class="h">${esc(s.help)}</span>`:'';
+      let input;
+      if(s.type==='bool'){
+        input = `<label class="switch"><input type="checkbox" data-key="${s.key}" data-type="bool" ${s.value?'checked':''}><span class="slider"></span></label>`;
+      } else {
+        const step = s.step!=null? s.step : (s.type==='float'?0.01:1);
+        const mn = s.min!=null? `min="${s.min}"`:''; const mx = s.max!=null? `max="${s.max}"`:'';
+        input = `<input type="number" data-key="${s.key}" data-type="${s.type}" value="${s.value}" step="${step}" ${mn} ${mx}>`;
+      }
+      return `<div class="setrow"><div class="lab">${esc(s.label)}${ov}${help}</div>${input}</div>`;
+    }).join('');
+    return `<div class="setgrp">${esc(g.group)}</div>${rows}`;
+  }).join('');
+}
+
+function collectSettings(){
+  const values={};
+  document.querySelectorAll('#set-body [data-key]').forEach(el=>{
+    const k=el.dataset.key, t=el.dataset.type;
+    values[k] = t==='bool'? el.checked : (t==='float'? parseFloat(el.value) : parseInt(el.value,10));
+  });
+  return values;
+}
+
+async function saveSettings(){
+  $('set-msg').style.color='var(--ok)'; $('set-msg').textContent='saving…';
+  try{
+    const r=await fetch('/decision/settings',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:collectSettings()})});
+    if(!r.ok){ const e=await r.json(); $('set-msg').style.color='var(--crit)'; $('set-msg').textContent=(e.detail||'invalid').toString(); return; }
+    $('set-msg').textContent='saved ✓';
+    const d=await (await fetch('/decision/settings')).json(); renderSettings(d.groups);
+  }catch(e){ $('set-msg').style.color='var(--crit)'; $('set-msg').textContent='save failed'; }
+}
+
+async function resetSettings(){
+  if(!confirm('Reset all settings to their defaults?')) return;
+  await fetch('/decision/settings/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  $('set-msg').style.color='var(--ok)'; $('set-msg').textContent='reset ✓';
+  const d=await (await fetch('/decision/settings')).json(); renderSettings(d.groups);
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeOverlays(); $('appmenu').classList.remove('open'); } });
+
+// ================= App menu + tool navigation (multi-view shell) =================
+const VIEWS = ['monitor','assess','help'];
+function navigate(view){
+  if(!VIEWS.includes(view)) view='monitor';
+  VIEWS.forEach(v=>$('view-'+v).classList.toggle('active', v===view));
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active', a.dataset.view===view));
+  if(location.hash.slice(2)!==view) location.hash = '#/'+view;
+  if(view==='assess') advisorInit();
+}
+function routeFromHash(){ navigate((location.hash.match(/^#\/(\w+)/)||[])[1] || 'monitor'); }
+window.addEventListener('hashchange', routeFromHash);
+document.querySelectorAll('[data-view]').forEach(a=>a.onclick=()=>{ navigate(a.dataset.view); $('appmenu').classList.remove('open'); });
+
+// dropdown menu open/close
+$('menubtn').onclick=(e)=>{ e.stopPropagation(); $('appmenu').classList.toggle('open'); };
+document.addEventListener('click', e=>{ if(!$('appmenu').contains(e.target)) $('appmenu').classList.remove('open'); });
+function about(){ $('appmenu').classList.remove('open'); navigate('help'); }
+async function exportTrail(){ $('appmenu').classList.remove('open');
+  try{ const d=await (await fetch('/decision/verdicts?limit=1000')).json();
+    const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='verdict_trail.json'; a.click(); URL.revokeObjectURL(a.href);
+  }catch(e){ alert('export failed'); } }
+
+// cvss pill (shared by the findings renderer)
+function cvssPill(s){ if(s==null) return '<span class="sevpill sev-low">n/a</span>';
+  const sev = s>=9?'critical':s>=7?'high':s>=4?'medium':'low';
+  return `<span class="sevpill sev-${sev}">${s} ${sev.toUpperCase()}</span>`; }
+
+// Render the unified analysis (findings = ports+CVEs+KEV/EPSS + mapped control categories) for
+// the user to VERIFY, with the CTA to continue to the compliance interview.
+// ============ Assess console — clickable tabs / stats / drill-downs + remediation drawer ============
+let acA=null, acInto=null, acTab='weaknesses', acSev=new Set(), acKev=false, acQuery='', acOpen=new Set(), acGuide=true;
+const acSEVc=v=>v>=9?'crit':v>=7?'high':v>=4?'med':v>0?'low':'info';
+const acLBL={crit:'Critical',high:'High',med:'Medium',low:'Low',info:'Info'};
+const acCOL=s=>({crit:'var(--sc)',high:'var(--sh)',med:'var(--sm)',low:'var(--sl)',info:'var(--muted)'})[s];
+const acCTRL={remote_access:['AC-17','Remote Access'],web:['SC-7','Boundary Protection'],file_share:['AC-3','Access Enforcement'],database:['SC-28','Protection at Rest'],windows:['SI-2','Flaw Remediation'],network_service:['SC-7','Boundary Protection'],media:['CM-7','Least Functionality'],print:['CM-7','Least Functionality'],directory:['IA-2','Identification & Auth'],email:['SC-8','Transmission Confidentiality']};
+const acRiskOf=c=>{ if(c.risk!=null) return Math.round(c.risk*10)/10; let r=c.cvss_score||0; if(c.in_kev)r=Math.max(r,9); if(c.epss)r=Math.min(10,r+c.epss*1.2); return Math.round(r*10)/10; };
+const acTech=c=>Math.max(1,Math.round((c.epss||.05)*11)+(c.in_kev?4:1));
+function acWeak(){ const m=new Map(); (acA.hosts||[]).forEach(h=>(h.ports||[]).forEach(p=>(p.cves||[]).forEach(c=>{
+  let w=m.get(c.cve_id); if(!w){const cat=p.category||''; w={id:c.cve_id,cvss:c.cvss_score||0,kev:!!c.in_kev,epss:c.epss||0,risk:acRiskOf(c),url:c.url,desc:c.summary||c.description||'',cat,service:p.service||'',ctrl:acCTRL[cat]||['CM-7','Least Functionality'],assets:new Set(),products:new Set(),tech:acTech(c)}; m.set(c.cve_id,w);}
+  w.assets.add(h.ip); const pn=[p.product,p.version].filter(Boolean).join(' '); if(pn)w.products.add(pn); }))); return [...m.values()]; }
+function acFind(){ const o=[]; (acA.hosts||[]).forEach(h=>(h.ports||[]).forEach(p=>(p.cves||[]).forEach(c=>o.push({ip:h.ip,svc:p.port+'/'+(p.service||''),cve:c,cat:p.category||'',risk:acRiskOf(c),tech:acTech(c)})))); return o; }
+function acSoft(){ const m=new Map(); (acA.hosts||[]).forEach(h=>(h.ports||[]).forEach(p=>{const n=[p.product,p.version].filter(Boolean).join(' '); if(!n)return; let s=m.get(n); if(!s){s={prod:n,svc:p.service||'',hosts:new Set(),cves:0};m.set(n,s);} s.hosts.add(h.ip); s.cves+=(p.cves||[]).length;})); return [...m.values()]; }
+const acWById=id=>acWeak().find(w=>w.id===id);
+const acMatchSev=s=>!acSev.size||acSev.has(s);
+const acHit=s=>!acQuery||String(s).toLowerCase().includes(acQuery.toLowerCase());
+function acHostRisk(h){ let m=0; (h.ports||[]).forEach(p=>(p.cves||[]).forEach(c=>m=Math.max(m,acRiskOf(c)))); return m; }
+
+function renderFindings(a,into){ acA=a; acInto=into; acTab='weaknesses'; acSev=new Set(); acKev=false; acQuery=''; acOpen=new Set(); acGuide=true; acEnsureDrawer(); acRender(); }
+
+function acVpr(sev,score){ return `<span class="ac-vpr" title="Transparent priority: CVSS, escalated by KEV, weighted by EPSS"><span class="ac-shield" style="background:${acCOL(sev)}"></span>${score.toFixed(1)}</span>`; }
+function acSevPill(sev){ return `<span class="ac-sev"><span class="ac-sd" style="background:${acCOL(sev)}"></span>${acLBL[sev]}</span>`; }
+function acTat(n){ return `<span class="ac-tat"><span class="ac-tatbar"><i style="width:${Math.min(100,n/12*100)}%"></i></span><span class="ac-mono">${n}</span></span>`; }
+const AC_COLS={assets:'1.3fr 1fr 70px 130px 130px',weaknesses:'96px 1.5fr 92px 168px 120px 1.3fr 110px',findings:'120px 130px 150px 92px 168px 1fr',software:'1.5fr 130px 70px 70px'};
+const AC_HEAD={assets:['Asset','Categories','Ports','Exposure','Severity'],weaknesses:['','Weakness','Priority','Top attack technique','Severity','Description','Action'],findings:['Asset','Service','Weakness','Priority','Top attack technique','Description'],software:['Product','Service','Hosts','CVEs']};
+
+function acRender(){
+  const hosts=acA.hosts||[]; const W=acWeak(), F=acFind(), S=acSoft();
+  const svc=hosts.reduce((n,h)=>n+(h.ports||[]).length,0), kev=W.filter(w=>w.kev).length, maxr=W.reduce((m,w)=>Math.max(m,w.risk),0);
+  const cnt={assets:hosts.length,weaknesses:W.length,findings:F.length,software:S.length};
+  const sc={crit:0,high:0,med:0,low:0}; W.forEach(w=>{const s=acSEVc(w.risk); if(sc[s]!=null)sc[s]++;});
+  const cats={}; W.forEach(w=>{ if(w.cat) cats[w.cat]=(cats[w.cat]||0)+1; });
+  const tab=t=>`<button class="ac-tab ${acTab===t?'on':''}" data-act="tab" data-tab="${t}">${t[0].toUpperCase()+t.slice(1)} <span class="pill">${cnt[t]}</span></button>`;
+  const stat=(l,v,goto,alert)=>`<div class="ac-stat ${alert?'alert':''}" data-act="stat" data-goto="${goto}"><div class="l">${l}</div><div class="v">${v}</div></div>`;
+  const sevItem=k=>`<div class="ac-srcitem ${acSev.has(k)?'on':''}" data-act="sev" data-sev="${k}"><span class="ac-sd" style="background:${acCOL(k)}"></span><span class="nm">${acLBL[k]}</span><span class="pc">${sc[k]||0}</span></div>`;
+  const catItem=c=>`<div class="ac-srcitem ${acQuery===c?'on':''}" data-act="cat" data-cat="${esc(c)}"><span class="nm">${esc(c)}</span><span class="pc">${cats[c]}</span></div>`;
+  let html=`<div class="ac-tabs">${['assets','weaknesses','findings','software'].map(tab).join('')}</div>`;
+  html+=`<div class="ac-stats">${stat('Number of weaknesses',W.length,'weaknesses')}${stat('Assets',hosts.length,'assets')}${stat('Open services',svc,'assets')}${stat('Known exploited (KEV)',kev,'kev',kev>0)}${stat('Max priority',maxr.toFixed(1),'weaknesses',maxr>=9)}</div>`;
+  if(acGuide) html+=`<div class="ac-guide">💡 <span><b>What you can do next:</b> click any number, CVE, host or product to drill in · <b>⚑ Resolve</b> shows fix steps &amp; the NIST control · then <b>Download</b> or <b>Send to Compliance →</b>.</span><button class="x" data-act="guidex" title="dismiss">✕</button></div>`;
+  html+=`<div class="ac-frow"><span class="ac-dd">All weakness types ▾</span><span class="ac-search">⌕ <input id="ac-q" placeholder="Search for a weakness name, CVE, asset or product…" value="${esc(acQuery)}"></span><button class="ac-ic" data-act="export" data-fmt="xlsx" title="Export findings">⇪</button><button class="btn primary" data-act="compliance">Send to Compliance →</button></div>`;
+  html+=`<div class="ac-body2"><aside class="ac-filters">
+      <div class="ac-fhead"><b>Filters</b><button class="ac-reset" data-act="reset">Reset filters</button></div>
+      <div class="ac-fsearch">⌕ <input id="ac-fq" placeholder="Search" value="${esc(acQuery)}"></div>
+      <div class="ac-fsub">Severity</div>${['crit','high','med','low'].map(sevItem).join('')}
+      <div class="ac-fsub">Exploit</div><div class="ac-srcitem kev ${acKev?'on':''}" data-act="kevf"><span class="nm">Known exploited (KEV)</span><span class="pc">${kev}</span></div>
+      ${Object.keys(cats).length?`<div class="ac-fsub">Category</div>${Object.keys(cats).sort().map(catItem).join('')}`:''}
+      <div class="ac-fsub">Download findings</div><div class="ac-dls"><button class="ac-exp" data-act="export" data-fmt="xlsx">XLSX</button><button class="ac-exp" data-act="export" data-fmt="docx">DOCX</button><button class="ac-exp" data-act="export" data-fmt="json">JSON</button></div>
+    </aside>
+    <section class="ac-table"><div class="ac-tw" id="ac-rows"></div></section></div>`;
+  acInto.innerHTML=html; acInto.onclick=acClick;
+  const q=$('ac-q'); if(q) q.oninput=e=>{acQuery=e.target.value; const f=$('ac-fq'); if(f)f.value=e.target.value; acRenderRows();};
+  const fq=$('ac-fq'); if(fq) fq.oninput=e=>{acQuery=e.target.value; const g=$('ac-q'); if(g)g.value=e.target.value; acRenderRows();};
+  acRenderRows();
+}
+function acRenderRows(){
+  const box=$('ac-rows'); if(!box)return; box.innerHTML='';
+  const cols=AC_COLS[acTab]; const head=document.createElement('div'); head.className='ac-r h'; head.style.setProperty('--cols',cols);
+  head.innerHTML=AC_HEAD[acTab].map(h=>`<span class="ac-cell">${h}</span>`).join(''); box.appendChild(head);
+  let rows=[];
+  if(acTab==='assets'){ rows=(acA.hosts||[]).filter(h=>h.ip&&(acHit(h.ip)||acHit((h.categories||[]).join(' ')))); rows.sort((a,b)=>acHostRisk(b)-acHostRisk(a)); rows.forEach(h=>acRowAsset(box,h)); }
+  else if(acTab==='weaknesses'){ rows=acWeak().filter(w=>acMatchSev(acSEVc(w.risk))&&(!acKev||w.kev)&&(acHit(w.id)||acHit(w.desc)||acHit([...w.products].join(' ')))); rows.sort((a,b)=>b.risk-a.risk); rows.forEach(w=>acRowWeak(box,w)); }
+  else if(acTab==='findings'){ rows=acFind().filter(f=>acMatchSev(acSEVc(f.risk))&&(!acKev||f.cve.in_kev)&&(acHit(f.ip)||acHit(f.cve.cve_id)||acHit(f.svc))); rows.sort((a,b)=>b.risk-a.risk); rows.forEach(f=>acRowFind(box,f)); }
+  else { rows=acSoft().filter(s=>acHit(s.prod)||acHit(s.svc)); rows.sort((a,b)=>b.cves-a.cves||b.hosts.size-a.hosts.size); rows.forEach(s=>acRowSoft(box,s)); }
+  if(!rows.length){ const hasData=(acA.hosts||[]).length>0;
+    box.appendChild(Object.assign(document.createElement('div'),{className:'ac-empty',innerHTML: hasData?'No rows match these filters.':'▲ Run a scan above — the console fills with assets, weaknesses, findings and software.'})); }
+}
+function acMk(cols){ const r=document.createElement('div'); r.className='ac-r row'; r.style.setProperty('--cols',cols); return r; }
+function acRowWeak(box,w){ const sev=acSEVc(w.risk); const r=acMk(AC_COLS.weaknesses);
+  r.innerHTML=`<div class="ac-cell"><span class="ac-see" data-act="fix" data-cve="${esc(w.id)}">⚑ Resolve</span></div>
+    <div class="ac-cell"><div class="ac-mono" style="font-weight:600"><span class="ac-see" data-act="fix" data-cve="${esc(w.id)}">${esc(w.id)}</span> ${w.kev?'<span class="ac-kev" data-act="kevf">KEV</span>':''}</div><div class="muted" style="font-size:12px">${esc([...w.products][0]||w.service)}</div></div>
+    <div class="ac-cell">${acVpr(sev,w.risk)}</div><div class="ac-cell">${acTat(w.tech)}</div><div class="ac-cell">${acSevPill(sev)}</div>
+    <div class="ac-cell muted" style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(w.desc||'—')}</div>
+    <div class="ac-cell"><span class="ac-see" data-act="fix" data-cve="${esc(w.id)}">See details ›</span></div>`;
+  box.appendChild(r); }
+function acRowFind(box,f){ const sev=acSEVc(f.risk); const r=acMk(AC_COLS.findings);
+  r.innerHTML=`<div class="ac-cell"><span class="ac-see" data-act="asset" data-ip="${esc(f.ip)}">${esc(f.ip)}</span></div>
+    <div class="ac-cell ac-mono muted">${esc(f.svc)}</div>
+    <div class="ac-cell"><span class="ac-see ac-mono" data-act="fix" data-cve="${esc(f.cve.cve_id)}">${esc(f.cve.cve_id)}</span> ${f.cve.in_kev?'<span class="ac-kev" data-act="kevf">KEV</span>':''}</div>
+    <div class="ac-cell">${acVpr(sev,f.risk)}</div><div class="ac-cell">${acTat(f.tech)}</div>
+    <div class="ac-cell muted" style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.cve.summary||f.cve.description||'')}</div>`;
+  box.appendChild(r); }
+function acRowSoft(box,s){ const r=acMk(AC_COLS.software);
+  r.innerHTML=`<div class="ac-cell ac-mono" style="font-weight:600"><span class="ac-see" data-act="prod" data-prod="${esc(s.prod)}">${esc(s.prod)}</span></div>
+    <div class="ac-cell ac-mono muted">${esc(s.svc)}</div><div class="ac-cell ac-mono">${s.hosts.size}</div><div class="ac-cell ac-mono">${s.cves||'—'}</div>`;
+  box.appendChild(r); }
+function acRowAsset(box,h){ const open=acOpen.has(h.ip); const mr=acHostRisk(h); const sev=acSEVc(mr);
+  const kev=(h.ports||[]).some(p=>(p.cves||[]).some(c=>c.in_kev)); const r=acMk(AC_COLS.assets); r.dataset.act='asset'; r.dataset.ip=h.ip;
+  r.innerHTML=`<div class="ac-cell ac-mono" style="font-weight:600">${esc(h.ip)}</div>
+    <div class="ac-cell">${(h.categories||[]).map(c=>`<span class="ac-cat" data-act="cat" data-cat="${esc(c)}">${esc(c)}</span>`).join(' ')}</div>
+    <div class="ac-cell ac-mono">${(h.ports||[]).length}</div>
+    <div class="ac-cell"><span class="ac-tatbar" style="max-width:130px"><i style="width:${mr*10}%;background:${acCOL(sev)}"></i></span></div>
+    <div class="ac-cell">${acSevPill(sev)} ${kev?'<span class="ac-kev" data-act="kevf">KEV</span>':''}</div>`;
+  box.appendChild(r);
+  if(open){ const d=document.createElement('div'); d.className='ac-r'; d.style.setProperty('--cols','1fr'); d.style.minWidth='0'; d.style.background='var(--panel2)';
+    d.innerHTML='<div class="ac-cell">'+(h.ports||[]).map(p=>{const cv=(p.cves||[]).map(c=>{const s=acSEVc(acRiskOf(c));return `<div style="display:flex;gap:9px;align-items:center;margin:3px 0;flex-wrap:wrap"><span class="ac-see ac-mono" data-act="fix" data-cve="${esc(c.cve_id)}">${esc(c.cve_id)}</span>${acVpr(s,acRiskOf(c))}${c.in_kev?'<span class="ac-kev" data-act="kevf">KEV</span>':''}<span class="muted" style="flex:1;font-size:12px">${esc(c.summary||c.description||'')}</span></div>`;}).join('')||'<span class="muted">no known CVEs</span>';
+      return `<div style="display:grid;grid-template-columns:150px 1fr;gap:12px;padding:8px 4px;border-top:1px solid var(--line)"><div class="ac-mono"><b>${p.port}</b>/${esc(p.service||'')}<div class="muted" style="font-size:12px">${esc([p.product,p.version].filter(Boolean).join(' '))}</div></div><div>${cv}</div></div>`;}).join('')+'</div>';
+    box.appendChild(d); } }
+function acGotoAsset(ip){ acCloseFix(); acTab='assets'; acOpen=new Set([ip]); acRender(); }
+function acClick(e){ const t=e.target.closest('[data-act]'); if(!t)return; const a=t.dataset.act;
+  if(a==='tab'){ acTab=t.dataset.tab; acRender(); }
+  else if(a==='stat'){ const g=t.dataset.goto; if(g==='kev'){acTab='weaknesses';acKev=true;} else {acTab=g;} acRender(); }
+  else if(a==='sev'){ const s=t.dataset.sev; acSev.has(s)?acSev.delete(s):acSev.add(s); acRender(); }
+  else if(a==='kevf'){ e.stopPropagation(); acKev=!acKev; if(acTab!=='weaknesses'&&acTab!=='findings')acTab='weaknesses'; acRender(); }
+  else if(a==='fix'){ e.stopPropagation(); acOpenFix(t.dataset.cve); }
+  else if(a==='asset'){ e.stopPropagation(); const ip=t.dataset.ip; if(acTab!=='assets'){acTab='assets';acOpen=new Set([ip]);acRender();} else {acOpen.has(ip)?acOpen.delete(ip):acOpen.add(ip);acRenderRows();} }
+  else if(a==='prod'){ e.stopPropagation(); acTab='software'; acQuery=t.dataset.prod; acRender(); }
+  else if(a==='cat'){ e.stopPropagation(); acTab='findings'; acQuery=t.dataset.cat; acRender(); }
+  else if(a==='export'){ acExport(t.dataset.fmt); }
+  else if(a==='compliance'){ caStartInterview(); }
+  else if(a==='guidex'){ acGuide=false; acRender(); }
+  else if(a==='reset'){ acSev=new Set(); acKev=false; acQuery=''; acRender(); }
+}
+function acEnsureDrawer(){ if($('ac-drawer'))return; const ov=document.createElement('div'); ov.id='ac-ov'; ov.onclick=acCloseFix; document.body.appendChild(ov); const d=document.createElement('aside'); d.id='ac-drawer'; document.body.appendChild(d); }
+function acFixSteps(w){ const s=[]; const prod=[...w.products][0]||('the '+(w.service||'affected')+' service');
+  if(w.kev)s.push("Treat as urgent — this CVE is in CISA's Known Exploited Vulnerabilities catalog; it is being exploited in the wild now.");
+  s.push('Patch or upgrade <b>'+esc(prod)+'</b> to a vendor release that fixes '+esc(w.id)+'.');
+  const c=w.cat;
+  if(c==='remote_access')s.push('Until patched, restrict this service to a management VPN and require MFA.');
+  else if(c==='web')s.push('Put it behind a reverse proxy / WAF, disable unused modules, enforce TLS.');
+  else if(c==='file_share')s.push('Limit shares to hosts that need them, disable SMBv1, enforce signing.');
+  else if(c==='database')s.push('Bind the database to trusted subnets and use least-privilege accounts.');
+  else if(c==='windows')s.push('Apply the latest monthly security rollup and enable automatic updates.');
+  else if(c==='media'||c==='print')s.push('Move the device onto an isolated VLAN with no inbound internet exposure.');
+  else s.push('Reduce exposure — firewall the port to only the hosts that require it.');
+  s.push('Re-scan the host to confirm the version no longer matches '+esc(w.id)+'.');
+  s.push('The fix and evidence map to NIST <b>'+w.ctrl[0]+'</b> and flow into your compliance package.');
+  return s; }
+function acOpenFix(id){ const w=acWById(id); if(!w)return; const sev=acSEVc(w.risk);
+  const refs=[['NVD — detail, CVSS vector & fixes','https://nvd.nist.gov/vuln/detail/'+id,'nvd.nist.gov ↗'],['CISA Known Exploited catalog','https://www.cisa.gov/known-exploited-vulnerabilities-catalog','cisa.gov ↗'],['Vendor advisory & patch','https://www.google.com/search?q='+encodeURIComponent(id+' patch advisory'),'search ↗']];
+  $('ac-drawer').innerHTML=`<div class="dh"><div><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px">Remediation</div><div class="ac-mono" style="font-size:17px;font-weight:700;margin-top:3px">${esc(id)}</div></div>${acVpr(sev,w.risk)}<button class="x" onclick="acCloseFix()">✕</button></div>
+    <div class="db">
+      <div><p style="margin:0;color:var(--muted)">${esc(w.desc||'')}</p><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${w.kev?'<span class="ac-kev">● Actively exploited (KEV)</span>':''}<span class="ac-cat">EPSS ${Math.round(w.epss*100)}%</span><span class="ac-cat">${w.assets.size} affected</span></div></div>
+      <div><h5>Recommended remediation</h5><ol>${acFixSteps(w).map(x=>'<li>'+x+'</li>').join('')}</ol></div>
+      <div><h5>Priority breakdown</h5><div class="bd">Priority <b>${w.risk.toFixed(1)}</b> = CVSS <b>${(w.cvss||0).toFixed(1)}</b>${w.kev?' · <b>KEV</b> escalates to ≥9.0':''} · EPSS <b>${Math.round(w.epss*100)}%</b>. Transparent — no black box.</div></div>
+      <div><h5>Affected assets</h5><div>${[...w.assets].map(ip=>`<span class="ac-cat" onclick="acGotoAsset('${ip}')">${esc(ip)}</span>`).join(' ')}</div></div>
+      <div><h5>Maps to control</h5><span class="ac-mono" style="color:var(--accent)"><b>${w.ctrl[0]}</b> ${w.ctrl[1]}</span></div>
+      <div><h5>References &amp; patch sources</h5>${refs.map(r=>`<a class="ref" href="${r[1]}" target="_blank" rel="noopener">${r[0]}<span class="e">${r[2]}</span></a>`).join('')}</div>
+    </div>
+    <div class="df"><button class="btn primary" onclick="acCloseFix()">✓ Acknowledge</button><button class="btn" onclick="acCloseFix();caStartInterview()">Send to Compliance →</button></div>`;
+  $('ac-ov').classList.add('show'); $('ac-drawer').classList.add('show'); }
+function acCloseFix(){ const d=$('ac-drawer'),o=$('ac-ov'); if(d)d.classList.remove('show'); if(o)o.classList.remove('show'); }
+async function acExport(fmt){ try{ const r=await fetch('/advisor/scan/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({analysis:acA,label:'scan_findings'})}); const j=await r.json(); if(!r.ok){alert(j.detail||'export failed');return;} window.open(j.download_base+fmt,'_blank'); }catch(e){ alert('export failed'); } }
+
+function renderCatalog(cat){
+  $('sc-catalog').innerHTML = (cat.catalog||[]).map(g=>`<div class="catgrp">${esc(g.label)}</div>`+
+    g.engines.map(e=>`<div class="catrow"><span class="st ${esc(e.status)}">${esc(e.status)}</span>
+      <span><b>${esc(e.name)}</b> <span class="en">${esc(e.note||'')}${(e.status==='install'&&e.enable)?' · enable: '+esc(e.enable):''}</span></span></div>`).join('')
+  ).join('') + `<div class="note" style="margin-top:8px">${cat.summary.ready}/${cat.summary.total} ready · ${cat.summary.needs_install} need install</div>`;
+}
+async function importReport(){
+  const f=$('sc-import-file').files[0];
+  if(!f){ alert('Choose a report file (.nessus, OpenVAS .xml, or nuclei .json).'); return; }
+  $('sc-import-out').innerHTML='<span class="spin"></span> parsing &amp; enriching…';
+  let text; try{ text=await f.text(); }catch(e){ $('sc-import-out').textContent='could not read file'; return; }
+  try{
+    const r=await fetch('/scan/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:f.name,content:text})});
+    const d=await r.json();
+    if(!r.ok){ $('sc-import-out').innerHTML='<span style="color:var(--crit)">'+esc(d.detail||'import failed')+'</span>'; return; }
+    const rows=(d.findings||[]).slice(0,300).map(x=>`<tr><td><b>${x.risk??''}</b></td>
+      <td><span class="sevpill sev-${esc(x.severity||'info')}">${esc(x.severity||'')}</span></td>
+      <td>${esc(x.host||'')}</td><td class="muted">${esc((x.name||'').slice(0,72))}</td>
+      <td>${(x.cve_ids||[]).map(esc).join(', ')}${x.in_kev?' <span class="kevchip">KEV</span>':''}</td></tr>`).join('');
+    $('sc-import-out').innerHTML=`<div class="note">Parsed <b>${d.count}</b> finding(s) from <b>${esc(d.format)}</b> · ${d.cve_count} CVE(s) · <b>${d.kev_count}</b> known-exploited (KEV)</div>
+      <div style="overflow:auto;margin-top:8px"><table><thead><tr><th>Risk</th><th>Sev</th><th>Host</th><th>Finding</th><th>CVEs</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan=5 class="note">no findings</td></tr>'}</tbody></table></div>`;
+  }catch(e){ $('sc-import-out').innerHTML='<span style="color:var(--crit)">import failed</span>'; }
+}
+
+// ================= Compliance Advisor view =================
+let advReady=false, caMode='scan', caScan=null, caCats=[], caAnswers={}, caFollowLoaded=false, caProviders=[];
+async function advisorInit(){ if(advReady) return; advReady=true;
+  try{ const h=await (await fetch('/advisor/health')).json();
+    $('ca-llm').textContent = h.available? (h.llm_language?'· written-language generation available':'· fast mode (no LLM language)') : '· advisor unavailable on this server';
+  }catch(e){}
+  try{ const p=await (await fetch('/advisor/providers')).json(); caProviders=p.providers||[];
+    $('ca-provider').innerHTML = caProviders.map(x=>`<option value="${x.id}">${esc(x.label)}${x.implemented?'':' — planned'}</option>`).join('');
+  }catch(e){}
+  document.querySelectorAll('input[name=camode]').forEach(r=>r.onchange=()=>caSetMode(r.value));
+  document.querySelectorAll('input[name=camethod]').forEach(r=>r.onchange=()=>caSetMethod(r.value));
+  $('ca-provider').onchange=caProviderChange;
+  $('ca-detect').onclick=caDetect; $('ca-scan').onclick=caScanRun;
+  $('ca-agent-create').onclick=caCreateAgentJob;
+  $('ca-tmpl-start').onclick=()=>caStartInterview();
+  $('ca-send').onclick=caSend;
+  $('ca-msg').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); caSend(); }});
+  $('ca-generate').onclick=caGenerate;
+  $('sc-import-btn').onclick=importReport;
+  try{ const cat=await (await fetch('/scan/catalog')).json(); renderCatalog(cat); }catch(e){ if($('sc-catalog')) $('sc-catalog').textContent='catalog unavailable'; }
+  caSetMode('scan'); caProviderChange(); caSetMethod('server');
+  // show the console layout immediately (empty state) so Assess looks like the console on open
+  if(!acA) renderFindings({hosts:[],cve_total:0,kev_count:0,categories:[]}, $('ca-scanout'));
+}
+function caSetMethod(m){
+  $('ca-servermethod').style.display=m==='server'?'block':'none';
+  $('ca-agentmethod').style.display=m==='agent'?'block':'none';
+  $('ca-importmethod').style.display=m==='import'?'block':'none';
+}
+async function caCreateAgentJob(){
+  const target=$('ca-agent-target').value.trim()||'auto';
+  $('ca-agent-out').innerHTML='<span class="spin"></span> creating job…';
+  try{
+    const j=await (await fetch('/agent/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target,label:'advisor'})})).json();
+    const c=j.commands;
+    $('ca-agent-out').innerHTML=`<div class="rescard"><h3>Run this on a host inside the target network</h3>
+      <div class="note" style="margin-bottom:4px">Windows PowerShell (click to select, then copy):</div>
+      <textarea class="qta" rows="2" readonly onclick="this.select()">${esc(c.powershell)}</textarea>
+      <div class="note" style="margin:8px 0 4px">macOS / Linux:</div>
+      <textarea class="qta" rows="2" readonly onclick="this.select()">${esc(c.bash)}</textarea>
+      <div id="ca-agent-status" class="note" style="margin-top:10px"><span class="spin"></span> waiting for the agent to submit results…</div></div>`;
+    caPollAgent(j.job_id, 0);
+  }catch(e){ $('ca-agent-out').innerHTML='<span style="color:var(--crit)">could not create agent job</span>'; }
+}
+async function caPollAgent(jobId, tries){
+  if(tries>200){ const s=$('ca-agent-status'); if(s) s.innerHTML='timed out waiting for the agent.'; return; }
+  try{ const s=await (await fetch('/agent/jobs/'+jobId)).json();
+    if(s.status==='complete'){
+      const el=$('ca-agent-status'); if(el) el.innerHTML='✓ results received — analyzing (CVEs, KEV/EPSS, controls)…';
+      let a; try{ a=await (await fetch('/advisor/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scan_report:s.scan_report})})).json(); }
+      catch(e){ a={hosts:[],recommendations:s.recommendations||{hosts:[]},categories:[],cve_total:0,kev_count:0}; }
+      caScan={scan_report:s.scan_report, recommendations:a.recommendations};
+      caCats=a.categories||[];
+      renderFindings(a, $('ca-agent-out'));
+      return;
+    }
+  }catch(e){}
+  setTimeout(()=>caPollAgent(jobId, tries+1), 3000);
+}
+function caSetMode(m){ caMode=m;
+  $('ca-scanbox').style.display = m==='scan'?'block':'none';
+  $('ca-templatebox').style.display = m==='template'?'block':'none';
+  $('cst-1-lbl').textContent = m==='scan'?'Scan & findings':'Questionnaire';
+}
+function caProviderChange(){
+  const id=$('ca-provider').value; const p=caProviders.find(x=>x.id===id)||{implemented:true};
+  $('ca-target-field').style.display = id==='physical'?'flex':'none';
+  $('ca-maxhosts-field').style.display = id==='physical'?'flex':'none';
+  $('ca-region-field').style.display = id==='aws'?'flex':'none';
+  $('ca-provider-note').textContent = p.note||'';
+  $('ca-scan').disabled = !p.implemented; $('ca-scan').style.opacity = p.implemented?'1':'.5';
+}
+function caGoStep(n){ [1,2,3].forEach(i=>{ $('ca-step'+i).style.display = i===n?'block':'none'; $('cst-'+i).classList.toggle('on', i<=n); }); }
+async function caDetect(){
+  $('ca-env').style.display='block'; $('ca-env').innerHTML='<span class="spin"></span> detecting…';
+  try{ const e=await (await fetch('/advisor/environment')).json();
+    const ifs=(e.local_interfaces||[]).map(i=>{const r=i.suggested_range||i.ip; return `<a onclick="$('ca-target').value='${r}'">${esc(i.ip)}${i.suggested_range?' → '+esc(i.suggested_range):''}</a>`;}).join(' · ');
+    $('ca-env').innerHTML = `<b>Environment</b> — Docker: ${e.running_in_docker} · cloud instance: ${(e.is_cloud_instance||[]).join(',')||'no'} · outbound IP: ${esc(e.outbound_ip||'—')}<br><b>Interfaces</b> (click to use as target): ${ifs||'none detected'}`;
+    const first=(e.local_interfaces||[]).find(i=>i.suggested_range); if(first && !$('ca-target').value) $('ca-target').value=first.suggested_range;
+  }catch(e){ $('ca-env').textContent='environment detection unavailable'; }
+}
+async function caScanRun(){
+  const provider=$('ca-provider').value; const target=$('ca-target').value.replace(/\s+/g,'');
+  if(!$('ca-ack').checked){ alert('Please confirm you are authorized to scan this target.'); return; }
+  if(provider==='physical' && !target){ alert('Enter a target CIDR or host — or click “Discover environment”.'); return; }
+  const maxHosts=parseInt($('ca-maxhosts').value,10)||256;
+  $('ca-scanout').innerHTML='<span class="spin"></span> scanning &amp; mapping controls…';
+  try{
+    const r=await fetch('/advisor/scan',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({provider, target, max_hosts:maxHosts, deep:($('ca-deep')?$('ca-deep').checked:false), region:($('ca-region').value||'us-east-1')})});
+    const d=await r.json();
+    if(!r.ok){ $('ca-scanout').innerHTML='<span style="color:var(--crit)">'+esc(d.detail||'scan failed')+'</span>'; return; }
+    caScan={scan_report:d.scan_report, recommendations:d.recommendations};
+    caCats=d.categories||[];
+    renderFindings(d, $('ca-scanout'));   // findings for the user to verify, then continue
+  }catch(e){ $('ca-scanout').innerHTML='<span style="color:var(--crit)">request failed</span>'; }
+}
+let caSid=null, caFacts={};
+function caBubble(role, text){
+  const b=document.createElement('div'); b.className='bubble '+(role==='user'?'u':'a'); b.textContent=text;
+  $('ca-chat').appendChild(b); $('ca-chat').scrollTop=$('ca-chat').scrollHeight; return b;
+}
+function caRenderFacts(){
+  const keys=Object.keys(caFacts); if(!keys.length){ $('ca-facts').innerHTML=''; return; }
+  $('ca-facts').innerHTML='<span class="note">captured:</span> '+keys.map(k=>`<span class="factchip">${esc(k)}: <b>${esc(caFacts[k])}</b></span>`).join('');
+}
+async function caStartInterview(){
+  caAnswers={}; caFacts={}; caSid=null;
+  caGoStep(2);
+  $('ca-chat').innerHTML=''; $('ca-facts').innerHTML='';
+  $('ca-msg').disabled=true; $('ca-send').disabled=true;
+  const typing=caBubble('assistant','…');
+  try{
+    const d=await (await fetch('/advisor/interview/start',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({categories:caCats})})).json();
+    caSid=d.session_id; typing.textContent=d.message;
+    if(!d.llm) caBubble('assistant','(note: the local language model is not loaded on the server — questions will be more basic.)');
+    $('ca-msg').disabled=false; $('ca-send').disabled=false; $('ca-msg').focus();
+  }catch(e){ typing.textContent='could not start the interview.'; }
+}
+async function caSend(){
+  const inp=$('ca-msg'); const text=inp.value.trim(); if(!text || !caSid) return;
+  caBubble('user', text); inp.value=''; inp.disabled=true; $('ca-send').disabled=true;
+  const typing=caBubble('assistant','…');
+  try{
+    const d=await (await fetch('/advisor/interview/reply',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({session_id:caSid, text})})).json();
+    typing.textContent=d.message||'…';
+    if(d.captured){ Object.assign(caFacts, d.captured); caRenderFacts(); }
+    if(d.done){
+      caAnswers=d.context||caAnswers;
+      inp.disabled=true; $('ca-send').disabled=true;
+      const go=document.createElement('button'); go.className='btn primary'; go.style.marginTop='10px';
+      go.textContent='Generate report →'; go.onclick=()=>caGoStep(3);
+      $('ca-facts').appendChild(document.createElement('br')); $('ca-facts').appendChild(go);
+    } else { inp.disabled=false; $('ca-send').disabled=false; inp.focus(); }
+  }catch(e){ typing.textContent='sorry — something went wrong; please try again.'; inp.disabled=false; $('ca-send').disabled=false; }
+}
+function renderQuestion(q){
+  const examples=q.options.map(o=>`<b>${esc(o.value)}</b> — ${esc(o.description)}`).join('<br>');
+  return `<div class="qcard"><div class="q">${esc(q.question)}</div>
+    <textarea class="qta" data-qid="${q.id}" rows="2" placeholder="Answer in your own words…"></textarea>
+    <div class="understood" id="u-${esc(q.id)}"></div>
+    <details><summary>examples / what this means</summary><div class="note" style="margin-top:6px;line-height:1.7">${examples}</div></details></div>`;
+}
+async function caContinue(){
+  const texts={};
+  document.querySelectorAll('#ca-questions [data-qid]').forEach(el=>{ if(el.value.trim()) texts[el.dataset.qid]=el.value.trim(); });
+  if(!texts.business_name && !Object.keys(caAnswers).length){ alert('Please at least enter your company name.'); return; }
+  $('ca-next').textContent='Interpreting…'; $('ca-next').disabled=true;
+  try{
+    const d=await (await fetch('/advisor/interpret',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({responses:texts})})).json();
+    Object.entries(d.results||{}).forEach(([qid,res])=>{ caAnswers[qid]=res.value;
+      const u=$('u-'+qid); if(u && qid!=='business_name') u.textContent = '✓ understood: '+res.label + (res.method&&res.method.indexOf('low')>=0?' (low confidence — refine if wrong)':''); });
+  } catch(e){ alert('interpretation failed'); $('ca-next').textContent='Continue'; $('ca-next').disabled=false; return; }
+  $('ca-next').textContent='Continue'; $('ca-next').disabled=false;
+  if(!caFollowLoaded){
+    try{ const r=await fetch('/advisor/followups',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({answers:caAnswers,categories:caCats})});
+      const d=await r.json(); caFollowLoaded=true;
+      if((d.questions||[]).length){
+        $('ca-questions').insertAdjacentHTML('beforeend',
+          '<div class="setgrp">A few follow-up questions</div>'+d.questions.map(renderQuestion).join(''));
+        $('ca-next').textContent='Continue to report →';
+        return; // stay on step 2 to answer follow-ups
+      }
+    }catch(e){}
+  }
+  caGoStep(3);
+}
+async function caGenerate(){
+  const withLang=$('ca-lang').checked;
+  $('ca-report').innerHTML='<span class="spin"></span> generating '+(caMode==='template'?'compliance template':'report')+(withLang?' with written language (this can take a few minutes)…':'…');
+  const body={answers:caAnswers, with_language:withLang};
+  if(caMode==='scan' && caScan){ body.scan_report=caScan.scan_report; body.recommendations=caScan.recommendations; }
+  try{
+    const r=await fetch('/advisor/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(!r.ok){ $('ca-report').innerHTML='<span style="color:var(--crit)">'+esc(d.detail||'generation failed')+'</span>'; return; }
+    if(d.environment_profile&&d.environment_profile.summary){ const ep=$('ca-envprofile'); ep.style.display='block'; ep.innerHTML='<b>Environment profile:</b> '+esc(d.environment_profile.summary); }
+    const base=d.download_base;
+    const rows=(d.rows||[]).slice(0,200).map(x=>`<tr><td><span class="sevpill sev-${(x.priority||'low').toLowerCase()}">${esc(x.priority||'')}</span></td>
+      <td>${esc(x.control_id||'')}</td><td>${esc(x.category||x.source||'')}</td><td class="muted">${esc((x.control_text||'').slice(0,90))}</td></tr>`).join('');
+    $('ca-report').innerHTML = `
+      <div class="rescard"><h3>Executive summary</h3><div class="note">${esc(d.executive_summary||'')}</div></div>
+      <div class="dlrow">
+        <a class="btn primary" href="${base}docx" download>⬇ DOCX report</a>
+        <a class="btn" href="${base}xlsx" download>⬇ XLSX workbook</a>
+        <a class="btn" href="${base}json" download>⬇ JSON</a>
+        ${d.llm_used?'<span class="note" style="align-self:center">· LLM-written language included</span>':''}
+      </div>
+      <div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Priority</th><th>Control</th><th>Category</th><th>Description</th></tr></thead>
+        <tbody>${rows||'<tr><td colspan=4 class="note">no controls</td></tr>'}</tbody></table></div>`;
+  }catch(e){ $('ca-report').innerHTML='<span style="color:var(--crit)">request failed</span>'; }
+}
+
+function connect(){
+  const es = new EventSource('/decision/stream');
+  es.onopen = ()=>{ $('dot').className='dot on'; $('livetxt').textContent='LIVE'; };
+  es.onerror = ()=>{ $('dot').className='dot off'; $('livetxt').textContent='reconnecting…'; };
+  es.onmessage = e=>{
+    const d = JSON.parse(e.data);
+    if(d.overview) renderOverview(d.overview);
+    if(d.type==='init' && d.overview) pushVerdicts((d.overview.recent_verdicts||[]).slice().reverse());
+    if(d.new_verdicts && d.new_verdicts.length) pushVerdicts(d.new_verdicts);
+  };
+}
+connect();
+routeFromHash();   // open the view named in the URL hash (default: monitor)
+</script>
+</body>
+</html>

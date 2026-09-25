@@ -1,0 +1,428 @@
+{
+  "cidr": "10.0.0.0/24",
+  "context": {
+    "business_name": "FocusX",
+    "sector": "general_business",
+    "regulated_data": [
+      "general_pii"
+    ],
+    "internet_facing": "yes",
+    "maturity": "established",
+    "file_share_permissions": "no",
+    "web_intended_public": "unsure"
+  },
+  "hosts": [
+    {
+      "ip": "10.0.0.1",
+      "categories": [
+        "dns",
+        "web",
+        "web_insecure"
+      ],
+      "recommended_controls": {
+        "dns": [
+          {
+            "control_id": "CA-9",
+            "control_text": "Internal System Connections: Authorize internal connections of [Assignment: org-defined] to the system; Document, for each internal connection, the interface characteristics, security and privacy requirements, and the nature of the information communicated; Terminate internal system connections afte",
+            "score": 0.2846,
+            "priority": "Low",
+            "adjusted_score": 0.2846,
+            "reasons": [
+              "Semantic match to 'dns' (similarity 0.28)"
+            ]
+          },
+          {
+            "control_id": "SI-4",
+            "control_text": "System Monitoring: Monitor the system to detect: Attacks and indicators of potential attacks in accordance with the following monitoring objectives: [Assignment: org-defined] ; and Unauthorized local, network, and remote connections; Identify unauthorized use of the system through the following tech",
+            "score": 0.2735,
+            "priority": "Low",
+            "adjusted_score": 0.2735,
+            "reasons": [
+              "Semantic match to 'dns' (similarity 0.27)"
+            ]
+          },
+          {
+            "control_id": "IA-3",
+            "control_text": "Device Identification and Authentication: Uniquely identify and authenticate [Assignment: org-defined] before establishing a [Assignment: org-defined] connection.",
+            "score": 0.2538,
+            "priority": "Low",
+            "adjusted_score": 0.2538,
+            "reasons": [
+              "Semantic match to 'dns' (similarity 0.25)"
+            ]
+          }
+        ],
+        "web": [
+          {
+            "control_id": "AC-17",
+            "control_text": "Remote Access: Establish and document usage restrictions, configuration/connection requirements, and implementation guidance for each type of remote access allowed; and Authorize each type of remote access to the system prior to allowing such connections.",
+            "score": 0.3515,
+            "priority": "Low",
+            "adjusted_score": 0.3515,
+            "reasons": [
+              "Semantic match to 'web' (similarity 0.35)"
+            ]
+          },
+          {
+            "control_id": "IA-1",
+            "control_text": "Policy and Procedures: Develop, document, and disseminate to [Assignment: org-defined]: [Assignment: org-defined] identification and authentication policy that: Addresses purpose, scope, roles, responsibilities, management commitment, coordination among organizational entities, and compliance; and I",
+            "score": 0.3172,
+            "priority": "Low",
+            "adjusted_score": 0.3172,
+            "reasons": [
+              "Semantic match to 'web' (similarity 0.32)"
+            ]
+          },
+          {
+            "control_id": "SI-4",
+            "control_text": "System Monitoring: Monitor the system to detect: Attacks and indicators of potential attacks in accordance with the following monitoring objectives: [Assignment: org-defined] ; and Unauthorized local, network, and remote connections; Identify unauthorized use of the system through the following tech",
+            "score": 0.3088,
+            "priority": "Low",
+            "adjusted_score": 0.3088,
+            "reasons": [
+              "Semantic match to 'web' (similarity 0.31)"
+            ]
+          }
+        ],
+        "web_insecure": [
+          {
+            "control_id": "SC-8",
+            "control_text": "Transmission Confidentiality and Integrity: Protect the [Assignment: org-defined] of transmitted information.",
+            "score": 0.5332,
+            "priority": "Critical",
+            "adjusted_score": 0.8332,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.53)",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "Whether this web service is intentionally public is unconfirmed - treating cautiously"
+            ]
+          },
+          {
+            "control_id": "AT-3",
+            "control_text": "Role-based Training: Provide role-based security and privacy training to personnel with the following roles and responsibilities: [Assignment: org-defined]: Before authorizing access to the system, information, or performing assigned duties, and [Assignment: org-defined] thereafter; and When require",
+            "score": 0.3475,
+            "priority": "High",
+            "adjusted_score": 0.6475,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.35)",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "Whether this web service is intentionally public is unconfirmed - treating cautiously"
+            ]
+          },
+          {
+            "control_id": "SC-28",
+            "control_text": "Protection of Information at Rest: Protect the [Assignment: org-defined] of the following information at rest: [Assignment: org-defined].",
+            "score": 0.3331,
+            "priority": "High",
+            "adjusted_score": 0.6331,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.33)",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "Whether this web service is intentionally public is unconfirmed - treating cautiously"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ip": "10.0.0.71",
+      "categories": [
+        "file_sharing",
+        "windows_rpc"
+      ],
+      "recommended_controls": {
+        "file_sharing": [
+          {
+            "control_id": "AC-17",
+            "control_text": "Remote Access: Establish and document usage restrictions, configuration/connection requirements, and implementation guidance for each type of remote access allowed; and Authorize each type of remote access to the system prior to allowing such connections.",
+            "score": 0.477,
+            "priority": "Critical",
+            "adjusted_score": 0.827,
+            "reasons": [
+              "Semantic match to 'file_sharing' (similarity 0.48)",
+              "'file_sharing' internet exposure is yes (risk weighting applied)",
+              "File share permission enforcement is 'no'"
+            ]
+          },
+          {
+            "control_id": "CA-9",
+            "control_text": "Internal System Connections: Authorize internal connections of [Assignment: org-defined] to the system; Document, for each internal connection, the interface characteristics, security and privacy requirements, and the nature of the information communicated; Terminate internal system connections afte",
+            "score": 0.357,
+            "priority": "High",
+            "adjusted_score": 0.707,
+            "reasons": [
+              "Semantic match to 'file_sharing' (similarity 0.36)",
+              "'file_sharing' internet exposure is yes (risk weighting applied)",
+              "File share permission enforcement is 'no'"
+            ]
+          },
+          {
+            "control_id": "MP-7",
+            "control_text": "Media Use: [Assignment: org-defined] the use of [Assignment: org-defined] on [Assignment: org-defined] using [Assignment: org-defined] ; and Prohibit the use of portable storage devices in organizational systems when such devices have no identifiable owner.",
+            "score": 0.3296,
+            "priority": "High",
+            "adjusted_score": 0.6796,
+            "reasons": [
+              "Semantic match to 'file_sharing' (similarity 0.33)",
+              "'file_sharing' internet exposure is yes (risk weighting applied)",
+              "File share permission enforcement is 'no'"
+            ]
+          }
+        ],
+        "windows_rpc": [
+          {
+            "control_id": "SC-15",
+            "control_text": "Collaborative Computing Devices and Applications: Prohibit remote activation of collaborative computing devices and applications with the following exceptions: [Assignment: org-defined] ; and Provide an explicit indication of use to users physically present at the devices.",
+            "score": 0.3438,
+            "priority": "Low",
+            "adjusted_score": 0.3438,
+            "reasons": [
+              "Semantic match to 'windows_rpc' (similarity 0.34)"
+            ]
+          },
+          {
+            "control_id": "AC-17",
+            "control_text": "Remote Access: Establish and document usage restrictions, configuration/connection requirements, and implementation guidance for each type of remote access allowed; and Authorize each type of remote access to the system prior to allowing such connections.",
+            "score": 0.3358,
+            "priority": "Low",
+            "adjusted_score": 0.3358,
+            "reasons": [
+              "Semantic match to 'windows_rpc' (similarity 0.34)"
+            ]
+          },
+          {
+            "control_id": "CA-9",
+            "control_text": "Internal System Connections: Authorize internal connections of [Assignment: org-defined] to the system; Document, for each internal connection, the interface characteristics, security and privacy requirements, and the nature of the information communicated; Terminate internal system connections afte",
+            "score": 0.2819,
+            "priority": "Low",
+            "adjusted_score": 0.2819,
+            "reasons": [
+              "Semantic match to 'windows_rpc' (similarity 0.28)"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "baseline_controls": [
+    {
+      "control_id": "AC-2",
+      "control_text": "Account Management: Define and document the types of accounts allowed and specifically prohibited for use within the system; Assign account managers; Require [Assignment: org-defined] for group and role membership; Specify: Authorized users of the system; Group and role membership; and Access author",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "AC-6",
+      "control_text": "Least Privilege: Employ the principle of least privilege, allowing only authorized accesses for users (or processes acting on behalf of users) that are necessary to accomplish assigned organizational tasks.",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "AC-7",
+      "control_text": "Unsuccessful Logon Attempts: Enforce a limit of [Assignment: org-defined] consecutive invalid logon attempts by a user during a [Assignment: org-defined] ; and Automatically [Assignment: org-defined] when the maximum number of unsuccessful attempts is exceeded.",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "AT-2",
+      "control_text": "Literacy Training and Awareness: Provide security and privacy literacy training to system users (including managers, senior executives, and contractors): As part of initial training for new users and [Assignment: org-defined] thereafter; and When required by system changes or following [Assignment: ",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "AU-2",
+      "control_text": "Event Logging: Identify the types of events that the system is capable of logging in support of the audit function: [Assignment: org-defined]; Coordinate the event logging function with other organizational entities requiring audit-related information to guide and inform the selection criteria for e",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "AU-6",
+      "control_text": "Audit Record Review, Analysis, and Reporting: Review and analyze system audit records [Assignment: org-defined] for indications of [Assignment: org-defined] and the potential impact of the inappropriate or unusual activity; Report findings to [Assignment: org-defined] ; and Adjust the level of audit",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "CM-2",
+      "control_text": "Baseline Configuration: Develop, document, and maintain under configuration control, a current baseline configuration of the system; and Review and update the baseline configuration of the system: [Assignment: org-defined]; When required due to [Assignment: org-defined] ; and When system components ",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "CM-8",
+      "control_text": "System Component Inventory: Develop and document an inventory of system components that: Accurately reflects the system; Includes all components within the system; Does not include duplicate accounting of components or components assigned to any other system; Is at the level of granularity deemed ne",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "CP-2",
+      "control_text": "Contingency Plan: Develop a contingency plan for the system that: Identifies essential mission and business functions and associated contingency requirements; Provides recovery objectives, restoration priorities, and metrics; Addresses contingency roles, responsibilities, assigned individuals with c",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "CP-9",
+      "control_text": "System Backup: Conduct backups of user-level information contained in [Assignment: org-defined] [Assignment: org-defined]; Conduct backups of system-level information contained in the system [Assignment: org-defined]; Conduct backups of system documentation, including security- and privacy-related d",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "IA-2",
+      "control_text": "Identification and Authentication (Organizational Users): Uniquely identify and authenticate organizational users and associate that unique identification with processes acting on behalf of those users.",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "IA-5",
+      "control_text": "Authenticator Management: Manage system authenticators by: Verifying, as part of the initial authenticator distribution, the identity of the individual, group, role, service, or device receiving the authenticator; Establishing initial authenticator content for any authenticators issued by the organi",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "IR-4",
+      "control_text": "Incident Handling: Implement an incident handling capability for incidents that is consistent with the incident response plan and includes preparation, detection and analysis, containment, eradication, and recovery; Coordinate incident handling activities with contingency planning activities; Incorp",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "IR-8",
+      "control_text": "Incident Response Plan: Develop an incident response plan that: Provides the organization with a roadmap for implementing its incident response capability; Describes the structure and organization of the incident response capability; Provides a high-level approach for how the incident response capab",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "PL-2",
+      "control_text": "System Security and Privacy Plans: Develop security and privacy plans for the system that: Are consistent with the organization\u2019s enterprise architecture; Explicitly define the constituent system components; Describe the operational context of the system in terms of mission and business processes; I",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "PS-3",
+      "control_text": "Personnel Screening: Screen individuals prior to authorizing access to the system; and Rescreen individuals in accordance with [Assignment: org-defined].",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "RA-3",
+      "control_text": "Risk Assessment: Conduct a risk assessment, including: Identifying threats to and vulnerabilities in the system; Determining the likelihood and magnitude of harm from unauthorized access, use, disclosure, disruption, modification, or destruction of the system, the information it processes, stores, o",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "RA-5",
+      "control_text": "Vulnerability Monitoring and Scanning: Monitor and scan for vulnerabilities in the system and hosted applications [Assignment: org-defined] and when new vulnerabilities potentially affecting the system are identified and reported; Employ vulnerability monitoring tools and techniques that facilitate ",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "SC-7",
+      "control_text": "Boundary Protection: Monitor and control communications at the external managed interfaces to the system and at key internal managed interfaces within the system; Implement subnetworks for publicly accessible system components that are [Assignment: org-defined] separated from internal organizational",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "SI-2",
+      "control_text": "Flaw Remediation: Identify, report, and correct system flaws; Test software and firmware updates related to flaw remediation for effectiveness and potential side effects before installation; Install security-relevant software and firmware updates within [Assignment: org-defined] of the release of th",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    },
+    {
+      "control_id": "SI-3",
+      "control_text": "Malicious Code Protection: Implement [Assignment: org-defined] malicious code protection mechanisms at system entry and exit points to detect and eradicate malicious code; Automatically update malicious code protection mechanisms as new releases are available in accordance with organizational config",
+      "score": 0.5,
+      "priority": "Medium",
+      "adjusted_score": 0.5,
+      "reasons": [
+        "Recommended as a foundational control for every environment"
+      ]
+    }
+  ],
+  "executive_summary": "The security assessment identified several critical vulnerabilities affecting systems with IP addresses 10.0.0.1 and 10.0.0.71. These issues relate to insecure web applications and file sharing capabilities, which could potentially expose sensitive data and compromise system integrity if exploited by malicious actors. The high-priority findings indicate that these vulnerabilities are significant threats to the organization's network security posture. Overall, while there is no immediate threat due to the current state of the security program being mature, addressing these critical vulnerabilities promptly is crucial to prevent potential future breaches and maintain robust cybersecurity defenses.",
+  "draft_language": {
+    "SC-8": "**Policy Paragraph:**\n\nTo protect the confidentiality and integrity of all transmitted information within our organization, we have adopted the following measures:\n\n1. **Encryption:** All sensitive data will be encrypted using industry-standard protocols such as AES-256 before transmission over public networks.\n   \n2. **Access Controls:** Only authorized personnel are granted access to transmit confidential information through secure channels, ensuring that only those who need to know can view or modify the data during transit.\n\n3. **Monitoring and Logging:** Comprehensive logging and monitoring systems will track all transmissions, including timestamps, source IP addresses, destination IP addresses, and user activity, enabling us to detect and respond promptly to any unauthorized attempts at interception or tampering.\n\n4. **Regular Audits:** Periodic audits will be conducted by independent third parties to ensure compliance with encryption standards and access controls, maintaining confidence in the protection of our data.\n\nBy adhering to these practices, we aim to safeguard our customers' personal information from potential breaches while facilitating efficient business",
+    "AC-17": "**Policy Paragraph:**\n\nOur organization adheres to stringent security protocols to protect sensitive information from unauthorized access. We have implemented robust measures to restrict remote access to our systems, ensuring that only authorized personnel can connect securely. All types of remote access are subject to detailed configuration guidelines, which include mandatory encryption standards and regular audits to maintain compliance. Prior to granting any form of remote access, we conduct thorough assessments to confirm that the user has legitimate business purposes and is equipped with necessary credentials. This approach helps safeguard our valuable data against potential threats while maintaining operational efficiency.",
+    "CA-9": "**Policy Paragraph:**\n\nOur organization has established an internal system connections authorization process that ensures all internal connections are carefully vetted and documented. Each connection is assessed based on its interface characteristics, security and privacy requirements, and the nature of the information being transmitted. Once approved, we document the details of each connection, including the interface specifications, security measures, and the type of data exchanged. To maintain our commitment to data protection, we terminate all internal system connections after their intended purpose has been fulfilled or when they no longer serve a valid business need. This rigorous approach helps us safeguard sensitive information and ensure compliance with relevant regulations and industry standards.",
+    "MP-7": "**Policy Paragraph:**\n\nOur organization adheres to the principle that media usage should be controlled within our systems to ensure compliance with regulatory requirements and maintain the integrity of our data. We prohibit the use of portable storage devices in organizational systems unless they are specifically approved by management. Additionally, we mandate that all media used within our network is encrypted both at rest and in transit to protect sensitive information from unauthorized access. This policy aligns with industry best practices while ensuring that our operations remain secure and compliant with relevant regulations.",
+    "AT-3": "**Policy Paragraph:**\n\nTo ensure that all personnel are adequately trained on their roles and responsibilities regarding security and privacy, we hereby mandate that each employee undergoes role-specific security and privacy training before they are authorized to access our systems, information, or perform any assigned duties. This training will cover essential topics such as recognizing potential threats, understanding organizational policies, and complying with legal requirements. Following this initial training, ongoing refresher courses will be provided at least annually to reinforce learning and address new developments in cybersecurity best practices. By adhering to this policy, we aim to maintain high standards of security awareness across all departments within our organization.",
+    "SC-28": "**Policy Paragraph:**\n\nOur organization is committed to protecting sensitive information stored both locally and remotely. To ensure compliance with NIST SP 800-53, we have implemented robust measures to safeguard our data at rest across all environments. Specifically, we encrypt all critical business data using industry-standard encryption algorithms before storing it, ensuring that even if intercepted, the data remains unreadable without the proper decryption key. Additionally, we regularly review and update our encryption policies to align with evolving threats and regulatory requirements. This approach helps maintain the confidentiality and integrity of our information assets, thereby enhancing our overall security posture."
+  }
+}

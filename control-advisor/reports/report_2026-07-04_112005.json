@@ -1,0 +1,453 @@
+{
+  "cidr": "10.0.0.0/24",
+  "context": {
+    "sector": "healthcare",
+    "regulated_data": [
+      "none"
+    ],
+    "internet_facing": "yes",
+    "maturity": "none_or_ad_hoc",
+    "file_share_permissions": "no",
+    "web_intended_public": "no",
+    "written_policy_check": "no",
+    "phi_confirmation": "unsure"
+  },
+  "hosts": [
+    {
+      "ip": "10.0.0.1",
+      "categories": [
+        "dns",
+        "web",
+        "web_insecure"
+      ],
+      "recommended_controls": {
+        "dns": [
+          {
+            "control_id": "SI-4",
+            "control_text": "System Monitoring: Monitor the system to detect: Attacks and indicators of potential attacks in accordance with the following monitoring objectives: [Assignment: org-defined] ; and Unauthorized local, network, and remote connections; Identify unauthorized use of the system through the following tech",
+            "score": 0.2735,
+            "priority": "Medium",
+            "adjusted_score": 0.4235,
+            "reasons": [
+              "Semantic match to 'dns' (similarity 0.27)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "IA-3",
+            "control_text": "Device Identification and Authentication: Uniquely identify and authenticate [Assignment: org-defined] before establishing a [Assignment: org-defined] connection.",
+            "score": 0.2538,
+            "priority": "Medium",
+            "adjusted_score": 0.4038,
+            "reasons": [
+              "Semantic match to 'dns' (similarity 0.25)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "CA-9",
+            "control_text": "Internal System Connections: Authorize internal connections of [Assignment: org-defined] to the system; Document, for each internal connection, the interface characteristics, security and privacy requirements, and the nature of the information communicated; Terminate internal system connections afte",
+            "score": 0.2846,
+            "priority": "Low",
+            "adjusted_score": 0.2846,
+            "reasons": [
+              "Semantic match to 'dns' (similarity 0.28)"
+            ]
+          }
+        ],
+        "web": [
+          {
+            "control_id": "AC-17",
+            "control_text": "Remote Access: Establish and document usage restrictions, configuration/connection requirements, and implementation guidance for each type of remote access allowed; and Authorize each type of remote access to the system prior to allowing such connections.",
+            "score": 0.3515,
+            "priority": "Medium",
+            "adjusted_score": 0.5015,
+            "reasons": [
+              "Semantic match to 'web' (similarity 0.35)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "IA-1",
+            "control_text": "Policy and Procedures: Develop, document, and disseminate to [Assignment: org-defined]: [Assignment: org-defined] identification and authentication policy that: Addresses purpose, scope, roles, responsibilities, management commitment, coordination among organizational entities, and compliance; and I",
+            "score": 0.3172,
+            "priority": "Medium",
+            "adjusted_score": 0.4672,
+            "reasons": [
+              "Semantic match to 'web' (similarity 0.32)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "SI-4",
+            "control_text": "System Monitoring: Monitor the system to detect: Attacks and indicators of potential attacks in accordance with the following monitoring objectives: [Assignment: org-defined] ; and Unauthorized local, network, and remote connections; Identify unauthorized use of the system through the following tech",
+            "score": 0.3088,
+            "priority": "Medium",
+            "adjusted_score": 0.4588,
+            "reasons": [
+              "Semantic match to 'web' (similarity 0.31)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          }
+        ],
+        "web_insecure": [
+          {
+            "control_id": "SC-8",
+            "control_text": "Transmission Confidentiality and Integrity: Protect the [Assignment: org-defined] of transmitted information.",
+            "score": 0.5332,
+            "priority": "Critical",
+            "adjusted_score": 1.1832,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.53)",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity",
+              "This web service was NOT supposed to be internet-facing - likely a misconfiguration exposing it unintentionally"
+            ]
+          },
+          {
+            "control_id": "SC-28",
+            "control_text": "Protection of Information at Rest: Protect the [Assignment: org-defined] of the following information at rest: [Assignment: org-defined].",
+            "score": 0.3331,
+            "priority": "Critical",
+            "adjusted_score": 0.9831,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.33)",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity",
+              "This web service was NOT supposed to be internet-facing - likely a misconfiguration exposing it unintentionally"
+            ]
+          },
+          {
+            "control_id": "AT-3",
+            "control_text": "Role-based Training: Provide role-based security and privacy training to personnel with the following roles and responsibilities: [Assignment: org-defined]: Before authorizing access to the system, information, or performing assigned duties, and [Assignment: org-defined] thereafter; and When require",
+            "score": 0.3475,
+            "priority": "Critical",
+            "adjusted_score": 0.8475,
+            "reasons": [
+              "Semantic match to 'web_insecure' (similarity 0.35)",
+              "'web_insecure' internet exposure is yes (risk weighting applied)",
+              "This web service was NOT supposed to be internet-facing - likely a misconfiguration exposing it unintentionally"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ip": "10.0.0.71",
+      "categories": [
+        "file_sharing",
+        "windows_rpc"
+      ],
+      "recommended_controls": {
+        "file_sharing": [
+          {
+            "control_id": "AC-17",
+            "control_text": "Remote Access: Establish and document usage restrictions, configuration/connection requirements, and implementation guidance for each type of remote access allowed; and Authorize each type of remote access to the system prior to allowing such connections.",
+            "score": 0.477,
+            "priority": "Critical",
+            "adjusted_score": 0.977,
+            "reasons": [
+              "Semantic match to 'file_sharing' (similarity 0.48)",
+              "'file_sharing' internet exposure is yes (risk weighting applied)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity",
+              "File share permission enforcement is 'no'"
+            ]
+          },
+          {
+            "control_id": "CA-9",
+            "control_text": "Internal System Connections: Authorize internal connections of [Assignment: org-defined] to the system; Document, for each internal connection, the interface characteristics, security and privacy requirements, and the nature of the information communicated; Terminate internal system connections afte",
+            "score": 0.357,
+            "priority": "High",
+            "adjusted_score": 0.707,
+            "reasons": [
+              "Semantic match to 'file_sharing' (similarity 0.36)",
+              "'file_sharing' internet exposure is yes (risk weighting applied)",
+              "File share permission enforcement is 'no'"
+            ]
+          },
+          {
+            "control_id": "MP-7",
+            "control_text": "Media Use: [Assignment: org-defined] the use of [Assignment: org-defined] on [Assignment: org-defined] using [Assignment: org-defined] ; and Prohibit the use of portable storage devices in organizational systems when such devices have no identifiable owner.",
+            "score": 0.3296,
+            "priority": "High",
+            "adjusted_score": 0.6796,
+            "reasons": [
+              "Semantic match to 'file_sharing' (similarity 0.33)",
+              "'file_sharing' internet exposure is yes (risk weighting applied)",
+              "File share permission enforcement is 'no'"
+            ]
+          }
+        ],
+        "windows_rpc": [
+          {
+            "control_id": "SC-15",
+            "control_text": "Collaborative Computing Devices and Applications: Prohibit remote activation of collaborative computing devices and applications with the following exceptions: [Assignment: org-defined] ; and Provide an explicit indication of use to users physically present at the devices.",
+            "score": 0.3438,
+            "priority": "Medium",
+            "adjusted_score": 0.4938,
+            "reasons": [
+              "Semantic match to 'windows_rpc' (similarity 0.34)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "AC-17",
+            "control_text": "Remote Access: Establish and document usage restrictions, configuration/connection requirements, and implementation guidance for each type of remote access allowed; and Authorize each type of remote access to the system prior to allowing such connections.",
+            "score": 0.3358,
+            "priority": "Medium",
+            "adjusted_score": 0.4858,
+            "reasons": [
+              "Semantic match to 'windows_rpc' (similarity 0.34)",
+              "Part of the essential baseline recommended given reported/uncertain program maturity"
+            ]
+          },
+          {
+            "control_id": "CA-9",
+            "control_text": "Internal System Connections: Authorize internal connections of [Assignment: org-defined] to the system; Document, for each internal connection, the interface characteristics, security and privacy requirements, and the nature of the information communicated; Terminate internal system connections afte",
+            "score": 0.2819,
+            "priority": "Low",
+            "adjusted_score": 0.2819,
+            "reasons": [
+              "Semantic match to 'windows_rpc' (similarity 0.28)"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "baseline_controls": [
+    {
+      "control_id": "AC-2",
+      "control_text": "Account Management: Define and document the types of accounts allowed and specifically prohibited for use within the system; Assign account managers; Require [Assignment: org-defined] for group and role membership; Specify: Authorized users of the system; Group and role membership; and Access author",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "AC-6",
+      "control_text": "Least Privilege: Employ the principle of least privilege, allowing only authorized accesses for users (or processes acting on behalf of users) that are necessary to accomplish assigned organizational tasks.",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "AC-7",
+      "control_text": "Unsuccessful Logon Attempts: Enforce a limit of [Assignment: org-defined] consecutive invalid logon attempts by a user during a [Assignment: org-defined] ; and Automatically [Assignment: org-defined] when the maximum number of unsuccessful attempts is exceeded.",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "AT-2",
+      "control_text": "Literacy Training and Awareness: Provide security and privacy literacy training to system users (including managers, senior executives, and contractors): As part of initial training for new users and [Assignment: org-defined] thereafter; and When required by system changes or following [Assignment: ",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "AU-2",
+      "control_text": "Event Logging: Identify the types of events that the system is capable of logging in support of the audit function: [Assignment: org-defined]; Coordinate the event logging function with other organizational entities requiring audit-related information to guide and inform the selection criteria for e",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "AU-6",
+      "control_text": "Audit Record Review, Analysis, and Reporting: Review and analyze system audit records [Assignment: org-defined] for indications of [Assignment: org-defined] and the potential impact of the inappropriate or unusual activity; Report findings to [Assignment: org-defined] ; and Adjust the level of audit",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "CM-2",
+      "control_text": "Baseline Configuration: Develop, document, and maintain under configuration control, a current baseline configuration of the system; and Review and update the baseline configuration of the system: [Assignment: org-defined]; When required due to [Assignment: org-defined] ; and When system components ",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "CM-8",
+      "control_text": "System Component Inventory: Develop and document an inventory of system components that: Accurately reflects the system; Includes all components within the system; Does not include duplicate accounting of components or components assigned to any other system; Is at the level of granularity deemed ne",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "CP-2",
+      "control_text": "Contingency Plan: Develop a contingency plan for the system that: Identifies essential mission and business functions and associated contingency requirements; Provides recovery objectives, restoration priorities, and metrics; Addresses contingency roles, responsibilities, assigned individuals with c",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "CP-9",
+      "control_text": "System Backup: Conduct backups of user-level information contained in [Assignment: org-defined] [Assignment: org-defined]; Conduct backups of system-level information contained in the system [Assignment: org-defined]; Conduct backups of system documentation, including security- and privacy-related d",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "IA-2",
+      "control_text": "Identification and Authentication (Organizational Users): Uniquely identify and authenticate organizational users and associate that unique identification with processes acting on behalf of those users.",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "IA-5",
+      "control_text": "Authenticator Management: Manage system authenticators by: Verifying, as part of the initial authenticator distribution, the identity of the individual, group, role, service, or device receiving the authenticator; Establishing initial authenticator content for any authenticators issued by the organi",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "IR-4",
+      "control_text": "Incident Handling: Implement an incident handling capability for incidents that is consistent with the incident response plan and includes preparation, detection and analysis, containment, eradication, and recovery; Coordinate incident handling activities with contingency planning activities; Incorp",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "IR-8",
+      "control_text": "Incident Response Plan: Develop an incident response plan that: Provides the organization with a roadmap for implementing its incident response capability; Describes the structure and organization of the incident response capability; Provides a high-level approach for how the incident response capab",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "PL-2",
+      "control_text": "System Security and Privacy Plans: Develop security and privacy plans for the system that: Are consistent with the organization\u2019s enterprise architecture; Explicitly define the constituent system components; Describe the operational context of the system in terms of mission and business processes; I",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "PS-3",
+      "control_text": "Personnel Screening: Screen individuals prior to authorizing access to the system; and Rescreen individuals in accordance with [Assignment: org-defined].",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "RA-3",
+      "control_text": "Risk Assessment: Conduct a risk assessment, including: Identifying threats to and vulnerabilities in the system; Determining the likelihood and magnitude of harm from unauthorized access, use, disclosure, disruption, modification, or destruction of the system, the information it processes, stores, o",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "RA-5",
+      "control_text": "Vulnerability Monitoring and Scanning: Monitor and scan for vulnerabilities in the system and hosted applications [Assignment: org-defined] and when new vulnerabilities potentially affecting the system are identified and reported; Employ vulnerability monitoring tools and techniques that facilitate ",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "SC-7",
+      "control_text": "Boundary Protection: Monitor and control communications at the external managed interfaces to the system and at key internal managed interfaces within the system; Implement subnetworks for publicly accessible system components that are [Assignment: org-defined] separated from internal organizational",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "SI-2",
+      "control_text": "Flaw Remediation: Identify, report, and correct system flaws; Test software and firmware updates related to flaw remediation for effectiveness and potential side effects before installation; Install security-relevant software and firmware updates within [Assignment: org-defined] of the release of th",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    },
+    {
+      "control_id": "SI-3",
+      "control_text": "Malicious Code Protection: Implement [Assignment: org-defined] malicious code protection mechanisms at system entry and exit points to detect and eradicate malicious code; Automatically update malicious code protection mechanisms as new releases are available in accordance with organizational config",
+      "score": 0.5,
+      "priority": "High",
+      "adjusted_score": 0.65,
+      "reasons": [
+        "Recommended as a foundational control for every environment",
+        "Part of the essential baseline recommended given reported/uncertain program maturity"
+      ]
+    }
+  ],
+  "executive_summary": "The security assessment identified several critical vulnerabilities across various systems within our healthcare organization's network. Specifically:\n\n- **SC-8** and **SC-28**, which are critical, were found on two different IP addresses with high similarity scores indicating potential web-based insecure practices.\n- **AT-3** and **AC-17**, both critical, were detected on another system related to file sharing activities.\n- Additionally, **MP-7** and **CA-9**, both high-priority, were noted on one server, highlighting issues with file-sharing practices that could compromise sensitive data.\n\nThese findings underscore significant risks to patient privacy and operational integrity due to improper handling of web traffic and file sharing. The lack of a robust security program suggests an unpreparedness to address these threats effectively. Given the critical nature of these vulnerabilities, immediate remediation is essential to prevent further breaches and protect sensitive information.",
+  "draft_language": {}
+}

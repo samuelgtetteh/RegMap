@@ -1,0 +1,11 @@
+services:
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./auth.sqlite3:/app/auth.sqlite3
+    restart: unless-stopped

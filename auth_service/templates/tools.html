@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Environment Tools</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #020617; color: #e2e8f0; margin: 0; padding: 24px; }
+    .card { background: #111827; padding: 24px; border-radius: 12px; max-width: 720px; margin: 0 auto; }
+    .row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding: 12px; border-radius: 8px; background: #1f2937; }
+    button { padding: 8px 12px; border: 0; border-radius: 8px; background: #2563eb; color: white; cursor: pointer; }
+    .muted { color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Available tools</h1>
+    <div id="welcome" class="muted">Loading...</div>
+    <div id="redmapStatus" class="muted" style="margin-top:8px"></div>
+    <div id="tools"></div>
+  </div>
+
+  <script>
+    async function loadTools() {
+      const token = localStorage.getItem('auth_token');
+      const username = localStorage.getItem('auth_username');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const welcomeEl = document.getElementById('welcome');
+      const redmapStatusEl = document.getElementById('redmapStatus');
+      welcomeEl.textContent = `Signed in as ${username || 'user'}`;
+
+      try {
+        const response = await fetch('http://127.0.0.1:8002/tools', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const tools = await response.json();
+        if (!response.ok) throw new Error('Access denied');
+
+        const redmapResponse = await fetch('http://127.0.0.1:8002/redmap/status', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const redmapData = redmapResponse.ok ? await redmapResponse.json() : null;
+        if (redmapData && redmapData.reachable) {
+          redmapStatusEl.textContent = `RedMap connected: ${redmapData.health?.status || 'ok'} • ${redmapData.overview?.stats?.verdicts || 0} verdicts tracked`;
+        } else {
+          redmapStatusEl.textContent = 'RedMap connection unavailable';
+        }
+
+        const toolsEl = document.getElementById('tools');
+        const toolLinks = {
+          'regmap-api': 'http://127.0.0.1:2500/#/monitor',
+          'control-advisor': 'http://127.0.0.1:8002/login.html',
+          'backend-health': 'http://127.0.0.1:2500/health'
+        };
+
+        toolsEl.innerHTML = tools.map(tool => `
+          <div class="row">
+            <div>
+              <strong>${tool.name}</strong><br/>
+              <span class="muted">${tool.description}</span>
+            </div>
+            <button onclick="openTool('${tool.name}')">Open</button>
+          </div>
+        `).join('');
+
+        window.openTool = function(name) {
+          const target = toolLinks[name] || 'about:blank';
+          if (name === 'regmap-api') {
+            window.open(target, '_blank', 'noopener,noreferrer');
+          } else {
+            window.open(target, '_blank', 'noopener,noreferrer');
+          }
+        };
+      } catch (err) {
+        welcomeEl.textContent = 'Authentication failed. Please sign in again.';
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_username');
+        setTimeout(() => { window.location.href = '/login.html'; }, 1000);
+      }
+    }
+
+    loadTools();
+  </script>
+</body>
+</html>
