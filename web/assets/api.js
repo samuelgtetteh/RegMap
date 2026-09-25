@@ -79,6 +79,7 @@
                                         + (withText ? "?include_text=true" : "")),
     map:        (payload)      => post("/map", payload),
     bulk:       (payload)      => post("/map/bulk", payload),
+    custom:     (payload)      => post("/map/custom", payload),
     exercise:   (payload)      => post("/exercise", payload),
     grade:      (payload)      => post("/exercise/grade", payload),
     evaluate:   (payload)      => post("/eval", payload),

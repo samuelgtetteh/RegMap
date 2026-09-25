@@ -630,6 +630,8 @@ class BulkReq(BaseModel):
 BULK_MAX = int(os.environ.get("REGMAP_BULK_MAX", "150"))
 # /eval encodes every query in the set against the full corpus, so it is bounded too.
 EVAL_MAX_QUERIES = int(os.environ.get("REGMAP_EVAL_MAX_QUERIES", "200"))
+# Free tier caps how many of a user's OWN controls can be mapped per run. The paid version raises it.
+CUSTOM_FREE_MAX = int(os.environ.get("REGMAP_CUSTOM_FREE_MAX", "25"))
 
 
 @app.post("/map/bulk")
@@ -714,6 +716,86 @@ def map_bulk(req: BulkReq, request: Request,
         "cap": BULK_MAX,
         "note": (f"Only the first {BULK_MAX} controls were mapped; pass explicit source_ids to page "
                  f"through the rest." if truncated else None),
+    }
+
+
+# =====================================================================================================
+# BRING YOUR OWN FRAMEWORK  — map a user's own control set onto a catalog framework
+# =====================================================================================================
+
+class CustomControl(BaseModel):
+    id: Optional[str] = None
+    title: Optional[str] = None
+    text: str = Field(..., min_length=1, max_length=5000)
+
+
+class CustomMapReq(BaseModel):
+    target: str = Field(..., description="target framework id to map onto (see GET /frameworks)")
+    controls: List[CustomControl] = Field(..., description="the user's own controls")
+    top_k: int = Field(5, ge=1, le=25)
+
+
+@app.post("/map/custom")
+def map_custom(req: CustomMapReq, request: Request, principal=Depends(auth.require_key)):
+    """Map a team's OWN internal or self-built control set onto a framework in the catalog.
+
+    A custom source is not in the catalog, so there is no official crosswalk to check against: every
+    result is a model suggestion for expert review, clearly non-authoritative. The free tier caps the
+    number of controls mapped per run (REGMAP_CUSTOM_FREE_MAX); the paid version raises the cap.
+    """
+    tgt = _require(req.target, "target")            # must be a rankable, full-text framework
+    controls = [c for c in req.controls if (c.text or "").strip()]
+    if not controls:
+        raise HTTPException(400, "provide at least one control with text")
+
+    # Free-tier limit. Everyone is on the free tier for now; a paid entitlement would raise this.
+    free_max = CUSTOM_FREE_MAX
+    truncated = len(controls) > free_max
+    controls = controls[:free_max]
+
+    tgt_ctl = _controls[tgt]
+    # Charge for the retrieval this implies (one encode per control), and gate before any encoding runs.
+    units = cu.bulk_units(len(controls), len(tgt_ctl) or 1, req.top_k)
+    auth.enforce_quota(principal, cu.quantise(units, _on_gpu()))
+    request.state.work_units = units
+    request.state.billed_detail = f"custom->{tgt} controls={len(controls)} top_k={req.top_k}"
+
+    rows = []
+    if _model is not None and tgt in _emb:
+        import numpy as np
+        cids, mat = _emb[tgt]
+        for i, c in enumerate(controls):
+            q = _model.encode([c.text.strip()], normalize_embeddings=True, show_progress_bar=False)[0]
+            sims = mat @ np.asarray(q)
+            order = sorted(range(len(cids)), key=lambda j: -sims[j])[:req.top_k]
+            rows.append({
+                "id": (c.id or f"C{i+1}").strip(), "title": (c.title or "").strip(),
+                "text": c.text.strip()[:400],
+                "results": [{"id": cids[j], "title": tgt_ctl[cids[j]]["title"],
+                             "text": tgt_ctl[cids[j]]["text"], "score": round(float(sims[j]), 4)}
+                            for j in order]})
+        method = "embed"
+    else:  # TF-IDF fallback so the tool works even without the embedder
+        corpus = {k: v["text"] for k, v in tgt_ctl.items()}
+        for i, c in enumerate(controls):
+            ranked = _tfidf_scored(c.text.strip(), corpus, req.top_k)
+            rows.append({
+                "id": (c.id or f"C{i+1}").strip(), "title": (c.title or "").strip(),
+                "text": c.text.strip()[:400],
+                "results": [{"id": k, "title": tgt_ctl[k]["title"], "text": tgt_ctl[k]["text"],
+                             "score": round(s, 4)} for k, s in ranked]})
+        method = "tfidf"
+
+    return {
+        "target": tgt, "target_framework": _registry[tgt].get("name", tgt),
+        "method": method, "version": VERSION, "authoritative": False,
+        "note": "A custom framework has no official crosswalk, so these are model suggestions for expert "
+                "review, not authoritative mappings.",
+        "counts": {"controls_mapped": len(rows)},
+        "free_limit": free_max, "truncated": truncated,
+        "cap_note": (f"The free tier maps up to {free_max} controls per run. The paid version removes the "
+                     f"cap." if truncated else None),
+        "rows": rows,
     }
 
 

@@ -29,6 +29,7 @@
   <div class="tabs">
     <button id="tab-map" class="active" type="button">Map a control</button>
     <button id="tab-gaps" type="button">Coverage &amp; gaps</button>
+    <button id="tab-custom" type="button">Your framework</button>
   </div>
 </section>
 
@@ -93,11 +94,48 @@
 <section class="section pad bleed" id="gout" style="padding-top:22px"></section>
 </div>
 
+<!-- ===================== MODE 3: your own framework ===================== -->
+<div class="mode" id="mode-custom" hidden>
+<section class="section tight pad bleed">
+  <p class="lead" style="font-size:14.5px;color:var(--muted);max-width:76ch;margin:0 0 14px">
+    Load your own internal or self-built control framework and map it onto any framework in the catalog.
+    Paste one control per line (<span class="mono">ID, description</span> or just the description), or load
+    a CSV or JSON file. There is no official crosswalk for a custom framework, so results are model
+    suggestions for expert review.</p>
+  <div style="display:grid;grid-template-columns:1.5fr .5fr;gap:14px" id="cGrid">
+    <label class="fld">Your controls
+      <textarea id="cText" style="min-height:170px" placeholder="AC-1, Access control policy and procedures&#10;AU-2, Audit events are defined, reviewed and updated&#10;IA-2, Users are uniquely identified and authenticated&#10;..."></textarea>
+    </label>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <label class="fld">Map onto (target)
+        <select id="cTgt"><option value="">Loading…</option></select>
+      </label>
+      <label class="fld" style="flex-direction:row;align-items:center;gap:8px;text-transform:none">
+        <span style="font-size:12px">Results each</span>
+        <select id="cTopk" style="width:auto;padding:7px 10px"><option>3</option><option selected>5</option><option>10</option></select>
+      </label>
+      <label class="btn ghost sm" style="cursor:pointer;justify-content:center">
+        Load CSV or JSON<input id="cFile" type="file" accept=".csv,.json,.txt" hidden>
+      </label>
+      <div class="note" style="font-size:12px">Free tier maps up to <b id="cFree">25</b> controls per run.
+        The paid version removes the cap and adds review, evidence and export.</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap">
+    <button class="btn primary" id="cGo">Map my controls →</button>
+    <span id="cCount" class="mono" style="font-size:12.5px;color:var(--muted)"></span>
+    <span id="cStatus" style="font-size:13px;color:var(--muted)"></span>
+  </div>
+</section>
+<hr class="divider">
+<section class="section pad bleed" id="cOut" style="padding-top:22px"></section>
+</div>
+
 <footer class="site-footer pad bleed">
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=3"></script>
+<script src="assets/api.js?v=4"></script>
 <script src="assets/shell.js?v=3"></script>
 <script>
 (function () {
@@ -106,14 +144,14 @@
   let FRAMEWORKS = [], PAIRS = [];
 
   /* ---- tab switch --------------------------------------------------------- */
-  const tabMap = $("tab-map"), tabGaps = $("tab-gaps");
+  const TABS = ["map", "gaps", "custom"];
   function show(mode) {
-    const onMap = mode === "map";
-    $("mode-map").hidden = !onMap; $("mode-gaps").hidden = onMap;
-    tabMap.classList.toggle("active", onMap); tabGaps.classList.toggle("active", !onMap);
+    TABS.forEach(m => {
+      $("mode-" + m).hidden = m !== mode;
+      $("tab-" + m).classList.toggle("active", m === mode);
+    });
   }
-  tabMap.addEventListener("click", () => show("map"));
-  tabGaps.addEventListener("click", () => show("gaps"));
+  TABS.forEach(m => $("tab-" + m).addEventListener("click", () => show(m)));
 
   /* ---- shared boot: frameworks + the pair graph --------------------------- */
   const optsFor = predicate => FRAMEWORKS.map(f => {
@@ -130,10 +168,12 @@
     } catch (e) {
       $("out").innerHTML = `<div class="note err">${esc(e.message)}</div>`;
       $("gout").innerHTML = `<div class="note err">${esc(e.message)}</div>`;
+      $("cOut").innerHTML = `<div class="note err">${esc(e.message)}</div>`;
       return;
     }
     bootMap();
     bootGaps();
+    bootCustom();
   }
 
   /* ======================= MODE 1: map a control ========================== */
@@ -337,6 +377,89 @@
   gsrc.addEventListener("change", onGapPair);
   gtgt.addEventListener("change", onGapPair);
   ggo.addEventListener("click", runGaps);
+
+  /* ======================= MODE 3: your own framework ===================== */
+  const cText = $("cText"), cTgt = $("cTgt"), cTopk = $("cTopk"), cFile = $("cFile"),
+        cGo = $("cGo"), cOut = $("cOut"), cStatus = $("cStatus"), cCount = $("cCount"), cFree = $("cFree");
+
+  // Parse a pasted control set: a JSON array, or one control per line as "id, text" (also : | tab), or
+  // just the text (auto-numbered). Kept lenient so a team can paste from a spreadsheet.
+  function parseControls(raw) {
+    raw = (raw || "").trim();
+    if (!raw) return [];
+    if (raw[0] === "[") {
+      try {
+        return JSON.parse(raw).map((o, i) => ({
+          id: (o.id || "C" + (i + 1)).toString(), title: (o.title || "").toString(),
+          text: (o.text || o.description || "").toString()
+        })).filter(o => o.text.trim());
+      } catch (e) { /* fall through to line parsing */ }
+    }
+    return raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map((l, i) => {
+      const m = l.match(/^([A-Za-z0-9._\-()\/ ]{1,24}?)\s*[,:\|\t]\s*(.+)$/);
+      return m ? { id: m[1].trim(), title: "", text: m[2].trim() }
+               : { id: "C" + (i + 1), title: "", text: l };
+    });
+  }
+
+  function updCount() {
+    const n = parseControls(cText.value).length, lim = Number(cFree.textContent) || 25;
+    cCount.textContent = n ? `${n} control${n > 1 ? "s" : ""}${n > lim ? ` (free maps ${lim})` : ""}` : "";
+  }
+
+  function bootCustom() {
+    // Only full-text (rankable) frameworks can be a target; coming-soon ones are disabled.
+    cTgt.innerHTML = `<option value="">select</option>` + optsFor(f => !!f.controls);
+    const best = FRAMEWORKS.filter(f => f.controls).sort((a, b) => b.controls - a.controls)[0];
+    if (best) cTgt.value = best.id;
+  }
+
+  cText.addEventListener("input", updCount);
+  cFile.addEventListener("change", async () => {
+    const f = cFile.files[0]; if (!f) return;
+    try { cText.value = await f.text(); updCount(); }
+    catch (e) { cOut.innerHTML = `<div class="note err">Could not read that file.</div>`; }
+  });
+
+  async function runCustom() {
+    const controls = parseControls(cText.value);
+    if (!controls.length) return (cOut.innerHTML = `<div class="note err">Add at least one control, one per line.</div>`);
+    if (!cTgt.value) return (cOut.innerHTML = `<div class="note err">Choose a framework to map onto.</div>`);
+    cGo.disabled = true; cStatus.innerHTML = `<span class="spin"></span> mapping ${controls.length} controls…`;
+    let d;
+    try { d = await RegMap.custom({ target: cTgt.value, controls, top_k: Number(cTopk.value) }); }
+    catch (e) { cGo.disabled = false; cStatus.textContent = "";
+      return (cOut.innerHTML = `<div class="note err">${esc(e.message)}</div>`); }
+    cGo.disabled = false; cStatus.textContent = "";
+    if (d.free_limit) cFree.textContent = d.free_limit;
+    renderCustom(d);
+  }
+  cGo.addEventListener("click", runCustom);
+
+  function renderCustom(d) {
+    const rows = d.rows.map(r => {
+      const items = r.results.map(x => {
+        const pct = Math.max(0, Math.min(100, Math.round((x.score || 0) * 100)));
+        return `<div class="res"><div class="rank"></div>
+          <div><span class="cid">${esc(x.id)}</span>${x.title ? `<div class="ctitle">${esc(x.title)}</div>` : ""}
+            <div class="ctext">${esc(x.text)}</div></div>
+          <div class="right"><div class="meter"><i style="width:${pct}%"></i></div>
+            <span class="score">${(x.score || 0).toFixed(3)}</span></div></div>`;
+      }).join("");
+      return `<div style="margin-bottom:22px">
+        <div class="row-head" style="margin-bottom:8px">
+          <h3 style="font-size:15px">${esc(r.id)}${r.title ? " · " + esc(r.title) : ""}</h3></div>
+        <div class="note" style="margin-bottom:8px">${esc(r.text)}</div>
+        <div class="res-list">${items}</div></div>`;
+    }).join("");
+    cOut.innerHTML = `
+      <div class="row-head">
+        <h2 style="font-size:20px">Your controls, mapped onto ${esc(d.target_framework)}</h2>
+        <span style="font-size:13px;color:var(--muted)">${d.counts.controls_mapped} controls · method
+          ${esc(d.method)} · model suggestions</span></div>
+      <div class="note" style="margin-bottom:14px">${esc(d.note)}${d.cap_note ? " " + esc(d.cap_note) : ""}</div>
+      ${rows}`;
+  }
 
   boot();
 })();
