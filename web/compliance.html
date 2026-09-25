@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RegMap — map any control to any framework</title>
+<title>RegMap: map any control to any framework</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/app.css">
 <style>
@@ -49,7 +49,7 @@
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px" id="qGrid">
     <label class="fld">Control in the source framework
-      <select id="ctl"><option value="">— choose a framework first —</option></select>
+      <select id="ctl"><option value="">choose a framework first</option></select>
     </label>
     <label class="fld">…or describe the requirement
       <textarea id="txt" placeholder="e.g. multi-factor authentication for remote access"></textarea>
@@ -94,7 +94,7 @@
 </div>
 
 <footer class="site-footer pad bleed">
-  RegMap · every mapping carries its provenance — official, inverted, or derived through a hub.
+  RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
 <script src="assets/api.js"></script>
@@ -117,8 +117,8 @@
 
   /* ---- shared boot: frameworks + the pair graph --------------------------- */
   const optsFor = predicate => FRAMEWORKS.map(f => {
-    const label = f.controls ? `${f.name} (${f.controls})` : `${f.name} — coming soon`;
-    const why = f.access === "licence-required" && !f.available ? " — licence required" : "";
+    const label = f.controls ? `${f.name} (${f.controls})` : `${f.name} (coming soon)`;
+    const why = f.access === "licence-required" && !f.available ? " (licence required)" : "";
     const ok = predicate ? predicate(f) : f.available;
     return `<option value="${esc(f.id)}" ${ok ? "" : "disabled"}>${esc(label + why)}</option>`;
   }).join("");
@@ -147,8 +147,8 @@
   const fail = m => { out.innerHTML = `<div class="note err">${esc(m)}</div>`; };
 
   async function bootMap() {
-    src.innerHTML = `<option value="">— select —</option>` + optsFor();
-    tgt.innerHTML = `<option value="">— select —</option>` + optsFor();
+    src.innerHTML = `<option value="">select</option>` + optsFor();
+    tgt.innerHTML = `<option value="">select</option>` + optsFor();
     const best = PAIRS.filter(p => p.authoritative)
                       .sort((a, b) => b.source_controls - a.source_controls)[0];
     if (best) { src.value = best.source; tgt.value = best.target; }
@@ -159,11 +159,11 @@
 
   async function onSource() {
     const f = src.value;
-    if (!f) { ctl.innerHTML = `<option value="">— choose a framework first —</option>`; return; }
+    if (!f) { ctl.innerHTML = `<option value="">choose a framework first</option>`; return; }
     ctl.innerHTML = `<option value="">Loading controls…</option>`;
     try {
       const d = await RegMap.controls(f);
-      ctl.innerHTML = `<option value="">— free text instead —</option>` + d.controls.map(c =>
+      ctl.innerHTML = `<option value="">free text instead</option>` + d.controls.map(c =>
         `<option value="${esc(c.id)}">${esc(c.id + (c.title ? " · " + c.title : ""))}</option>`).join("");
     } catch (e) { ctl.innerHTML = `<option value="">unavailable</option>`; status.textContent = e.message; }
   }
@@ -176,7 +176,7 @@
     const p = PAIRS.find(p => p.source === a && p.target === b);
     if (!p) {
       routeMeta.innerHTML = `<span class="pill crit">no route</span>`
-        + `<span>No official mapping and no hub path — the model can still rank the target framework, `
+        + `<span>No official mapping and no hub path, the model can still rank the target framework, `
         + `but there is nothing authoritative to check it against.</span>`;
       return;
     }
@@ -217,7 +217,7 @@
       </div>`;
     } else if (off && d.query.source_id) {
       cov = `<div class="note">An official mapping exists between these frameworks, but
-             <b>${esc(d.query.source_id)}</b> has no target in it — the ranking below is the
+             <b>${esc(d.query.source_id)}</b> has no target in it, the ranking below is the
              model's suggestion only.</div>`;
     } else if (off) {
       cov = `<div class="note">Free-text queries can't be checked against the official mapping.
@@ -225,7 +225,7 @@
              ranking.</div>`;
     } else if (d.source) {
       cov = `<div class="note">No official mapping between these frameworks, so nothing below is
-             confirmed — treat it as a starting point for review.</div>`;
+             confirmed, treat it as a starting point for review.</div>`;
     }
 
     const rows = d.results.map((r, i) => {
@@ -239,19 +239,19 @@
           <div class="ctext">${esc(r.text)}</div>
         </div>
         <div class="right">
-          ${pct == null ? `<span class="score">—</span>`
+          ${pct == null ? `<span class="score">-</span>`
             : `<div class="meter"><i style="width:${pct}%"></i></div><span class="score">${r.score.toFixed(3)}</span>`}
         </div>
       </div>`;
     }).join("");
 
-    const q = d.query.source_id ? `${d.query.source_id} — ${d.source_framework}` : `“${d.query.text}”`;
+    const q = d.query.source_id ? `${d.query.source_id}, ${d.source_framework}` : `“${d.query.text}”`;
     out.innerHTML = `
       <div class="row-head">
         <h2 style="font-size:20px">${esc(d.target_framework)}</h2>
         <span style="font-size:13px;color:var(--muted)">
           ${esc(q)} · method ${esc(d.method)}${d.method === "tfidf"
-            ? " (embedder unavailable — lexical fallback)" : ""}
+            ? " (embedder unavailable, lexical fallback)" : ""}
         </span>
       </div>
       ${cov}
@@ -271,8 +271,8 @@
 
   function bootGaps() {
     // Only rankable sources with an authoritative route make an honest coverage report.
-    gsrc.innerHTML = `<option value="">— select —</option>` + optsFor();
-    gtgt.innerHTML = `<option value="">— select —</option>` + optsFor();
+    gsrc.innerHTML = `<option value="">select</option>` + optsFor();
+    gtgt.innerHTML = `<option value="">select</option>` + optsFor();
     const best = PAIRS.filter(p => p.authoritative)
                       .sort((a, b) => b.source_controls - a.source_controls)[0];
     if (best) { gsrc.value = best.source; gtgt.value = best.target; }
@@ -289,7 +289,7 @@
     const b2 = RegMap.routeBadge(p.route, p.authoritative);
     gRouteMeta.innerHTML = `<span class="pill ${b2.cls}">${esc(b2.label)}</span>`
       + `<span>${p.source_controls} → ${p.target_controls} controls</span>`
-      + (p.authoritative ? "" : `<span>derived route — the gap list is advisory, not authoritative</span>`);
+      + (p.authoritative ? "" : `<span>derived route, the gap list is advisory, not authoritative</span>`);
   }
 
   async function runGaps() {
@@ -331,7 +331,7 @@
         Target controls that no control in the source set maps to, by the official crosswalk. This number
         is about the published mapping, not the model, so it can go straight into a report.</p>
       ${d.gaps.length ? `<div class="gap-grid">${chips}</div>`
-        : `<div class="note" style="margin-top:10px">No gaps — every target provision is covered.</div>`}`;
+        : `<div class="note" style="margin-top:10px">No gaps, every target provision is covered.</div>`}`;
   }
 
   gsrc.addEventListener("change", onGapPair);

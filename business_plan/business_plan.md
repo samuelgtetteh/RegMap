@@ -10,8 +10,15 @@ All financial figures, market sizes, and dates in this plan are forward-looking 
 
 RegMap is a compliance automation company. Our software maps the security and privacy controls an organization already operates onto the many regulatory frameworks it must satisfy, and keeps that mapping current as frameworks change. We reduce a slow, expert-driven task called regulatory crosswalking to an automated, evidence-backed workflow.
 
-- **Mission:** make multi-framework compliance continuous, transparent, and affordable.
-- **Vision:** become the mapping layer that sits underneath every compliance program, so that proving a control once proves it everywhere it applies.
+One proprietary asset, a curated, provenance-tagged set of cross-framework control mappings with reproducible ground truth, powers **two reinforcing pillars**:
+
+1. **Automate compliance.** A crosswalk engine that companies operate to prove a control once and satisfy it everywhere it applies, with evidence and audit-ready reports.
+2. **Prove you can do the job.** A hands-on training platform where practitioners and teams do realistic compliance and audit work and are graded against the same official ground truth, producing verifiable, role-based evidence of skill. This is a first-class product and a major selling point, not only a marketing channel: the same ground truth that maps a company's controls also proves a person can map them.
+
+The two pillars share data, brand, and a flywheel: practitioners trained on RegMap become buyers and champions inside the companies that license the engine, and every confirmed mapping improves both products at once.
+
+- **Mission:** make multi-framework compliance continuous, transparent, and affordable, and make the skill to operate it demonstrable.
+- **Vision:** become the mapping layer that sits underneath every compliance program, so that proving a control once proves it everywhere it applies, and the standard place practitioners prove they can do the work.
 - **Legal status:** to be incorporated as a Delaware C corporation at first close, the standard structure for venture and angel investment.
 
 ## 2. The problem
@@ -37,6 +44,18 @@ RegMap frames crosswalking as a semantic retrieval problem and solves it with a 
 4. **Continuously.** Because a mapping is a fast automated operation rather than a consulting engagement, it can be rerun on every framework revision or on a schedule, so coverage never goes stale silently.
 
 The design keeps a human in the loop. The engine ranks and flags; an expert confirms. It can only reduce the manual workload, never introduce an unreviewed decision, which is essential for audit-grade work.
+
+### Prove you can do the job (the second pillar)
+
+The same ground truth that lets RegMap map a company's controls also lets it grade whether a person can. Our training platform gives practitioners and teams realistic, hands-on compliance and audit tasks, mapping a control, finding a coverage gap, assembling evidence, and scores each attempt on precision and recall against the official published crosswalk, not against an opinion. The result is a verifiable, role-based record of skill: "performed these tasks, scored X," tied to recognized work roles.
+
+This is a major selling point in its own right, for three reasons:
+
+- **It sells the engine.** A practitioner who has proven the workflow on RegMap is the person who adopts and champions it inside the company that later licenses the engine.
+- **It is a product buyers pay for.** Individuals prove job-readiness; employers and teams validate and upskill staff against objective ground truth rather than a certificate of attendance.
+- **It compounds the moat.** Every graded attempt and every confirmed mapping enriches the same proprietary ground-truth dataset that makes the engine hard to copy.
+
+Compliance work is one of the few skills where the ground truth is public and objective, so it is uniquely well suited to graded, evidence-producing practice. That is why we treat training as a pillar, not a giveaway.
 
 ## 4. What we have built already (traction)
 
@@ -80,6 +99,7 @@ Software as a service, sold to mid-market companies and to compliance consultanc
 - **Starter (crosswalk):** map an existing program onto additional public-domain frameworks. Entry tier, roughly 12,000 dollars per year.
 - **Continuous compliance:** ongoing mapping, evidence, and reporting across frameworks, roughly 30,000 to 40,000 dollars per year.
 - **Usage add-on:** consumption-based compute units for heavy mapping workloads, already metered in the platform.
+- **Skills and training:** the second pillar as revenue, not just a funnel. Individual practitioner subscriptions to the graded labs, and team and employer plans that validate and upskill staff against objective ground truth with role-based evidence of skill. Priced per seat, it is a low-friction entry point that also seeds demand for the engine.
 - **Services and partnerships:** paid onboarding and a partner tier for consultancies who deliver mappings to their own clients on our engine.
 
 Target gross margin is roughly 80 to 85 percent, typical for vertical SaaS, because the marginal cost of a mapping is a small amount of compute.
@@ -88,7 +108,7 @@ Target gross margin is roughly 80 to 85 percent, typical for vertical SaaS, beca
 
 - **Land on the wedge.** Lead with a single, demonstrable promise: you are compliant with framework A, so here is exactly which of your existing controls already satisfy framework B, with evidence, today.
 - **Sell at the moment of pain.** Target companies pursuing their second framework, and the consultancies who serve them.
-- **Use the training funnel.** A hands-on, auto-graded training platform built on our ground-truth data brings in practitioners at low cost, builds brand and trust, and creates a pipeline into the paid product.
+- **Lead with both pillars.** The training platform is a paid product in its own right and the top of the funnel: a hands-on, auto-graded experience built on our ground-truth data that brings in practitioners at low cost, builds brand and trust, produces role-based evidence of skill, and creates a warm pipeline of champions into the companies that license the engine.
 - **Motion.** Founder-led sales to the first design partners, then a repeatable mid-market motion as the growth hire builds the pipeline. This is a sales-assisted model, not pure self-serve, which is why the team scales with revenue.
 
 ## 9. Product roadmap (build order set by content licensing)
@@ -104,7 +124,7 @@ Alongside frameworks: multi-tenant isolation, cloud and identity integrations, a
 - **Curated, provenance-tagged mappings** across frameworks. This is expert labor that compounds and is hard to copy.
 - **Proprietary evaluation and ground truth.** Our labeled datasets and benchmarks let us prove mapping quality that competitors cannot easily reproduce.
 - **Data flywheel.** Every customer confirmation or rejection of a suggested mapping improves the engine.
-- **The training funnel** as a durable, low-cost acquisition and brand channel.
+- **The training pillar** as both a revenue product and a durable, low-cost acquisition and brand channel, powered by the same ground truth as the engine so the two reinforce each other.
 - **Research credibility** that shortens enterprise trust cycles and strengthens grant applications.
 
 ## 11. Team

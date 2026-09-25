@@ -5,10 +5,10 @@
   // The site's pages. Add an app here and it appears in the nav on every page.
   const NAV = [
     { id: "home",       label: "Home",       href: "/" },
-    { id: "dashboard",  label: "Dashboard",  href: "/dashboard" },      // the existing live app
-    { id: "labs",       label: "Labs",       href: "/labs.html" },
-    { id: "compliance", label: "Compliance", href: "/compliance.html" },
+    { id: "compliance", label: "Compliance", href: "/compliance.html" }, // pillar 1: automate compliance
+    { id: "labs",       label: "Labs",       href: "/labs.html" },       // pillar 2: prove you can do the job
     { id: "pricing",    label: "Pricing",    href: "/pricing.html" },
+    { id: "dashboard",  label: "Console",    href: "/dashboard" },       // the live app
   ];
 
   const page = document.body.dataset.page || "";

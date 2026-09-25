@@ -1,4 +1,4 @@
-/* RegMap API client — shared by every page. Thin wrapper over fetch that surfaces the engine's
+/* RegMap API client, shared by every page. Thin wrapper over fetch that surfaces the engine's
    error detail instead of a bare status code, so the UI can say what actually went wrong (an
    unlicensed framework returns 403 with a reason, and the user should see that reason).
 
@@ -18,7 +18,7 @@
   async function call(path, opts) {
     // Attach the key if we have one. Harmless when the engine runs open.
     opts = opts || {};
-    // Send the session cookie. It is HttpOnly, so this is the only way the browser can authenticate —
+    // Send the session cookie. It is HttpOnly, so this is the only way the browser can authenticate -
     // script cannot read it, which is precisely why a session beats a token in localStorage.
     opts.credentials = "same-origin";
     const k = getKey();
@@ -27,7 +27,7 @@
     try {
       r = await fetch(path, opts);
     } catch (e) {
-      throw new Error("Cannot reach the engine — is it running?");
+      throw new Error("Cannot reach the engine, is it running?");
     }
     let body = null;
     try { body = await r.json(); } catch (e) { /* non-JSON error page */ }
@@ -35,7 +35,7 @@
       let detail = (body && (body.detail || body.message)) || `HTTP ${r.status}`;
       if (r.status === 401) {
         detail = getKey()
-          ? "That API key was rejected — it may be revoked, or the account deactivated."
+          ? "That API key was rejected, it may be revoked, or the account deactivated."
           : "This instance requires an API key. Use the key button in the header to add one.";
       } else if (r.status === 402 && detail && typeof detail === "object") {
         detail = `Monthly allowance exhausted: ${detail.used_cu} of ${detail.allowance_cu} CU used on `
@@ -43,10 +43,10 @@
       } else if (r.status === 403) {
         detail = typeof detail === "string" ? detail : "This endpoint needs an admin-scoped key.";
       } else if (r.status === 429) {
-        detail = `Rate limited — ${detail}. Retry in `
+        detail = `Rate limited, ${detail}. Retry in `
                + `${r.headers.get("retry-after") || "a moment"}s.`;
       } else if (r.status === 413) {
-        detail = typeof detail === "object" ? (detail.error + " — " + detail.remedy) : detail;
+        detail = typeof detail === "object" ? (detail.error + ", " + detail.remedy) : detail;
       }
       const err = new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
       err.status = r.status;
@@ -83,7 +83,7 @@
     grade:      (payload)      => post("/exercise/grade", payload),
     evaluate:   (payload)      => post("/eval", payload),
 
-    /* Escape before interpolating control text into HTML — control statements contain quotes,
+    /* Escape before interpolating control text into HTML, control statements contain quotes,
        ampersands and angle brackets, and this content ultimately comes from imported files. */
     esc(s) {
       return String(s == null ? "" : s).replace(/[&<>"']/g, c =>

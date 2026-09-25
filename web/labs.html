@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RegMap — graded labs</title>
+<title>RegMap: graded labs</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/app.css">
 </head>
@@ -14,8 +14,8 @@
   <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Map the control</h1>
   <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 0;max-width:74ch">
     You are given a control from one framework and a set of candidate provisions from another. Select the
-    ones that genuinely map. Your answer is scored against the <b>official published crosswalk</b> — not
-    against an opinion — so this is the same judgement an auditor is paid to make.
+    ones that genuinely map. Your answer is scored against the <b>official published crosswalk</b>, not
+    against an opinion, so this is the same judgement an auditor is paid to make.
   </p>
   <div class="note" style="margin-top:16px;max-width:74ch">
     <b>Selecting everything will fail you.</b> Scoring uses precision and recall, so over-selecting is
@@ -40,9 +40,9 @@
     <label class="fld" style="flex-direction:row;align-items:center;gap:8px;text-transform:none">
       <span style="font-size:12px">Difficulty</span>
       <select id="distractors" style="width:auto;padding:7px 10px">
-        <option value="4">easier — 4 distractors</option>
-        <option value="8" selected>standard — 8</option>
-        <option value="14">harder — 14</option>
+        <option value="4">easier: 4 distractors</option>
+        <option value="8" selected>standard: 8</option>
+        <option value="14">harder: 14</option>
       </select>
     </label>
     <span id="tally" class="mono" style="font-size:12.5px;color:var(--muted)"></span>
@@ -75,7 +75,7 @@
     tally.textContent = `session: ${stats.passed}/${stats.attempts} passed · mean F1 ${avg.toFixed(2)}`;
   }
 
-  /* Only pairs with an AUTHORITATIVE mapping can be graded — a derived route is advisory, so grading
+  /* Only pairs with an AUTHORITATIVE mapping can be graded, a derived route is advisory, so grading
      against it would be marking a learner against a guess. */
   async function boot() {
     let fw, pr;
@@ -108,7 +108,7 @@
   function onPair() {
     const p = PAIRS.find(p => p.source === src.value && p.target === tgt.value);
     routeMeta.innerHTML = p
-      ? `<span class="pill ok">official — ${esc(p.route)}</span>`
+      ? `<span class="pill ok">official: ${esc(p.route)}</span>`
         + `<span>graded against the published crosswalk</span>`
       : `<span class="pill crit">not gradable</span>`;
   }
@@ -210,10 +210,10 @@
         ${esc(g.source_id)}. You selected ${c.selected}, of which <b>${c.correct}</b> were right;
         you missed ${c.missed} and included ${c.incorrect} that do not map.
         ${c.incorrect > 0 && c.missed === 0
-          ? " Recall was fine — the loss was precision, so you were too inclusive."
+          ? " Recall was fine, the loss was precision, so you were too inclusive."
           : ""}
         ${c.missed > 0 && c.incorrect === 0
-          ? " Precision was fine — you were too conservative and left correct mappings out."
+          ? " Precision was fine, you were too conservative and left correct mappings out."
           : ""}
         <div class="sub" style="margin-top:8px">Evidence recorded against NICE task
           ${esc(g.nice_task)} · route ${esc(g.route)}.</div>
