@@ -1,0 +1,65 @@
+<svg viewBox="0 0 680 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mapping controls from one framework to another">
+  <defs>
+    <linearGradient id="gv" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366F1"/><stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="gline" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6366F1"/><stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="42%" r="60%">
+      <stop offset="0" stop-color="#6366F1" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#6366F1" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse">
+      <circle cx="1.4" cy="1.4" r="1.4" fill="#94A3BE" fill-opacity=".10"/>
+    </pattern>
+    <style>
+      .lbl{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;fill:#C7D2E8;font-weight:600}
+      .cap{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;fill:#7C8AA6;letter-spacing:.14em}
+      .node{fill:#141A29;stroke:#2C3650;stroke-width:1}
+      .node.on{stroke:url(#gv);stroke-width:1.6}
+    </style>
+  </defs>
+
+  <rect x="8" y="8" width="664" height="504" rx="22" fill="#0C1019" stroke="#1E2637"/>
+  <rect x="8" y="8" width="664" height="504" rx="22" fill="url(#dots)"/>
+  <rect x="8" y="8" width="664" height="504" rx="22" fill="url(#glow)"/>
+
+  <text x="96" y="56" class="cap">NIST SP 800-53</text>
+  <text x="470" y="56" class="cap">HIPAA SECURITY RULE</text>
+
+  <!-- connectors -->
+  <g fill="none" stroke-linecap="round">
+    <path d="M246,104 C340,104 350,196 434,196" stroke="url(#gline)" stroke-width="2.5"/>
+    <path d="M246,180 C346,180 352,104 434,104" stroke="url(#gline)" stroke-width="2.5"/>
+    <path d="M246,180 C350,180 356,272 434,272" stroke="#334063" stroke-width="1.4" stroke-opacity=".7"/>
+    <path d="M246,256 C348,256 356,196 434,196" stroke="#334063" stroke-width="1.4" stroke-opacity=".7"/>
+    <path d="M246,256 C352,256 356,348 434,348" stroke="url(#gline)" stroke-width="2.5"/>
+    <path d="M246,332 C350,332 356,424 434,424" stroke="url(#gline)" stroke-width="2.5"/>
+    <path d="M246,408 C352,408 356,348 434,348" stroke="#334063" stroke-width="1.4" stroke-opacity=".7"/>
+  </g>
+
+  <!-- left nodes -->
+  <g>
+    <g><rect class="node on" x="88" y="82" width="158" height="44" rx="11"/><text x="104" y="109" class="lbl">AC-1</text></g>
+    <g><rect class="node on" x="88" y="158" width="158" height="44" rx="11"/><text x="104" y="185" class="lbl">AC-2</text></g>
+    <g><rect class="node" x="88" y="234" width="158" height="44" rx="11"/><text x="104" y="261" class="lbl">AU-6</text></g>
+    <g><rect class="node on" x="88" y="310" width="158" height="44" rx="11"/><text x="104" y="337" class="lbl">SC-7</text></g>
+    <g><rect class="node on" x="88" y="386" width="158" height="44" rx="11"/><text x="104" y="413" class="lbl">IA-5</text></g>
+  </g>
+  <!-- right nodes -->
+  <g>
+    <g><rect class="node on" x="434" y="82" width="158" height="44" rx="11"/><text x="450" y="109" class="lbl">164.312(a)</text></g>
+    <g><rect class="node on" x="434" y="174" width="158" height="44" rx="11"/><text x="450" y="201" class="lbl">164.308(a)</text></g>
+    <g><rect class="node" x="434" y="250" width="158" height="44" rx="11"/><text x="450" y="277" class="lbl">164.312(b)</text></g>
+    <g><rect class="node on" x="434" y="326" width="158" height="44" rx="11"/><text x="450" y="353" class="lbl">164.316</text></g>
+    <g><rect class="node on" x="434" y="402" width="158" height="44" rx="11"/><text x="450" y="429" class="lbl">164.312(d)</text></g>
+  </g>
+
+  <!-- score badge -->
+  <g transform="translate(300,458)">
+    <rect x="0" y="0" width="150" height="34" rx="17" fill="#101827" stroke="#2C3650"/>
+    <circle cx="20" cy="17" r="6" fill="#34D399"/>
+    <text x="36" y="22" class="lbl" fill="#34D399">official  0.88</text>
+  </g>
+</svg>

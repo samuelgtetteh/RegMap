@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RegMap console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  .grid2{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  .fwrow{display:grid;grid-template-columns:1fr 120px 60px;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+  .fwrow:last-child{border-bottom:0}
+  .fwrow .bar{height:8px;border-radius:5px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+  .fwrow .bar>i{display:block;height:100%;background:var(--grad)}
+  .pairrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .pairrow:last-child{border-bottom:0}
+  .qa{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+</style>
+</head>
+<body data-page="dashboard">
+
+<section class="section tight pad bleed" style="padding-top:26px">
+  <div class="row-head reveal" style="margin-bottom:14px">
+    <div>
+      <div class="eyebrow">Console</div>
+      <h2 style="margin-top:6px">Compliance overview</h2>
+    </div>
+    <span class="chip"><span class="dot"></span> <span id="live">live</span></span>
+  </div>
+  <div class="stat-row reveal" id="stats">
+    <div class="cell"><div class="stat"><span class="k">frameworks live</span><span class="n" id="s-fw">–</span></div></div>
+    <div class="cell"><div class="stat"><span class="k">controls indexed</span><span class="n" id="s-ctl">–</span></div></div>
+    <div class="cell"><div class="stat"><span class="k">answerable pairs</span><span class="n" id="s-pairs">–</span></div></div>
+    <div class="cell"><div class="stat"><span class="k">official routes</span><span class="n" id="s-off">–</span></div></div>
+  </div>
+</section>
+
+<section class="section tight pad bleed">
+  <div class="grid2">
+    <div class="panel reveal">
+      <div class="panel-head"><h3>Framework catalog</h3><span class="sub" id="fw-sub"></span></div>
+      <div class="panel-body" id="fw-body"><div class="note"><span class="spin"></span> loading frameworks</div></div>
+    </div>
+    <div class="panel reveal">
+      <div class="panel-head"><h3>Answerable pairs</h3><span class="sub" id="pr-sub"></span></div>
+      <div class="panel-body" id="pr-body"><div class="note"><span class="spin"></span> loading pairs</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section pad bleed">
+  <div class="row-head reveal"><h2 style="font-size:clamp(18px,2.2vw,22px)">Do the work</h2></div>
+  <div class="qa">
+    <a class="tile reveal" href="/compliance.html"><div class="body">
+      <h3>Map a control</h3><p>Rank a control against any framework, with official markers and coverage.</p>
+      <div class="foot"><span class="pill info">engine</span> /map</div></div></a>
+    <a class="tile reveal" href="/compliance.html"><div class="body">
+      <h3>Coverage and gaps</h3><p>Map a whole control set and export the official gap list for a report.</p>
+      <div class="foot"><span class="pill info">engine</span> /map/bulk</div></div></a>
+    <a class="tile reveal" href="/labs.html"><div class="body">
+      <h3>Graded labs</h3><p>Practice on real ground truth and produce role-based evidence of skill.</p>
+      <div class="foot"><span class="pill ok">graded</span> /exercise</div></div></a>
+    <a class="tile reveal" href="/pricing.html"><div class="body">
+      <h3>Usage and plans</h3><p>Deterministic Compute Units, published pricing, per-account metering.</p>
+      <div class="foot"><span class="pill warn">metered</span> /pricing</div></div></a>
+  </div>
+</section>
+
+<footer class="site-footer pad bleed">
+  RegMap console · read from the live engine catalog · every mapping scored and provenance-tagged.
+</footer>
+
+<script src="assets/api.js"></script>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = RegMap.esc;
+
+  async function boot() {
+    let fw, pr;
+    try { [fw, pr] = await Promise.all([RegMap.frameworks(), RegMap.pairs()]); }
+    catch (e) {
+      $("live").textContent = "engine unreachable";
+      $("fw-body").innerHTML = `<div class="note err">${esc(e.message)}</div>`;
+      $("pr-body").innerHTML = `<div class="note err">${esc(e.message)}</div>`;
+      return;
+    }
+    const frameworks = fw.frameworks, pairs = pr.pairs;
+    const populated = frameworks.filter(f => f.controls);
+    const totalCtl = frameworks.reduce((a, f) => a + (f.controls || 0), 0);
+    const official = pairs.filter(p => p.authoritative).length;
+
+    $("s-fw").textContent = populated.length;
+    $("s-ctl").textContent = totalCtl.toLocaleString();
+    $("s-pairs").textContent = pairs.length;
+    $("s-off").textContent = official;
+
+    // framework catalog, biggest first
+    const max = Math.max(1, ...populated.map(f => f.controls));
+    $("fw-sub").textContent = `${populated.length} of ${frameworks.length} imported`;
+    $("fw-body").innerHTML = populated
+      .sort((a, b) => b.controls - a.controls)
+      .map(f => {
+        const cls = f.access === "public" ? "ok" : f.access === "licence-required" ? "crit" : "warn";
+        return `<div class="fwrow">
+          <div><div style="font-weight:600;font-size:13.5px">${esc(f.name)}</div>
+            <div class="mono" style="font-size:11px;color:var(--faint)">${esc(f.id)} · <span class="pill ${cls}" style="padding:1px 8px">${esc(f.access)}</span></div></div>
+          <div class="bar"><i style="width:${Math.round(100 * f.controls / max)}%"></i></div>
+          <div class="mono" style="text-align:right;font-size:13px">${f.controls}</div>
+        </div>`;
+      }).join("");
+
+    // pairs
+    const rankable = pairs.filter(p => p.rankable).length;
+    $("pr-sub").textContent = `${rankable} rankable`;
+    $("pr-body").innerHTML = pairs.slice(0, 12).map(p => {
+      const b = RegMap.routeBadge(p.route, p.authoritative);
+      return `<div class="pairrow">
+        <span class="mono" style="font-size:12.5px">${esc(p.source)} <span style="color:var(--faint)">→</span> ${esc(p.target)}</span>
+        <span class="pill ${b.cls}">${esc(b.label)}</span>
+      </div>`;
+    }).join("") + (pairs.length > 12 ? `<div style="font-size:12px;color:var(--faint);margin-top:10px">and ${pairs.length - 12} more</div>` : "");
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

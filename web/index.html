@@ -2,87 +2,105 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RegMap: automate compliance, and prove you can do the job</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/app.css">
 <style>
-  /* the two-pillar centerpiece: two large, equal cards */
-  .pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:8px}
+  .pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
   .pillar{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
-    box-shadow:var(--shadow);padding:22px 22px 20px;display:flex;flex-direction:column;gap:10px}
-  .pillar .tag{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
-  .pillar h3{font-size:22px;letter-spacing:-.02em}
+    box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column}
+  .pillar .banner{border-bottom:1px solid var(--line);background:var(--surface-2)}
+  .pillar .banner img{display:block;width:100%;height:auto}
+  .pillar .in{padding:20px 22px;display:flex;flex-direction:column;gap:11px;flex:1}
+  .pillar .tag{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .pillar h3{font-size:22px}
   .pillar p{margin:0;color:var(--muted);font-size:14.5px}
-  .pillar ul{margin:4px 0 0;padding-left:18px;color:var(--muted);font-size:13.5px;line-height:1.7}
-  .pillar .go{margin-top:auto;padding-top:12px}
+  .pillar ul{margin:2px 0 0;padding-left:18px;color:var(--muted);font-size:13.5px;line-height:1.75}
+  .pillar .go{margin-top:auto;padding-top:6px}
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px}
+  .step .no{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--accent);font-weight:600}
+  .step h4{font-size:15px;margin:6px 0 5px}
+  .step p{margin:0;color:var(--muted);font-size:14px}
 </style>
 </head>
 <body data-page="home">
 
 <!-- HERO -->
 <section class="hero pad bleed">
-  <div class="eyebrow reveal">Compliance automation · skills that prove out</div>
-  <h1 class="reveal">Prove it once.<br>Satisfy every framework.</h1>
-  <p class="lead reveal">RegMap turns one thing, a curated map of how every security framework's controls line up,
-    into two products. Companies map the controls they already operate onto every framework they must
-    satisfy. Practitioners and teams prove they can do that work, graded against the same official ground
-    truth.</p>
-  <div class="cta reveal">
-    <a class="btn primary" href="/compliance.html">Map your controls →</a>
-    <a class="btn ghost" href="/labs.html">Prove you can do the job →</a>
+  <div class="hero-wrap">
+    <div>
+      <div class="chip reveal"><span class="dot"></span> Live engine: 6 frameworks, 18 mappings</div>
+      <h1 class="reveal" style="margin-top:18px">Prove it once.<br><span class="grad-text">Satisfy every framework.</span></h1>
+      <p class="lead reveal">RegMap turns one thing, a curated map of how every security framework's controls line
+        up, into two products. Companies map the controls they already operate onto every framework they
+        must satisfy. Practitioners and teams prove they can do that work, graded against the same official
+        ground truth.</p>
+      <div class="cta reveal">
+        <a class="btn primary" href="/compliance.html">Map your controls</a>
+        <a class="btn ghost" href="/labs.html">Prove you can do the job</a>
+      </div>
+    </div>
+    <div class="hero-art reveal"><img src="assets/img/hero-crosswalk.svg" alt="Mapping NIST 800-53 controls to HIPAA provisions" width="680" height="520"></div>
   </div>
 </section>
 
 <!-- PROOF STRIP -->
 <section class="section tight pad bleed">
-  <div class="cov reveal" style="gap:30px">
-    <div><span class="k">held-out top-5 retrieval</span><span class="v good">0.500 → 0.735</span></div>
-    <div><span class="k">confidence</span><span class="v" style="font-size:15px;padding-top:5px">bootstrap 95% CI</span></div>
-    <div><span class="k">frameworks live</span><span class="v">6</span></div>
-    <div><span class="k">answerable pairs</span><span class="v">18</span></div>
-    <div><span class="k">every mapping</span><span class="v" style="font-size:15px;padding-top:5px">scored + provenance</span></div>
+  <div class="stat-row reveal">
+    <div class="cell"><div class="stat"><span class="k">held-out top-5</span><span class="n grad-text">0.735</span><span class="d up">up from 0.500 baseline</span></div></div>
+    <div class="cell"><div class="stat"><span class="k">confidence</span><span class="n">95%</span><span class="d">bootstrap CI</span></div></div>
+    <div class="cell"><div class="stat"><span class="k">frameworks</span><span class="n">6</span><span class="d">live now</span></div></div>
+    <div class="cell"><div class="stat"><span class="k">answerable pairs</span><span class="n">18</span><span class="d">official + derived</span></div></div>
+    <div class="cell"><div class="stat"><span class="k">every mapping</span><span class="n" style="font-size:18px;padding-top:8px">scored</span><span class="d">+ provenance tag</span></div></div>
   </div>
-  <p style="font-size:12.5px;color:var(--faint);margin:10px 2px 0">
+  <p style="font-size:12.5px;color:var(--faint);margin:12px 2px 0">
     Measured on held-out data against generic embeddings and keyword baselines; a stricter leakage-free
     split confirms the gain. Models are Apache-2.0 and published, so the numbers are reproducible.</p>
 </section>
-
-<hr class="divider">
 
 <!-- TWO PILLARS -->
 <section class="section pad bleed">
   <div class="row-head reveal"><h2>One ground truth. Two products.</h2></div>
   <div class="pillars">
     <div class="pillar reveal">
-      <div class="tag">Pillar 1 · for companies</div>
-      <h3>Automate compliance</h3>
-      <p>You are compliant with framework A. RegMap shows exactly which of your existing controls already
-        satisfy framework B, with evidence, today, instead of a fresh consulting engagement.</p>
-      <ul>
-        <li>Map any control to any framework, ranked and scored</li>
-        <li>Live coverage and the official gap list</li>
-        <li>Scan findings become control-level evidence</li>
-        <li>Audit-ready package: DOCX, XLSX, JSON</li>
-      </ul>
-      <div class="go"><a class="btn primary" href="/compliance.html">Map your controls →</a></div>
+      <div class="banner"><img src="assets/img/pillar-compliance.svg" alt="Framework coverage visual" width="560" height="300"></div>
+      <div class="in">
+        <div class="tag">Pillar 1 · for companies</div>
+        <h3>Automate compliance</h3>
+        <p>You are compliant with framework A. RegMap shows exactly which of your existing controls already
+          satisfy framework B, with evidence, today, instead of a fresh consulting engagement.</p>
+        <ul>
+          <li>Map any control to any framework, ranked and scored</li>
+          <li>Live coverage and the official gap list</li>
+          <li>Scan findings become control-level evidence</li>
+          <li>Audit-ready package: DOCX, XLSX, JSON</li>
+        </ul>
+        <div class="go"><a class="btn primary" href="/compliance.html">Map your controls</a></div>
+      </div>
     </div>
     <div class="pillar reveal">
-      <div class="tag">Pillar 2 · for practitioners &amp; teams</div>
-      <h3>Prove you can do the job</h3>
-      <p>Do realistic compliance and audit work and get scored against the official published crosswalk,
-        not an opinion. The result is verifiable, role-based evidence of skill: performed these tasks,
-        scored X.</p>
-      <ul>
-        <li>Hands-on, auto-graded labs on real ground truth</li>
-        <li>Precision and recall, so guessing does not pass</li>
-        <li>Tied to recognized work roles (NICE)</li>
-        <li>Evidence employers and teams trust</li>
-      </ul>
-      <div class="go"><a class="btn primary" href="/labs.html">Start a graded lab →</a></div>
+      <div class="banner"><img src="assets/img/pillar-training.svg" alt="A graded lab result" width="560" height="300"></div>
+      <div class="in">
+        <div class="tag">Pillar 2 · for practitioners and teams</div>
+        <h3>Prove you can do the job</h3>
+        <p>Do realistic compliance and security work and get scored against the official published
+          crosswalk, not an opinion. The result is verifiable, role-based evidence of skill: performed
+          these tasks, scored X.</p>
+        <ul>
+          <li>Hands-on, auto-graded labs on real ground truth</li>
+          <li>Precision and recall, so guessing does not pass</li>
+          <li>XP, streaks and ranks, tied to NICE work roles</li>
+          <li>Evidence employers and teams trust</li>
+        </ul>
+        <div class="go"><a class="btn primary" href="/labs.html">Start a graded lab</a></div>
+      </div>
     </div>
   </div>
-  <p class="reveal" style="font-size:13.5px;color:var(--muted);margin-top:16px;max-width:78ch">
+  <p class="reveal" style="font-size:13.5px;color:var(--muted);margin-top:16px;max-width:80ch">
     The two reinforce each other. The same data that maps a company's controls also proves a person can
     map them, and every confirmed mapping improves both at once.</p>
 </section>
@@ -95,85 +113,111 @@
       SOC 2, then ISO 27001, then HIPAA, PCI DSS, CMMC. Each states overlapping obligations in its own
       language. Proving that the controls you built for one satisfy another is <b>crosswalking</b>, and
       today it is done by hand.</p>
-    <div class="grid" style="margin-top:20px">
-      <div class="reveal"><div class="eyebrow">Manual</div><p class="lead" style="font-size:14.5px">Performed line by line by scarce, expensive compliance experts.</p></div>
-      <div class="reveal"><div class="eyebrow">Expensive</div><p class="lead" style="font-size:14.5px">A single cross-framework engagement runs into tens of thousands in consulting time.</p></div>
-      <div class="reveal"><div class="eyebrow">Fragile</div><p class="lead" style="font-size:14.5px">Redone on every framework revision, so the mapping is stale between reviews.</p></div>
-      <div class="reveal"><div class="eyebrow">Opaque</div><p class="lead" style="font-size:14.5px">The reasoning behind each mapping is rarely captured, so audits are slow and repetitive.</p></div>
+    <div class="steps" style="margin-top:22px">
+      <div class="step reveal"><div class="no">Manual</div><p>Performed line by line by scarce, expensive compliance experts.</p></div>
+      <div class="step reveal"><div class="no">Expensive</div><p>A single cross-framework engagement runs into tens of thousands in consulting time.</p></div>
+      <div class="step reveal"><div class="no">Fragile</div><p>Redone on every framework revision, so the mapping is stale between reviews.</p></div>
+      <div class="step reveal"><div class="no">Opaque</div><p>The reasoning behind each mapping is rarely captured, so audits are slow and repetitive.</p></div>
     </div>
   </div>
 </section>
 
-<!-- HOW IT WORKS (pillar 1 detail) -->
+<!-- HOW IT WORKS -->
 <section id="how" class="section pad bleed">
-  <div class="row-head reveal"><h2>Map → evidence → report → continuously</h2></div>
-  <div class="grid">
-    <div class="reveal"><div class="eyebrow">01 · Map</div><p class="lead" style="font-size:15px">Give the engine a control; it returns the ranked, scored provisions of a target framework it satisfies, and flags weak matches as candidate gaps.</p></div>
-    <div class="reveal"><div class="eyebrow">02 · Evidence</div><p class="lead" style="font-size:15px">A scanning and assessment layer turns live technical findings into control-level evidence, so coverage reflects the real environment.</p></div>
-    <div class="reveal"><div class="eyebrow">03 · Report</div><p class="lead" style="font-size:15px">Export an auditable compliance package: per obligation, the suggested control, its score, and its status.</p></div>
-    <div class="reveal"><div class="eyebrow">04 · Continuously</div><p class="lead" style="font-size:15px">A mapping is a fast automated operation, so it reruns on every revision or on a schedule. Coverage never goes stale silently.</p></div>
+  <div class="row-head reveal"><h2>Map, evidence, report, continuously</h2></div>
+  <div class="steps">
+    <div class="step reveal"><div class="no">01 · Map</div><h4>Rank and score</h4><p>Give the engine a control; it returns the ranked, scored provisions of a target framework it satisfies, and flags weak matches as candidate gaps.</p></div>
+    <div class="step reveal"><div class="no">02 · Evidence</div><h4>From findings</h4><p>A scanning and assessment layer turns live technical findings into control-level evidence, so coverage reflects the real environment.</p></div>
+    <div class="step reveal"><div class="no">03 · Report</div><h4>Audit-ready</h4><p>Export an auditable package: per obligation, the suggested control, its score, and its status.</p></div>
+    <div class="step reveal"><div class="no">04 · Continuously</div><h4>Never stale</h4><p>A mapping is a fast automated operation, so it reruns on every revision or on a schedule.</p></div>
   </div>
   <p class="reveal" style="font-size:13.5px;color:var(--muted);margin-top:18px;max-width:74ch">
     The human stays in the loop: the engine ranks and flags, an expert confirms. It reduces the manual
     workload without ever introducing an unreviewed decision, which is what audit-grade work requires.</p>
 </section>
 
-<!-- PROVE YOU CAN DO THE JOB (pillar 2 detail) -->
+<!-- PROVE YOU CAN DO THE JOB (training) -->
 <section class="band bleed">
   <div class="section pad">
-    <div class="row-head reveal"><h2>Learn → do → graded → evidence</h2></div>
-    <div class="grid">
-      <div class="reveal"><div class="eyebrow">01 · Learn</div><p class="lead" style="font-size:15px">A tight concept brief: the one resource that matters, no filler.</p></div>
-      <div class="reveal"><div class="eyebrow">02 · Do</div><p class="lead" style="font-size:15px">A realistic lab: triage alerts, write a detection, map a control, test evidence.</p></div>
-      <div class="reveal"><div class="eyebrow">03 · Graded</div><p class="lead" style="font-size:15px">Scored against ground truth: accuracy, precision, recall, with feedback.</p></div>
-      <div class="reveal"><div class="eyebrow">04 · Evidence</div><p class="lead" style="font-size:15px">A NICE work-role record employers trust: performed these tasks, scored X.</p></div>
+    <div class="row-head reveal"><h2>Learn, do, graded, evidence</h2>
+      <span class="pill info">hands-on · scored on ground truth</span></div>
+    <div class="steps">
+      <div class="step reveal"><div class="no">01 · Learn</div><p>A tight concept brief: the one resource that matters, no filler.</p></div>
+      <div class="step reveal"><div class="no">02 · Do</div><p>A realistic lab: triage alerts, write a detection, map a control, test evidence.</p></div>
+      <div class="step reveal"><div class="no">03 · Graded</div><p>Scored against ground truth: accuracy, precision, recall, with feedback.</p></div>
+      <div class="step reveal"><div class="no">04 · Evidence</div><p>A NICE work-role record employers trust: performed these tasks, scored X.</p></div>
     </div>
 
-    <div class="row-head reveal" style="margin-top:28px"><h2 style="font-size:clamp(18px,2.2vw,22px)">Two paths to senior</h2></div>
-    <div class="grid">
-      <div class="tile reveal" style="box-shadow:none"><div class="body">
-        <h3>Cybersecurity / SOC Analyst</h3>
-        <p>Alert triage · SIEM investigation · detection engineering · threat hunting · incident response · vulnerability prioritization.</p>
-        <div class="foot mono">NICE · Cyber Defense Analyst</div></div></div>
-      <div class="tile reveal" style="box-shadow:none"><div class="body">
-        <h3>IT Audit / GRC</h3>
-        <p>Control frameworks · risk assessment · RMF · ITGC testing · findings and workpapers · SOC 2 readiness.</p>
-        <div class="foot mono">NICE · Security Control Assessor</div></div></div>
+    <div class="row-head reveal" style="margin-top:30px"><h2 style="font-size:clamp(18px,2.2vw,23px)">Inside every track</h2></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(224px,1fr))">
+      <div class="tile reveal"><div class="body">
+        <div class="eyebrow">Read</div><h3 style="margin-top:6px">Concept briefs</h3>
+        <p>Reading material that is the one resource that matters for each topic, no filler.</p></div></div>
+      <div class="tile reveal"><div class="body">
+        <div class="eyebrow">Watch</div><h3 style="margin-top:6px">Video tutorials</h3>
+        <p>Short walkthroughs that show the skill in motion before you try it yourself.</p></div></div>
+      <div class="tile reveal"><div class="body">
+        <div class="eyebrow">Do</div><h3 style="margin-top:6px">Graded labs</h3>
+        <p>Auto-graded exercises on real crosswalks, scored on precision and recall.</p></div></div>
+      <div class="tile reveal"><div class="body">
+        <div class="eyebrow">Build</div><h3 style="margin-top:6px">Real-world practice</h3>
+        <p>Stand up a real environment, harden and scan it, map findings to controls, and assemble the
+          evidence. Graded on the system you actually built.</p></div></div>
     </div>
-    <p class="reveal" style="font-size:13.5px;color:var(--muted);margin-top:16px;max-width:78ch">
+
+    <div class="row-head reveal" style="margin-top:30px"><h2 style="font-size:clamp(18px,2.2vw,23px)">Two paths to senior</h2></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+      <div class="tile reveal">
+        <div class="thumb"><img src="assets/img/track-soc.svg" alt="Live signal with an alert" width="440" height="150"></div>
+        <div class="body">
+          <h3>Cybersecurity / SOC Analyst</h3>
+          <p>Alert triage · SIEM investigation · detection engineering · threat hunting · incident response · vulnerability prioritization.</p>
+          <div class="foot mono">NICE · Cyber Defense Analyst</div>
+        </div>
+      </div>
+      <div class="tile reveal">
+        <div class="thumb"><img src="assets/img/track-audit.svg" alt="Control workpaper coverage" width="440" height="150"></div>
+        <div class="body">
+          <h3>IT Audit / GRC</h3>
+          <p>Control frameworks · risk assessment · RMF · ITGC testing · findings and workpapers · SOC 2 readiness.</p>
+          <div class="foot mono">NICE · Security Control Assessor</div>
+        </div>
+      </div>
+    </div>
+    <p class="reveal" style="font-size:13.5px;color:var(--muted);margin-top:16px;max-width:80ch">
       Individuals subscribe per seat to prove job-readiness before anyone asks for a resume; teams and
       employers use the same graded ground truth to validate and upskill staff.</p>
-    <div class="cta reveal" style="margin-top:18px"><a class="btn primary" href="/labs.html">Start a graded lab →</a></div>
+    <div class="cta reveal" style="margin-top:18px"><a class="btn primary" href="/labs.html">Start a graded lab</a></div>
   </div>
 </section>
 
 <!-- WHY REGMAP -->
 <section class="section pad bleed">
   <div class="row-head reveal"><h2>Why RegMap</h2></div>
-  <div class="grid">
-    <div class="reveal"><div class="eyebrow">The wedge</div><p class="lead" style="font-size:14.5px">Vanta, Drata and Secureframe are strong at evidence for one framework at a time, and weak at automated cross-framework mapping. That gap is our entry.</p></div>
-    <div class="reveal"><div class="eyebrow">Transparent</div><p class="lead" style="font-size:14.5px">Every mapping carries a score and a provenance tag, official, inverted, or derived through a hub, which auditors trust over a black box.</p></div>
-    <div class="reveal"><div class="eyebrow">Open science</div><p class="lead" style="font-size:14.5px">Apache-2.0 models and reproducible, peer-review-standard benchmarks lower the trust barrier for security-conscious buyers.</p></div>
-    <div class="reveal"><div class="eyebrow">One flywheel</div><p class="lead" style="font-size:14.5px">The same curated ground truth powers both products, and every confirmation or graded attempt makes it harder to copy.</p></div>
+  <div class="steps">
+    <div class="step reveal"><div class="no">The wedge</div><p>Vanta, Drata and Secureframe are strong at evidence for one framework at a time, and weak at automated cross-framework mapping. That gap is our entry.</p></div>
+    <div class="step reveal"><div class="no">Transparent</div><p>Every mapping carries a score and a provenance tag, official, inverted, or derived through a hub, which auditors trust over a black box.</p></div>
+    <div class="step reveal"><div class="no">Open science</div><p>Apache-2.0 models and reproducible, peer-review-standard benchmarks lower the trust barrier for security-conscious buyers.</p></div>
+    <div class="step reveal"><div class="no">One flywheel</div><p>The same curated ground truth powers both products, and every confirmation or graded attempt makes it harder to copy.</p></div>
   </div>
 </section>
 
 <!-- PRICING TEASER -->
 <section class="band bleed">
   <div class="section pad">
-    <div class="row-head reveal"><h2>Pricing that follows the value</h2><a href="/pricing.html">Full pricing →</a></div>
-    <div class="grid">
-      <div class="tile reveal" style="box-shadow:none"><div class="body">
+    <div class="row-head reveal"><h2>Pricing that follows the value</h2><a href="/pricing.html">Full pricing</a></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+      <div class="tile reveal"><div class="body">
         <h3>Starter</h3>
-        <p style="font-size:20px;font-weight:700;color:var(--ink);margin:2px 0">~$12k<span style="font-size:13px;font-weight:500;color:var(--muted)"> / year</span></p>
+        <p style="font-size:22px;font-weight:800;color:var(--ink);margin:2px 0" class="grad-text">~$12k <span style="font-size:13px;font-weight:500;color:var(--muted)">/ year</span></p>
         <p>Map an existing program onto additional public-domain frameworks (NIST, CSF, HIPAA).</p></div></div>
-      <div class="tile reveal" style="box-shadow:none"><div class="body">
+      <div class="tile reveal"><div class="body">
         <h3>Continuous compliance</h3>
-        <p style="font-size:20px;font-weight:700;color:var(--ink);margin:2px 0">~$30k to $40k<span style="font-size:13px;font-weight:500;color:var(--muted)"> / year</span></p>
+        <p style="font-size:22px;font-weight:800;color:var(--ink);margin:2px 0" class="grad-text">~$30k to $40k <span style="font-size:13px;font-weight:500;color:var(--muted)">/ year</span></p>
         <p>Ongoing mapping, evidence, and reporting across frameworks, rerun as they change.</p></div></div>
-      <div class="tile reveal" style="box-shadow:none"><div class="body">
-        <h3>Skills &amp; training</h3>
-        <p style="font-size:20px;font-weight:700;color:var(--ink);margin:2px 0">per seat</p>
+      <div class="tile reveal"><div class="body">
+        <h3>Skills and training</h3>
+        <p style="font-size:22px;font-weight:800;color:var(--ink);margin:2px 0" class="grad-text">per seat</p>
         <p>Graded labs for practitioners, and team plans for employers validating and upskilling staff.</p></div></div>
     </div>
   </div>
@@ -181,12 +225,15 @@
 
 <!-- CLOSING CTA -->
 <section class="section pad bleed">
-  <div class="eyebrow reveal">Prove it once. Satisfy every framework. Prove you can do the job.</div>
-  <h2 class="reveal" style="font-size:clamp(24px,3.4vw,34px);margin:8px 0 16px;max-width:62ch">
-    Turn your next framework into an afternoon, and turn the skill to run it into evidence.</h2>
-  <div class="cta reveal">
-    <a class="btn primary" href="/compliance.html">Map your controls →</a>
-    <a class="btn ghost" href="/labs.html">Start a graded lab →</a>
+  <div class="panel reveal" style="padding:clamp(28px,5vw,52px);background:
+      radial-gradient(600px 300px at 80% 0%,var(--accent-soft),transparent),var(--surface)">
+    <div class="eyebrow">Prove it once. Satisfy every framework. Prove you can do the job.</div>
+    <h2 style="font-size:clamp(24px,3.6vw,38px);margin:12px 0 18px;max-width:62ch">
+      Turn your next framework into an afternoon, and turn the skill to run it into evidence.</h2>
+    <div class="cta">
+      <a class="btn primary" href="/compliance.html">Map your controls</a>
+      <a class="btn ghost" href="/labs.html">Start a graded lab</a>
+    </div>
   </div>
 </section>
 

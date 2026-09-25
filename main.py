@@ -74,20 +74,20 @@ for _mod_name, _desc in _PLATFORM:
         _skipped.append(f"{_desc}  (unavailable: {_e})")
 
 
-# --- the compliance console (Monitor . Assess . Help) ---------------------------
-_DASHBOARD = ROOT / "backend" / "dashboard" / "index.html"
+# --- the compliance console -----------------------------------------------------
+# The new console (web/console.html) is a compliance overview in the product shell:
+# framework catalog, answerable pairs, and quick actions, read live from the engine.
+# It replaces the old security-monitoring dashboard, which was built around the
+# retired identity and OT/ICS detectors.
+_CONSOLE = ROOT / "web" / "console.html"
 
 
 @app.get("/dashboard", include_in_schema=False)
 def console():
-    """The live compliance console that surrounds the engine (Monitor, Assess, Help).
-
-    Served here because the engine owns the product site at "/"; this is the
-    operator-facing app, reachable from the product once signed in.
-    """
-    if not _DASHBOARD.is_file():
+    """The compliance console, in the same shell as the product site."""
+    if not _CONSOLE.is_file():
         raise HTTPException(404, "console is not installed in this build")
-    return HTMLResponse(_DASHBOARD.read_text(encoding="utf-8"))
+    return HTMLResponse(_CONSOLE.read_text(encoding="utf-8"))
 
 
 # --- platform request auditing --------------------------------------------------

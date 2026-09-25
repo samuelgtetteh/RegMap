@@ -1,0 +1,49 @@
+<svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Framework coverage across your control set">
+  <defs>
+    <linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366F1"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient>
+    <style>
+      .h{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;fill:#7C8AA6;letter-spacing:.14em}
+      .fw{font-family:Inter,system-ui,sans-serif;font-size:13px;fill:#C7D2E8;font-weight:600}
+      .big{font-family:Inter,system-ui,sans-serif;font-weight:800;fill:#EAEFFB}
+    </style>
+  </defs>
+  <rect x="6" y="6" width="548" height="288" rx="18" fill="#0F1420" stroke="#1E2637"/>
+  <text x="30" y="40" class="h">FRAMEWORK COVERAGE</text>
+
+  <!-- coverage donut -->
+  <g transform="translate(96,168)">
+    <circle r="66" fill="none" stroke="#1E2637" stroke-width="16"/>
+    <circle r="66" fill="none" stroke="url(#cg)" stroke-width="16" stroke-linecap="round"
+      stroke-dasharray="303 414" transform="rotate(-90)"/>
+    <text x="0" y="6" text-anchor="middle" class="big" font-size="30">73%</text>
+    <text x="0" y="26" text-anchor="middle" class="h" font-size="10">MAPPED</text>
+  </g>
+
+  <!-- framework rows -->
+  <g transform="translate(212,74)">
+    <g transform="translate(0,0)">
+      <text x="0" y="14" class="fw">NIST 800-53</text>
+      <rect x="150" y="4" width="150" height="9" rx="5" fill="#1E2637"/>
+      <rect x="150" y="4" width="150" height="9" rx="5" fill="url(#cg)"/>
+      <circle cx="316" cy="9" r="5" fill="#34D399"/>
+    </g>
+    <g transform="translate(0,44)">
+      <text x="0" y="14" class="fw">HIPAA</text>
+      <rect x="150" y="4" width="150" height="9" rx="5" fill="#1E2637"/>
+      <rect x="150" y="4" width="132" height="9" rx="5" fill="url(#cg)"/>
+      <circle cx="316" cy="9" r="5" fill="#34D399"/>
+    </g>
+    <g transform="translate(0,88)">
+      <text x="0" y="14" class="fw">CSF 2.0</text>
+      <rect x="150" y="4" width="150" height="9" rx="5" fill="#1E2637"/>
+      <rect x="150" y="4" width="98" height="9" rx="5" fill="url(#cg)"/>
+      <circle cx="316" cy="9" r="5" fill="#FBBF24"/>
+    </g>
+    <g transform="translate(0,132)">
+      <text x="0" y="14" class="fw">ISO 27001</text>
+      <rect x="150" y="4" width="150" height="9" rx="5" fill="#1E2637"/>
+      <rect x="150" y="4" width="54" height="9" rx="5" fill="url(#cg)"/>
+      <circle cx="316" cy="9" r="5" fill="#FB7185"/>
+    </g>
+  </g>
+</svg>
