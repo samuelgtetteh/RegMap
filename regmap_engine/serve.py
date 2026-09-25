@@ -804,6 +804,66 @@ def map_custom(req: CustomMapReq, request: Request, principal=Depends(auth.requi
 
 
 # =====================================================================================================
+# SAVED PROJECTS  — persist a crosswalk and its review, reopen it later (Compliance workflow, step B)
+# =====================================================================================================
+
+class ProjectReq(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    target_fid: Optional[str] = None
+    source_kind: str = Field("custom")
+    data: dict = Field(default_factory=dict, description="full working state: target, controls, decisions")
+
+
+class ProjectUpdateReq(BaseModel):
+    name: Optional[str] = None
+    target_fid: Optional[str] = None
+    data: Optional[dict] = None
+
+
+def _iso(d):
+    for k in ("created_at", "updated_at"):
+        if d.get(k) is not None and hasattr(d[k], "isoformat"):
+            d[k] = d[k].isoformat()
+    return d
+
+
+@app.get("/projects")
+def projects_list(principal=Depends(auth.require_key)):
+    """The caller's saved projects, newest first. Scoped to the account."""
+    return {"projects": [_iso(p) for p in billing.list_projects(principal["account_id"])]}
+
+
+@app.post("/projects")
+def projects_create(req: ProjectReq, principal=Depends(auth.require_key)):
+    pid = billing.create_project(principal["account_id"], req.name, req.target_fid, req.source_kind, req.data)
+    return {"id": pid, "name": req.name}
+
+
+@app.get("/projects/{pid}")
+def projects_get(pid: str, principal=Depends(auth.require_key)):
+    p = billing.get_project(principal["account_id"], pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    return _iso(p)
+
+
+@app.put("/projects/{pid}")
+def projects_update(pid: str, req: ProjectUpdateReq, principal=Depends(auth.require_key)):
+    n = billing.update_project(principal["account_id"], pid, req.name, req.target_fid, req.data)
+    if not n:
+        raise HTTPException(404, "project not found")
+    return {"id": pid, "updated": True}
+
+
+@app.delete("/projects/{pid}")
+def projects_delete(pid: str, principal=Depends(auth.require_key)):
+    n = billing.delete_project(principal["account_id"], pid)
+    if not n:
+        raise HTTPException(404, "project not found")
+    return {"id": pid, "deleted": True}
+
+
+# =====================================================================================================
 # GRADED EXERCISE  — the learner surface
 # =====================================================================================================
 # The answer never reaches the browser. /exercise returns a shuffled candidate set plus a signed token

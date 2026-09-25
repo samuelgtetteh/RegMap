@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RegMap: map any control to any framework</title>
-<link rel="stylesheet" href="assets/site.css?v=7">
-<link rel="stylesheet" href="assets/app.css?v=7">
+<link rel="stylesheet" href="assets/site.css?v=8">
+<link rel="stylesheet" href="assets/app.css?v=8">
 <style>
   /* page-local: the two-mode tab switch (uses the shell tokens) */
   .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
@@ -28,6 +28,11 @@
   .ctl-card{padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:20px}
   .ctl-card:last-child{border-bottom:0}
   #cText.dropping{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--accent-soft)}
+  .proj-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding:10px 12px;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:12px}
+  .proj-bar .proj-name{width:210px;padding:7px 10px;font-size:13.5px}
+  .proj-bar select{width:auto;padding:7px 10px;font-size:13px}
+  .proj-bar .sp{flex:1}
 </style>
 </head>
 <body data-page="compliance">
@@ -111,6 +116,15 @@
 <!-- ===================== MODE 3: your own framework ===================== -->
 <div class="mode" id="mode-custom" hidden>
 <section class="section tight pad bleed">
+  <div class="proj-bar">
+    <input id="pName" class="proj-name" placeholder="Untitled project">
+    <button class="btn primary sm" id="pSave" type="button">Save</button>
+    <select id="pOpen"><option value="">Open project…</option></select>
+    <button class="btn ghost sm" id="pNew" type="button">New</button>
+    <button class="btn ghost sm" id="pDel" type="button">Delete</button>
+    <span class="sp"></span>
+    <span id="pStatus" class="mono" style="font-size:12px;color:var(--faint)"></span>
+  </div>
   <p class="lead" style="font-size:14.5px;color:var(--muted);max-width:76ch;margin:0 0 14px">
     Load your own internal or self-built control framework and map it onto any framework in the catalog.
     Paste one control per line (<span class="mono">ID, description</span> or just the description), or drag
@@ -149,8 +163,8 @@
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=7"></script>
-<script src="assets/shell.js?v=7"></script>
+<script src="assets/api.js?v=8"></script>
+<script src="assets/shell.js?v=8"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -198,7 +212,8 @@
   }
 
   // Bind once per output container; rows are re-rendered but the listener stays on the parent.
-  function bindReview(container, rollupId, getSids) {
+  function bindReview(container, rollupId, getSids, onChange) {
+    const changed = () => { if (onChange) onChange(); };
     container.addEventListener("click", e => {
       const b = e.target.closest(".rev-btn"); if (!b) return;
       const { sid, tid, act } = b.dataset, d = dec(sid);
@@ -208,14 +223,16 @@
         const m = markClass(sid, tid); if (m) row.classList.add(m);
         row.querySelectorAll(".rev-btn").forEach(x => x.classList.toggle("on", x.dataset.act === d.targets[tid] && !!d.targets[tid])); }
       const ru = $(rollupId); if (ru) ru.innerHTML = rollup(getSids());
+      changed();
     });
     container.addEventListener("change", e => {
       const s = e.target.closest(".rev-status"); if (!s) return;
       dec(s.dataset.sid).status = s.value;
       const ru = $(rollupId); if (ru) ru.innerHTML = rollup(getSids());
+      changed();
     });
     container.addEventListener("input", e => {
-      const n = e.target.closest(".rev-note"); if (n) dec(n.dataset.sid).note = n.value;
+      const n = e.target.closest(".rev-note"); if (n) { dec(n.dataset.sid).note = n.value; changed(); }
     });
   }
   let customSids = [], mapSids = [];
@@ -499,8 +516,64 @@
     cTgt.innerHTML = `<option value="">select</option>` + optsFor(f => !!f.controls);
     const best = FRAMEWORKS.filter(f => f.controls).sort((a, b) => b.controls - a.controls)[0];
     if (best) cTgt.value = best.id;
-    bindReview(cOut, "rollup-custom", () => customSids);
+    bindReview(cOut, "rollup-custom", () => customSids, scheduleAutosave);
+    loadProjects();
   }
+
+  /* ---- saved projects (Step B) -------------------------------------------- */
+  let curProj = null;                       // {id, name} of the open project, or null for unsaved
+  const pName = $("pName"), pSave = $("pSave"), pOpen = $("pOpen"), pNew = $("pNew"),
+        pDel = $("pDel"), pStatus = $("pStatus");
+  const projData = () => ({ kind: "custom", target: cTgt.value, top_k: Number(cTopk.value),
+                            controls: cText.value, decisions: DECISIONS });
+
+  async function loadProjects(selectId) {
+    let d; try { d = await RegMap.projects(); } catch (e) { return; }
+    pOpen.innerHTML = `<option value="">Open project…</option>` + d.projects.map(p =>
+      `<option value="${esc(p.id)}"${selectId === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+  }
+  async function saveProject(silent) {
+    const name = (pName.value.trim() || "Untitled project");
+    try {
+      if (curProj) await RegMap.projectUpdate(curProj.id, { name, target_fid: cTgt.value, data: projData() });
+      else { const r = await RegMap.projectCreate({ name, target_fid: cTgt.value, source_kind: "custom", data: projData() }); curProj = { id: r.id, name }; }
+      curProj.name = name;
+      pStatus.textContent = "saved " + new Date().toLocaleTimeString();
+      await loadProjects(curProj.id);
+    } catch (e) { if (!silent) cOut.innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+  }
+  async function openProject(id) {
+    let p; try { p = await RegMap.projectGet(id); } catch (e) { return; }
+    curProj = { id: p.id, name: p.name }; pName.value = p.name;
+    const dat = p.data || {};
+    for (const k in DECISIONS) delete DECISIONS[k];
+    Object.assign(DECISIONS, dat.decisions || {});
+    if (dat.target) cTgt.value = dat.target;
+    if (dat.top_k) cTopk.value = String(dat.top_k);
+    if (typeof dat.controls === "string") { cText.value = dat.controls; updCount(); }
+    pStatus.textContent = "opened";
+    if (cText.value.trim()) runCustom();     // re-map; renderCustom re-applies the restored decisions
+  }
+  function newProject() {
+    curProj = null; pName.value = ""; pOpen.value = ""; pStatus.textContent = "new project";
+    for (const k in DECISIONS) delete DECISIONS[k];
+    cOut.innerHTML = ""; cText.value = ""; updCount();
+  }
+  async function deleteProject() {
+    if (!curProj) return;
+    try { await RegMap.projectDelete(curProj.id); } catch (e) { }
+    newProject(); await loadProjects(); pStatus.textContent = "deleted";
+  }
+  let _autosaveT;
+  function scheduleAutosave() {
+    if (!curProj) return;
+    clearTimeout(_autosaveT);
+    _autosaveT = setTimeout(() => saveProject(true), 1200);
+  }
+  pSave.addEventListener("click", () => saveProject(false));
+  pNew.addEventListener("click", newProject);
+  pDel.addEventListener("click", deleteProject);
+  pOpen.addEventListener("change", () => { if (pOpen.value) openProject(pOpen.value); });
 
   cText.addEventListener("input", updCount);
   async function loadFile(f) {

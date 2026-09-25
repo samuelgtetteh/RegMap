@@ -65,14 +65,13 @@ The engine suggests, the expert confirms. This is the human-in-the-loop the busi
 A **project** = a named crosswalk: the source control set (custom or catalog), the target framework, and
 every decision/status/note/evidence link. Reopen and continue; track progress over time.
 
-- [ ] Data model (new tables in `billing.py`, dual-dialect SQLite/Postgres, keyed by `account_id`):
-      - `projects(id, account_id, name, source_kind, source_ref, target_fid, created_at, updated_at)`
-      - `project_items(id, project_id, source_id, source_title, source_text, target_id, score,
-        provenance, status, action, note, evidence_ref, updated_at)`
-- [ ] Endpoints: `POST /projects` (create), `GET /projects` (list mine), `GET /projects/{id}`,
-      `PATCH /projects/{id}` (rename), `DELETE /projects/{id}`, `PUT /projects/{id}/items` (save decisions,
-      upsert in bulk). All behind `auth.require_key`, scoped to the caller's account.
-- [ ] UI: Save / Save as / Open project, a project list, autosave on decision changes.
+- [x] Data model in `billing.py` (dual-dialect, keyed by `account_id`): DONE 2026-09-25. Went with a
+      single `projects` table carrying the full working state as JSON (`data` = target, top_k, controls,
+      decisions) instead of a separate `project_items` table. Simpler for now; split out later if needed.
+- [x] Endpoints: `GET/POST /projects`, `GET/PUT/DELETE /projects/{id}` in serve.py, behind
+      `auth.require_key`, scoped to the account. Verified CRUD end to end. (Rename is a PUT with `name`.)
+- [x] UI: project bar on the "Your framework" tab (name, Save, Open project, New, Delete) with autosave
+      on decision changes; opening a project restores the controls, target and review state, then re-maps.
 
 ### C. Audit-ready export
 One click to a shareable package from a project (or the current in-session mapping).
@@ -84,11 +83,12 @@ One click to a shareable package from a project (or the current in-session mappi
 - [ ] Free tier: JSON only, capped rows, watermark. Paid: full XLSX/DOCX, no cap.
 
 ### Build order for this workflow
-1. [ ] A (in-session review UI) on the "Your framework" and "Map a control" results, no persistence yet.
-2. [ ] B1 (schema + `POST/GET/PATCH/DELETE /projects`, `PUT /items`).
-3. [ ] B2 (Save/Open UI + autosave), which makes A durable.
-4. [ ] C (export XLSX/JSON, then DOCX).
-5. [ ] Gate paid pieces behind an entitlement; keep in-session review free.
+1. [x] A (in-session review UI) on the "Your framework" and "Map a control" results. DONE 2026-09-25.
+2. [x] B1 (schema + `GET/POST /projects`, `GET/PUT/DELETE /projects/{id}`). DONE 2026-09-25.
+3. [x] B2 (Save/Open UI + autosave), which makes A durable. DONE 2026-09-25.
+4. [ ] C (export XLSX/JSON, then DOCX). NEXT.
+5. [ ] Gate paid pieces behind an entitlement; keep in-session review free. (Enforcement is off for
+      pre-launch, so nothing is gated yet.)
 
 ### Open decisions before/while building
 - **Entitlement flag:** how "paid" is represented. Simplest now: a boolean/`features` column on the

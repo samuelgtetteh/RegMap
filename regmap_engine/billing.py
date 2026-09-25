@@ -31,6 +31,7 @@ charge use the same deterministic function, so they agree unless the request cha
 """
 import hashlib
 import hmac
+import json
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -108,6 +109,21 @@ usage_periods = Table(
     Column("period", String(7), primary_key=True),
     Column("compute_units", Float, nullable=False, default=0.0),
     Column("requests", Integer, nullable=False, default=0),
+    Column("updated_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+)
+
+# Saved compliance projects: a named crosswalk the user returns to. The full working state (target,
+# controls, and the per-control review/status/notes) lives in `data` as JSON, so opening a project
+# restores exactly where the analyst left off.
+projects = Table(
+    "projects", metadata,
+    Column("id", String(40), primary_key=True),
+    Column("account_id", String(40), index=True, nullable=False),
+    Column("name", String(200), nullable=False),
+    Column("target_fid", String(64)),
+    Column("source_kind", String(16), default="custom"),   # custom | catalog
+    Column("data", Text),                                   # JSON: {target, top_k, controls, decisions}
+    Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
     Column("updated_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
 )
 
@@ -244,6 +260,61 @@ def verify_key(raw):
         c.execute(update(api_keys).where(api_keys.c.id == row["id"])
                   .values(last_used_at=datetime.now(timezone.utc)))
     return dict(row)
+
+
+# ---- saved projects ------------------------------------------------------------------------------
+def create_project(account_id, name, target_fid=None, source_kind="custom", data=None):
+    pid = "proj_" + secrets.token_hex(8)
+    now = datetime.now(timezone.utc)
+    with engine().begin() as c:
+        c.execute(insert(projects).values(
+            id=pid, account_id=account_id, name=(name or "Untitled")[:200], target_fid=target_fid,
+            source_kind=source_kind, data=json.dumps(data or {}), created_at=now, updated_at=now))
+    return pid
+
+
+def list_projects(account_id):
+    with engine().begin() as c:
+        rows = c.execute(
+            select(projects.c.id, projects.c.name, projects.c.target_fid, projects.c.updated_at)
+            .where(projects.c.account_id == account_id)
+            .order_by(projects.c.updated_at.desc())).mappings().all()
+    return [dict(r) for r in rows]
+
+
+def get_project(account_id, pid):
+    with engine().begin() as c:
+        row = c.execute(select(projects).where(
+            projects.c.id == pid, projects.c.account_id == account_id)).mappings().first()
+    if not row:
+        return None
+    d = dict(row)
+    try:
+        d["data"] = json.loads(d.get("data") or "{}")
+    except Exception:
+        d["data"] = {}
+    return d
+
+
+def update_project(account_id, pid, name=None, target_fid=None, data=None):
+    vals = {"updated_at": datetime.now(timezone.utc)}
+    if name is not None:
+        vals["name"] = name[:200]
+    if target_fid is not None:
+        vals["target_fid"] = target_fid
+    if data is not None:
+        vals["data"] = json.dumps(data)
+    with engine().begin() as c:
+        r = c.execute(update(projects).where(
+            projects.c.id == pid, projects.c.account_id == account_id).values(**vals))
+    return r.rowcount
+
+
+def delete_project(account_id, pid):
+    with engine().begin() as c:
+        r = c.execute(projects.delete().where(
+            projects.c.id == pid, projects.c.account_id == account_id))
+    return r.rowcount
 
 
 # ---- usage + quota -------------------------------------------------------------------------------
