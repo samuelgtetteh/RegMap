@@ -102,6 +102,14 @@ training), `pricing.html` (CU pricing), `console.html` (compliance console at `/
 - **2026-09-25 console continuous monitoring.** Added a "Continuous monitoring" section between the
   panels and "Do the work": coming-soon cards for Identity and OT/ICS control monitoring (confirm mapped
   controls are operating). Reuses existing components; no token changes.
+- **2026-09-25 company footer.** Full multi-column footer (brand + blurb + social; Product / Solutions /
+  Resources / Company columns; a bottom bar with copyright and Privacy/Terms/Cookies/Licensing) injected
+  once from `shell.js` so it is identical on every page (it removes any per-page `<footer>` first).
+  Styles (`.footer-top`, `.footer-col`, `.footer-bottom`) added to `site.css`; responsive (columns
+  collapse on tablet/phone).
+- **2026-09-25 compliance review + drag-drop.** In-session review on the Compliance results (Accept/Reject
+  per suggestion, status select, note, roll-up), and drag-and-drop of a CSV/JSON file onto the "Your
+  framework" box. Reuses existing components; page-local classes only.
 - **2026-09-25 animated monitoring previews.** Replaced the static monitoring banners with looping
   animated SVGs (SMIL, `repeatCount=indefinite`): `img/mon-identity.svg` (live signal, travelling pulse,
   sweeping scan bar, periodic anomaly) and `img/mon-otics.svg` (telemetry breaching a control threshold).

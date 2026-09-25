@@ -653,8 +653,10 @@ def map_bulk(req: BulkReq, request: Request,
 
     mapping, route = cat.resolve(src, tgt)
     ids = req.source_ids or sorted(_controls[src])
-    truncated = len(ids) > BULK_MAX
-    ids = ids[:BULK_MAX]
+    # Cap lifted while enforcement is off for pre-launch (auth.ENFORCE_QUOTA).
+    bulk_cap = BULK_MAX if auth.ENFORCE_QUOTA else max(len(ids), 1)
+    truncated = len(ids) > bulk_cap
+    ids = ids[:bulk_cap]
 
     tgt_ctl = _controls.get(tgt, {})
     # Worst case is every submitted control needing a ranking pass; gate on that so admission is
@@ -713,8 +715,8 @@ def map_bulk(req: BulkReq, request: Request,
         "gaps": [{"id": g, "title": tgt_ctl.get(g, {}).get("title", "")} for g in gaps],
         "rows": rows,
         "truncated": truncated,
-        "cap": BULK_MAX,
-        "note": (f"Only the first {BULK_MAX} controls were mapped; pass explicit source_ids to page "
+        "cap": bulk_cap,
+        "note": (f"Only the first {bulk_cap} controls were mapped; pass explicit source_ids to page "
                  f"through the rest." if truncated else None),
     }
 
@@ -748,8 +750,10 @@ def map_custom(req: CustomMapReq, request: Request, principal=Depends(auth.requi
     if not controls:
         raise HTTPException(400, "provide at least one control with text")
 
-    # Free-tier limit. Everyone is on the free tier for now; a paid entitlement would raise this.
-    free_max = CUSTOM_FREE_MAX
+    # Free-tier limit. Lifted while enforcement is off for pre-launch (auth.ENFORCE_QUOTA); a paid
+    # entitlement would raise it once we go live. `capped` says whether the cap is actually applied now.
+    capped = auth.ENFORCE_QUOTA
+    free_max = CUSTOM_FREE_MAX if capped else max(len(controls), 1)
     truncated = len(controls) > free_max
     controls = controls[:free_max]
 
@@ -792,9 +796,9 @@ def map_custom(req: CustomMapReq, request: Request, principal=Depends(auth.requi
         "note": "A custom framework has no official crosswalk, so these are model suggestions for expert "
                 "review, not authoritative mappings.",
         "counts": {"controls_mapped": len(rows)},
-        "free_limit": free_max, "truncated": truncated,
-        "cap_note": (f"The free tier maps up to {free_max} controls per run. The paid version removes the "
-                     f"cap." if truncated else None),
+        "free_limit": CUSTOM_FREE_MAX, "capped": capped, "truncated": truncated,
+        "cap_note": (f"The free tier maps up to {CUSTOM_FREE_MAX} controls per run. The paid version "
+                     f"removes the cap." if truncated else None),
         "rows": rows,
     }
 

@@ -36,6 +36,63 @@
      </div>`;
   document.body.prepend(header);
 
+  // Full company footer, injected once here so it is identical on every page. Any per-page <footer> is
+  // removed first. Product links go to real pages; company/resources/legal are placeholders for now.
+  (function buildFooter() {
+    document.querySelectorAll(".site-footer").forEach(f => f.remove());
+    const f = document.createElement("footer");
+    f.className = "site-footer pad bleed";
+    f.innerHTML =
+      `<div class="footer-top">
+         <div class="footer-brand">
+           <a class="brand" href="/"><span class="logo"></span>RegMap</a>
+           <p>Compliance automation and graded skills. Map the controls you operate onto every framework
+              you must satisfy, and prove your team can do the work.</p>
+           <div class="footer-social">
+             <a href="#" aria-label="LinkedIn">LinkedIn</a>
+             <a href="#" aria-label="GitHub">GitHub</a>
+             <a href="#" aria-label="X">X</a>
+           </div>
+         </div>
+         <div class="footer-col"><h4>Product</h4>
+           <a href="/compliance.html">Compliance engine</a>
+           <a href="/compliance.html">Coverage and gaps</a>
+           <a href="/compliance.html">Bring your own framework</a>
+           <a href="/labs.html">Graded labs</a>
+           <a href="/dashboard">Console</a>
+           <a href="/pricing.html">Pricing</a>
+         </div>
+         <div class="footer-col"><h4>Solutions</h4>
+           <a href="/compliance.html">Automate compliance</a>
+           <a href="/labs.html">Prove you can do the job</a>
+           <a href="#">For GRC teams</a>
+           <a href="#">For consultancies</a>
+           <a href="#">For practitioners</a>
+         </div>
+         <div class="footer-col"><h4>Resources</h4>
+           <a href="#">Documentation</a>
+           <a href="#">API reference</a>
+           <a href="#">Benchmarks</a>
+           <a href="#">Changelog</a>
+           <a href="#">Status</a>
+         </div>
+         <div class="footer-col"><h4>Company</h4>
+           <a href="#">About</a>
+           <a href="#">Careers</a>
+           <a href="#">Contact</a>
+           <a href="#">Security</a>
+           <a href="#">Responsible disclosure</a>
+         </div>
+       </div>
+       <div class="footer-bottom">
+         <span>&copy; ${new Date().getFullYear()} RegMap, Inc. &middot; Prove it once. Satisfy every framework.</span>
+         <span class="legal">
+           <a href="#">Privacy</a><a href="#">Terms</a><a href="#">Cookies</a><a href="#">Licensing</a>
+         </span>
+       </div>`;
+    document.body.appendChild(f);
+  })();
+
   // mobile menu toggle
   const menu = document.getElementById("mobileMenu");
   const toggle = document.getElementById("navToggle");

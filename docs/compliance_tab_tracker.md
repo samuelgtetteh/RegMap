@@ -54,9 +54,12 @@ For every suggested control-to-target mapping, the analyst decides:
 - **Note:** free-text justification.
 The engine suggests, the expert confirms. This is the human-in-the-loop the business plan promises.
 
-- [ ] UI: inline controls on each result row (accept/reject, a status select, a note field), plus a
-      per-control roll-up (how many decided, coverage by status).
-- [ ] Works in-session immediately (state held in the page); persists once saved (piece B).
+- [x] UI: inline controls on each result row (Accept/Reject, a status select, a note field), plus a
+      per-control roll-up. DONE 2026-09-25 on the "Your framework" and "Map a control" tabs.
+- [x] Works in-session immediately (state held in `DECISIONS` in the page); persists once saved (piece B).
+- [x] Usability: drag-and-drop a CSV/JSON file onto the "Your framework" box; caps lifted while
+      enforcement is off (see build_tracker pre-launch note).
+- [ ] NEXT: persist it (piece B, saved projects) so review survives a reload.
 
 ### B. Saved projects (persistence)
 A **project** = a named crosswalk: the source control set (custom or catalog), the target framework, and

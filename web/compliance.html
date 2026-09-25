@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RegMap: map any control to any framework</title>
-<link rel="stylesheet" href="assets/site.css?v=3">
-<link rel="stylesheet" href="assets/app.css?v=3">
+<link rel="stylesheet" href="assets/site.css?v=5">
+<link rel="stylesheet" href="assets/app.css?v=5">
 <style>
   /* page-local: the two-mode tab switch (uses the shell tokens) */
   .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
@@ -14,6 +14,20 @@
     border:0;border-radius:9px;padding:8px 15px;cursor:pointer}
   .tabs button.active{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
   .mode[hidden]{display:none}
+  /* in-session review + status */
+  .rev-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);
+    padding:10px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;margin-bottom:16px}
+  .rev-actions{display:flex;gap:6px;margin-top:8px}
+  .rev-btn{font:inherit;font-size:12px;font-weight:600;padding:4px 12px;border-radius:8px;cursor:pointer;
+    border:1px solid var(--line-2);background:var(--surface);color:var(--muted);transition:.12s}
+  .rev-btn:hover{color:var(--ink)}
+  .rev-btn.acc.on{background:color-mix(in srgb,var(--ok) 18%,transparent);border-color:var(--ok);color:var(--ok)}
+  .rev-btn.rej.on{background:color-mix(in srgb,var(--crit) 18%,transparent);border-color:var(--crit);color:var(--crit)}
+  .rev-status{width:auto;padding:6px 9px;font-size:12.5px}
+  .rev-note{width:100%;margin-top:10px;font-size:13px}
+  .ctl-card{padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:20px}
+  .ctl-card:last-child{border-bottom:0}
+  #cText.dropping{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--accent-soft)}
 </style>
 </head>
 <body data-page="compliance">
@@ -99,9 +113,9 @@
 <section class="section tight pad bleed">
   <p class="lead" style="font-size:14.5px;color:var(--muted);max-width:76ch;margin:0 0 14px">
     Load your own internal or self-built control framework and map it onto any framework in the catalog.
-    Paste one control per line (<span class="mono">ID, description</span> or just the description), or load
-    a CSV or JSON file. There is no official crosswalk for a custom framework, so results are model
-    suggestions for expert review.</p>
+    Paste one control per line (<span class="mono">ID, description</span> or just the description), or drag
+    a CSV or JSON file straight onto the box (or use the button). There is no official crosswalk for a
+    custom framework, so results are model suggestions for expert review.</p>
   <div style="display:grid;grid-template-columns:1.5fr .5fr;gap:14px" id="cGrid">
     <label class="fld">Your controls
       <textarea id="cText" style="min-height:170px" placeholder="AC-1, Access control policy and procedures&#10;AU-2, Audit events are defined, reviewed and updated&#10;IA-2, Users are uniquely identified and authenticated&#10;..."></textarea>
@@ -135,13 +149,76 @@
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=4"></script>
-<script src="assets/shell.js?v=3"></script>
+<script src="assets/api.js?v=5"></script>
+<script src="assets/shell.js?v=5"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
   const esc = RegMap.esc;
   let FRAMEWORKS = [], PAIRS = [];
+
+  /* ---- in-session review + status (Step A) --------------------------------
+     Decisions live in the page for now (no persistence yet). Each source control gets a status and a
+     note; each suggested target can be Accepted or Rejected. A roll-up shows progress. Saved projects
+     (persistence) and export come next in docs/compliance_tab_tracker.md. */
+  const DECISIONS = {};
+  const dec = sid => DECISIONS[sid] || (DECISIONS[sid] = { status: "", note: "", targets: {} });
+  const STATUS = { met: ["Met", "good"], partial: ["Partial", "mid"], gap: ["Gap", "bad"], na: ["N/A", ""] };
+
+  const revActions = (sid, tid) => {
+    const cur = (DECISIONS[sid] && DECISIONS[sid].targets[tid]) || "";
+    return `<div class="rev-actions">
+      <button type="button" class="rev-btn acc${cur === "accept" ? " on" : ""}" data-act="accept" data-sid="${esc(sid)}" data-tid="${esc(tid)}">Accept</button>
+      <button type="button" class="rev-btn rej${cur === "reject" ? " on" : ""}" data-act="reject" data-sid="${esc(sid)}" data-tid="${esc(tid)}">Reject</button>
+    </div>`;
+  };
+  const markClass = (sid, tid) => {
+    const c = (DECISIONS[sid] && DECISIONS[sid].targets[tid]) || "";
+    return c === "accept" ? "mark-correct" : c === "reject" ? "mark-incorrect" : "";
+  };
+  const revStatus = sid => {
+    const d = dec(sid);
+    return `<select class="rev-status" data-sid="${esc(sid)}"><option value="">status…</option>` +
+      Object.entries(STATUS).map(([k, v]) => `<option value="${k}"${d.status === k ? " selected" : ""}>${v[0]}</option>`).join("") +
+      `</select>`;
+  };
+  const revNote = sid => `<input class="rev-note" data-sid="${esc(sid)}" placeholder="Note (justification, evidence reference)…" value="${esc(dec(sid).note)}">`;
+
+  function rollup(sids) {
+    const total = sids.length; let reviewed = 0; const by = { met: 0, partial: 0, gap: 0, na: 0 };
+    sids.forEach(s => {
+      const d = DECISIONS[s];
+      if (d && (d.status || Object.values(d.targets).some(Boolean))) reviewed++;
+      if (d && d.status && by[d.status] != null) by[d.status]++;
+    });
+    const chip = k => `<span class="pill ${STATUS[k][1] ? "" : "info"}" style="padding:2px 9px">${STATUS[k][0]} ${by[k]}</span>`;
+    const v = k => `<span class="v ${STATUS[k][1]}" style="font-size:14px">${STATUS[k][0]} ${by[k]}</span>`;
+    return `<div class="rev-bar"><b>${reviewed}/${total}</b> controls reviewed
+      ${["met", "partial", "gap", "na"].map(v).join(" · ")}</div>`;
+  }
+
+  // Bind once per output container; rows are re-rendered but the listener stays on the parent.
+  function bindReview(container, rollupId, getSids) {
+    container.addEventListener("click", e => {
+      const b = e.target.closest(".rev-btn"); if (!b) return;
+      const { sid, tid, act } = b.dataset, d = dec(sid);
+      d.targets[tid] = d.targets[tid] === act ? "" : act;
+      const row = b.closest(".res");
+      if (row) { row.classList.remove("mark-correct", "mark-incorrect");
+        const m = markClass(sid, tid); if (m) row.classList.add(m);
+        row.querySelectorAll(".rev-btn").forEach(x => x.classList.toggle("on", x.dataset.act === d.targets[tid] && !!d.targets[tid])); }
+      const ru = $(rollupId); if (ru) ru.innerHTML = rollup(getSids());
+    });
+    container.addEventListener("change", e => {
+      const s = e.target.closest(".rev-status"); if (!s) return;
+      dec(s.dataset.sid).status = s.value;
+      const ru = $(rollupId); if (ru) ru.innerHTML = rollup(getSids());
+    });
+    container.addEventListener("input", e => {
+      const n = e.target.closest(".rev-note"); if (n) dec(n.dataset.sid).note = n.value;
+    });
+  }
+  let customSids = [], mapSids = [];
 
   /* ---- tab switch --------------------------------------------------------- */
   const TABS = ["map", "gaps", "custom"];
@@ -187,6 +264,7 @@
   const fail = m => { out.innerHTML = `<div class="note err">${esc(m)}</div>`; };
 
   async function bootMap() {
+    bindReview(out, "rollup-map", () => mapSids);
     src.innerHTML = `<option value="">select</option>` + optsFor();
     tgt.innerHTML = `<option value="">select</option>` + optsFor();
     const best = PAIRS.filter(p => p.authoritative)
@@ -268,15 +346,18 @@
              confirmed, treat it as a starting point for review.</div>`;
     }
 
+    const sid = d.query.source_id || ("q:" + (d.query.text || "").slice(0, 48));
+    mapSids = [sid];
     const rows = d.results.map((r, i) => {
       const pct = r.score == null ? null : Math.max(0, Math.min(100, Math.round(r.score * 100)));
-      return `<div class="res ${r.official ? "is-official" : ""}">
+      return `<div class="res ${r.official ? "is-official" : ""} ${markClass(sid, r.id)}">
         <div class="rank">${i + 1}</div>
         <div>
           <span class="cid">${esc(r.id)}</span>
           ${r.official ? `<span class="pill ok" style="margin-left:8px">official</span>` : ""}
           ${r.title ? `<div class="ctitle">${esc(r.title)}</div>` : ""}
           <div class="ctext">${esc(r.text)}</div>
+          ${revActions(sid, r.id)}
         </div>
         <div class="right">
           ${pct == null ? `<span class="score">-</span>`
@@ -295,7 +376,13 @@
         </span>
       </div>
       ${cov}
-      <div class="res-list">${rows}</div>`;
+      <div class="ctl-card" data-sid="${esc(sid)}" style="border-bottom:0;margin-bottom:0">
+        <div class="row-head" style="margin:10px 0 8px">
+          <span style="font-size:13px;color:var(--muted)">Accept the correct mappings and set this control's status</span>
+          ${revStatus(sid)}</div>
+        <div id="rollup-map">${rollup(mapSids)}</div>
+        <div class="res-list">${rows}</div>
+        ${revNote(sid)}</div>`;
   }
 
   src.addEventListener("change", async () => { await onSource(); onPair(); });
@@ -412,13 +499,24 @@
     cTgt.innerHTML = `<option value="">select</option>` + optsFor(f => !!f.controls);
     const best = FRAMEWORKS.filter(f => f.controls).sort((a, b) => b.controls - a.controls)[0];
     if (best) cTgt.value = best.id;
+    bindReview(cOut, "rollup-custom", () => customSids);
   }
 
   cText.addEventListener("input", updCount);
-  cFile.addEventListener("change", async () => {
-    const f = cFile.files[0]; if (!f) return;
-    try { cText.value = await f.text(); updCount(); }
+  async function loadFile(f) {
+    if (!f) return;
+    try { cText.value = await f.text(); updCount(); cText.focus(); }
     catch (e) { cOut.innerHTML = `<div class="note err">Could not read that file.</div>`; }
+  }
+  cFile.addEventListener("change", () => loadFile(cFile.files[0]));
+  // Drag and drop a CSV / JSON / text file straight onto the box.
+  ["dragenter", "dragover"].forEach(ev => cText.addEventListener(ev, e => {
+    e.preventDefault(); e.dataTransfer.dropEffect = "copy"; cText.classList.add("dropping");
+  }));
+  ["dragleave", "dragend"].forEach(ev => cText.addEventListener(ev, () => cText.classList.remove("dropping")));
+  cText.addEventListener("drop", e => {
+    e.preventDefault(); cText.classList.remove("dropping");
+    const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) loadFile(f);
   });
 
   async function runCustom() {
@@ -437,27 +535,33 @@
   cGo.addEventListener("click", runCustom);
 
   function renderCustom(d) {
+    customSids = d.rows.map(r => r.id);
     const rows = d.rows.map(r => {
       const items = r.results.map(x => {
         const pct = Math.max(0, Math.min(100, Math.round((x.score || 0) * 100)));
-        return `<div class="res"><div class="rank"></div>
+        return `<div class="res ${markClass(r.id, x.id)}"><div class="rank"></div>
           <div><span class="cid">${esc(x.id)}</span>${x.title ? `<div class="ctitle">${esc(x.title)}</div>` : ""}
-            <div class="ctext">${esc(x.text)}</div></div>
+            <div class="ctext">${esc(x.text)}</div>${revActions(r.id, x.id)}</div>
           <div class="right"><div class="meter"><i style="width:${pct}%"></i></div>
             <span class="score">${(x.score || 0).toFixed(3)}</span></div></div>`;
       }).join("");
-      return `<div style="margin-bottom:22px">
+      return `<div class="ctl-card" data-sid="${esc(r.id)}">
         <div class="row-head" style="margin-bottom:8px">
-          <h3 style="font-size:15px">${esc(r.id)}${r.title ? " · " + esc(r.title) : ""}</h3></div>
+          <h3 style="font-size:15px">${esc(r.id)}${r.title ? " · " + esc(r.title) : ""}</h3>
+          ${revStatus(r.id)}</div>
         <div class="note" style="margin-bottom:8px">${esc(r.text)}</div>
-        <div class="res-list">${items}</div></div>`;
+        <div class="res-list">${items}</div>
+        ${revNote(r.id)}</div>`;
     }).join("");
     cOut.innerHTML = `
       <div class="row-head">
         <h2 style="font-size:20px">Your controls, mapped onto ${esc(d.target_framework)}</h2>
         <span style="font-size:13px;color:var(--muted)">${d.counts.controls_mapped} controls · method
           ${esc(d.method)} · model suggestions</span></div>
-      <div class="note" style="margin-bottom:14px">${esc(d.note)}${d.cap_note ? " " + esc(d.cap_note) : ""}</div>
+      <div class="note" style="margin-bottom:14px">${esc(d.note)}${d.cap_note ? " " + esc(d.cap_note) : ""}
+        Accept or reject each suggestion, set a status, and add a note. Your review stays on this page for
+        now; saving and export are coming next.</div>
+      <div id="rollup-custom">${rollup(customSids)}</div>
       ${rows}`;
   }
 
