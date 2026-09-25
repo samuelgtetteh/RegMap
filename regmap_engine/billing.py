@@ -640,6 +640,49 @@ def is_email_verified(account_id):
     return bool(row and row[0])
 
 
+# ---- two-factor (TOTP) ---------------------------------------------------------------------------
+def set_totp_secret(account_id, secret):
+    """Store a pending TOTP secret. Not active until enable_totp confirms a valid code."""
+    with engine().begin() as c:
+        c.execute(update(accounts).where(accounts.c.id == account_id)
+                  .values(totp_secret=secret, totp_enabled=False))
+
+
+def get_totp(account_id):
+    with engine().begin() as c:
+        row = c.execute(select(accounts.c.totp_secret, accounts.c.totp_enabled)
+                        .where(accounts.c.id == account_id)).first()
+    return (row[0], bool(row[1])) if row else (None, False)
+
+
+def enable_totp(account_id, recovery_hashes):
+    with engine().begin() as c:
+        c.execute(update(accounts).where(accounts.c.id == account_id)
+                  .values(totp_enabled=True, recovery_codes=json.dumps(recovery_hashes)))
+
+
+def disable_totp(account_id):
+    with engine().begin() as c:
+        c.execute(update(accounts).where(accounts.c.id == account_id)
+                  .values(totp_secret=None, totp_enabled=False, recovery_codes=None))
+
+
+def use_recovery_code(account_id, code):
+    """Consume a one-time recovery code (a backup for a lost authenticator). Returns True if valid."""
+    if not code:
+        return False
+    h = hashlib.sha256(code.strip().replace(" ", "").encode()).hexdigest()
+    with engine().begin() as c:
+        row = c.execute(select(accounts.c.recovery_codes).where(accounts.c.id == account_id)).first()
+        codes = json.loads(row[0]) if row and row[0] else []
+        if h not in codes:
+            return False
+        codes.remove(h)
+        c.execute(update(accounts).where(accounts.c.id == account_id)
+                  .values(recovery_codes=json.dumps(codes)))
+    return True
+
+
 def verify_session(raw):
     """Resolve a session cookie to the same principal shape verify_key() returns, or None."""
     if not raw:

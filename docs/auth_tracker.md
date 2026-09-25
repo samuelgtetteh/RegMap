@@ -43,7 +43,11 @@ roadmap items.
       `/auth/password`. Register issues a verify token; verify/reset links are returned in dev responses
       and logged (gated by `REGMAP_EMAIL_ENABLED`).
 - [x] `email_verified` surfaced in `/auth/session`.
-- [ ] TOTP 2FA endpoints (enrol/verify/disable and `/auth/login/totp`) are Part A.2 below.
+- [x] **TOTP 2FA DONE 2026-09-25, verified.** Hand-rolled RFC 6238 (Google Authenticator compatible),
+      no dependency. Endpoints: `/auth/totp/setup` (secret + otpauth URI), `/auth/totp/enable` (confirm a
+      code, returns 8 one-time recovery codes), `/auth/totp/disable` (password-gated), `/auth/login/totp`
+      (finish a 2FA login with a code or recovery code). `totp_enabled` surfaced in the session. Verified:
+      enrol, login prompts for the code, TOTP and recovery-code logins work, wrong code is rejected.
 
 ### B. Account UI on the new shell
 - [ ] `web/account.html` (data-page="account"): signed-out = sign in + register; signed-in = account

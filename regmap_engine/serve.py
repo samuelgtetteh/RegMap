@@ -39,6 +39,8 @@ import io
 import os
 import random
 import re
+import secrets
+import struct
 import json as _json
 import time
 from pathlib import Path
@@ -1396,6 +1398,7 @@ def auth_session(request: Request,
         "auth_enforced": auth.REQUIRE_AUTH,
         "account_id": p["account_id"], "email": p.get("email"),
         "email_verified": billing.is_email_verified(p["account_id"]),
+        "totp_enabled": billing.get_totp(p["account_id"])[1],
         "via": p.get("auth", "session"),
         "admin": "admin" in {s.strip() for s in (p.get("scopes") or "").split(",") if s.strip()},
         "plan": {"id": p.get("plan_id"), "name": p.get("name"),
@@ -1499,3 +1502,90 @@ def auth_password(req: PasswordChangeBody, principal=Depends(auth.require_key)):
         raise HTTPException(400, detail="current password is incorrect")
     billing.set_password(principal["account_id"], req.new_password)
     return {"changed": True}
+
+
+# --- two-factor (TOTP, RFC 6238, Google Authenticator compatible) -----------------------------------
+def _totp_now(secret_b32, at=None, step=30, digits=6):
+    key = base64.b32decode(secret_b32.upper() + "=" * (-len(secret_b32) % 8))
+    counter = int((at if at is not None else time.time()) // step)
+    h = hmac.new(key, struct.pack(">Q", counter), hashlib.sha1).digest()
+    o = h[-1] & 0x0F
+    code = (struct.unpack(">I", h[o:o + 4])[0] & 0x7FFFFFFF) % (10 ** digits)
+    return str(code).zfill(digits)
+
+
+def _totp_verify(secret_b32, code, window=1):
+    """Accept the code for the current 30s step or one step either side (clock skew tolerance)."""
+    if not secret_b32 or not code:
+        return False
+    code = str(code).strip().replace(" ", "")
+    now = time.time()
+    return any(hmac.compare_digest(_totp_now(secret_b32, now + w * 30), code)
+               for w in range(-window, window + 1))
+
+
+@app.post("/auth/totp/setup")
+def totp_setup(principal=Depends(auth.require_key)):
+    """Begin two-factor enrolment: generate a secret and the otpauth URI to scan. Not active until
+    /auth/totp/enable confirms a code from the authenticator app."""
+    _require_account(principal, "set up two-factor authentication")
+    secret = base64.b32encode(os.urandom(20)).decode().rstrip("=")
+    billing.set_totp_secret(principal["account_id"], secret)
+    label = principal.get("email") or principal["account_id"]
+    uri = (f"otpauth://totp/RegMap:{label}?secret={secret}&issuer=RegMap&algorithm=SHA1"
+           f"&digits=6&period=30")
+    return {"secret": secret, "otpauth_uri": uri}
+
+
+class TotpCodeBody(BaseModel):
+    code: str
+
+
+@app.post("/auth/totp/enable")
+def totp_enable(req: TotpCodeBody, principal=Depends(auth.require_key)):
+    """Confirm the pending secret with a code, turn 2FA on, and return one-time recovery codes."""
+    _require_account(principal, "enable two-factor authentication")
+    secret, _ = billing.get_totp(principal["account_id"])
+    if not secret:
+        raise HTTPException(400, detail="start two-factor setup first")
+    if not _totp_verify(secret, req.code):
+        raise HTTPException(400, detail="that code is incorrect, check the authenticator app and try again")
+    codes = ["-".join((secrets.token_hex(3)[:4], secrets.token_hex(3)[:4])) for _ in range(8)]
+    billing.enable_totp(principal["account_id"],
+                        [hashlib.sha256(c.encode()).hexdigest() for c in codes])
+    return {"enabled": True, "recovery_codes": codes,
+            "note": "Save these recovery codes now. Each works once if you lose your authenticator."}
+
+
+class TotpDisableBody(BaseModel):
+    password: str
+
+
+@app.post("/auth/totp/disable")
+def totp_disable(req: TotpDisableBody, principal=Depends(auth.require_key)):
+    _require_account(principal, "disable two-factor authentication")
+    if not billing.check_password(principal["account_id"], req.password):
+        raise HTTPException(400, detail="password is incorrect")
+    billing.disable_totp(principal["account_id"])
+    return {"disabled": True}
+
+
+class LoginTotpBody(BaseModel):
+    pending: str
+    code: str
+
+
+@app.post("/auth/login/totp")
+def login_totp(req: LoginTotpBody, request: Request):
+    """Finish a login that needs a second factor. `pending` proves the password step passed; `code` is a
+    TOTP code or a recovery code."""
+    aid = billing.consume_auth_token(req.pending, "totp")
+    if not aid:
+        raise HTTPException(401, detail="that sign-in step expired, please sign in again")
+    secret, enabled = billing.get_totp(aid)
+    if not (enabled and (_totp_verify(secret, req.code) or billing.use_recovery_code(aid, req.code))):
+        raise HTTPException(401, detail="that code is incorrect")
+    token = billing.open_session(aid, request.headers.get("user-agent"))
+    resp = JSONResponse({"account_id": aid, "message": "signed in"})
+    _set_session_cookie(resp, token)
+    return resp
