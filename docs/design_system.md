@@ -1,46 +1,96 @@
-# Design system — look & feel decision
+# RegMap design system (LOCKED)
 
-The website's visual direction, decided so every page is consistent. Living reference page (artifact):
-built alongside this doc. Related: `docs/product_master_plan.md`, the landing page.
+**Status: LOCKED baseline. This is the final layout.** Frozen 2026-09-25, marked by git tag
+`design-baseline-v1` (the design system landed in commit `c702245`). Every page and every future change
+extends this system. Do not diverge from it. No em-dashes or en-dashes anywhere (founder style rule).
 
-## The decision
-Credible-but-approachable: **serious enough that an employer/auditor trusts it, warm enough that a
-career-changer isn't intimidated.** We emulate the best-in-class rather than invent:
-- **Linear** — precision, dark base, disciplined motion, tight type hierarchy. (Marketing + app chrome.)
-- **Stripe** — trust, polish, one restrained gradient accent, great docs. (Marketing + GRC surfaces.)
-- **Datadog / Tenable** — information density done right. (The console/workbench.)
-- **Duolingo** — encouraging, legible feedback. (The learn→do→graded loop only — a hint, not the whole site.)
-- **Avoid:** gamer-neon (TryHackMe/HTB); AI-generated cream+serif+terracotta; Inter/Space-Grotesk-as-default.
+## The rule
 
-## Tokens
-**Color** — deep ink base, one confident indigo accent, semantic severity kept separate from the accent.
+- **This layout is final.** Build on top of it. New pages and features reuse the tokens and components
+  below; they do not introduce a second visual language.
+- **Token names are stable.** You may retune a token's *value*, never rename or remove it, because every
+  page depends on the names. Add new tokens rather than repurposing existing ones.
+- **The source of truth is the code**, in this order: `web/assets/site.css` (tokens + components),
+  `web/assets/shell.js` (the injected nav/shell), `web/assets/app.css` (interactive-tool components),
+  `web/assets/img/*.svg` (imagery). This doc describes them; if they disagree, the code wins and this
+  doc gets corrected.
+- **When you change CSS or JS, bump the cache-bust version** on the `?v=` query in every page's
+  `<link>`/`<script>` (currently `?v=3`), or browsers serve a stale copy.
+- **Imagery is hand-authored SVG, not icons and not emoji.** Art lives in `web/assets/img/`. If an image
+  generator is wired up later, generated raster art may be added for hero/marketing only; the UI stays SVG.
+- **Any future visual change is recorded here** in the Change log at the bottom, with its commit.
+
+## Design language
+
+Linear (crisp dark canvas, tight type, gradient accents, disciplined motion) + Vanta (compliance trust:
+coverage rings, status badges, framework grids) + Datadog (dense data panels for the console). Training
+surfaces borrow TryHackMe / HackTheBox energy (terminal, graded, XP) inside the same system. Dark first,
+with a first-class light theme (`prefers-color-scheme` + `data-theme` override).
+
+## Tokens (as implemented in site.css)
+
+Dark base:
 ```
---bg:#0B0F17  --surface:#111826  --surface-2:#0E1420  --line:#1E2A3C  --line-2:#2A3A52
---ink:#EAF1FB  --muted:#93A6BD  --faint:#63758F
---accent:#6E8BFF  --accent-2:#87A2FF  --accent-soft:rgba(110,139,255,.14)
---ok:#3DDC84  --warn:#F0B429  --crit:#FF5C7A     (severity — NOT the accent)
-light theme: --bg:#F6F8FC --surface:#FFFFFF --ink:#0E1626 --accent:#3E63DD (mirror the rest)
+--bg:#0A0D17  --surface:#10141F  --surface-2:#0C0F19  --elev:#151B2B
+--line:#1E2637  --line-2:#2C3650
+--ink:#EAEFFB  --muted:#96A3BE  --faint:#5F6C88
+--accent:#6366F1  --accent-2:#8B5CF6  --cyan:#22D3EE  --accent-soft:rgba(99,102,241,.15)
+--grad: linear-gradient(135deg,var(--accent),var(--accent-2))
+--ok:#34D399  --warn:#FBBF24  --crit:#FB7185          (severity, kept separate from the accent)
+--sans:"Inter",system-ui,...   --mono:"JetBrains Mono",ui-monospace,...
+--radius:16px  --radius-sm:11px  --gut:clamp(18px,3.4vw,60px)
 ```
-Both themes are first-class (`prefers-color-scheme` + `data-theme` override). Neutrals carry a slight blue
-bias (chosen, not default grey).
+Light theme mirrors it: `--bg:#F6F8FD --surface:#FFFFFF --ink:#0D1424 --accent:#5457E6` (rest follows).
+Digits use `tabular-nums`; uppercase labels get letter-spacing; headings use `text-wrap:balance`.
 
-**Type** — differentiate from the AI-default. In the **product** (real webfonts allowed):
-display = **General Sans** or **Geist**; body = **Inter** (or system) at ~65ch; data/console = a mono
-(Geist Mono / Cascadia). In **artifacts** (font-CDN blocked by CSP): a tuned system stack + strong
-weight/tracking, or embed one display face as a data URI. Type scale fixed; headings `text-wrap:balance`;
-uppercase labels get letter-spacing; digits use `tabular-nums`.
+## Components (the locked vocabulary)
 
-**Layout** — centered, generous marketing (`max-width:1180px`), dense data-first console. Cards with soft
-1px borders + subtle shadow; rounded 12–16px (not `rounded-lg` everywhere).
+- **Shell / nav** injected by `shell.js`: sticky blurred header, gradient brand mark, `.nav-links`
+  (desktop) with a **mobile hamburger menu** (`.mobile-menu`) below 860px, theme toggle, `Open app` +
+  `Start free`. Nav entries live in the `NAV` array in `shell.js`.
+- **Layout primitives:** `.bleed` (full width), `.pad` (the single side gutter), `.section` /
+  `.section.tight`, `.band` (tinted strip), `.divider`, `.row-head` (heading + link).
+- **Buttons:** `.btn.primary` (gradient), `.btn.ghost`, `.btn.sm`.
+- **Hero:** `.hero` + `.hero-wrap` (two columns, stacks under 900px) + `.hero-art` (image, `width:100%`)
+  + `.chip` (live status pill) + `.grad-text` (gradient headline span).
+- **Stat row:** `.stat-row` of `.cell > .stat` (`.k` label, `.n` number, `.d` delta). The proof strip.
+- **Tiles / cards:** `.tile` with an optional `.thumb` (image or SVG banner, `object-fit:cover`) and
+  `.body`. `.grid` auto-fills them.
+- **Pillars:** the two-product cards (`.pillar` in the homepage `<style>`), image banner + body + CTA.
+- **Steps:** `.step` (numbered `.no` label + heading + copy), used for process rows.
+- **Panels (console):** `.panel` + `.panel-head` + `.panel-body`.
+- **Coverage ring:** `.ring` (conic-gradient donut, set `--p` 0-100 and `--ring` color inline).
+- **Pills / badges:** `.pill.ok|warn|crit|info`.
+- **Data table:** `table.dt` (Datadog-style).
+- **Motion:** `.reveal` scroll-reveal; hover lift on tiles/buttons; respects `prefers-reduced-motion`.
 
-**Motion** — purposeful, Linear-style: scroll-reveal, hover lift, console state transitions
-(provisioning→ready pulses). Respect `prefers-reduced-motion`. One orchestrated moment (an animated live
-console in the hero) beats scattered effects.
+## Page shell pattern (how to add a page without diverging)
 
-**Voice** — plain, from the user's side. "Prove you can do the job." Buttons say the action; feedback is
-specific and encouraging, never condescending.
+1. `<body data-page="ID">` where `ID` matches a `NAV` entry (or a new one).
+2. In `<head>`, link the shared assets with the current cache-bust version:
+   `assets/site.css?v=N`, `assets/app.css?v=N` (only if it uses tool components), and before `</body>`
+   `assets/shell.js?v=N` (plus `assets/api.js?v=N` if it calls the engine).
+3. Build the page from the components above. Page-specific CSS goes in a small `<head><style>` block that
+   uses the tokens; do not fork the token set.
+4. Imagery: reference SVGs from `assets/img/`. No emoji, no icon fonts.
+5. Include the Google Fonts preconnect + Inter/JetBrains Mono link (see any existing page) so type matches.
 
-## Where it applies
-Marketing/landing, the app shell (nav/tabs), the Assess/Monitor console (already Tenable-style — align its
-tokens to the above), the learning loop, and the RegMap/GRC surfaces. The provisioner UI already uses this
-palette — treat it as the first component-level implementation.
+## Responsive rules (locked)
+
+- Mobile menu below 860px; `.nav-desk` items hide, the hamburger shows.
+- Grids/pillars/hero stack on phones; `.stat-row` goes 2-up; buttons go full width.
+- Grid and flex children carry `min-width:0` so wide content (images) cannot force horizontal scroll.
+- `body{overflow-x:hidden}` is the backstop. Verified: at phone width `scrollWidth == clientWidth`.
+- Wide, dense content (tables, diagrams) scrolls inside an `.scroll-x` wrapper, never the page body.
+
+## Pages on the system
+
+`index.html` (two-pillar landing), `compliance.html` (map + coverage/gaps), `labs.html` (graded
+training), `pricing.html` (CU pricing), `console.html` (compliance console at `/dashboard`). Served by
+`main.py` (`uvicorn main:app`) from the `web/` shell.
+
+## Change log
+
+- **2026-09-25 `c702245` (LOCKED baseline, tag `design-baseline-v1`).** New design system (Linear +
+  Vanta + Datadog), SVG imagery, rebuilt homepage and compliance console, mobile menu, responsive
+  hardening, cache-busting. This is the final layout; entries below record changes on top of it.

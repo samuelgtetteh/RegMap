@@ -44,7 +44,11 @@ quiz. Every component maps to the same graded ground truth so progress is object
       (`0b8e015`), but the product is refocused on compliance + training. The SOC training track needs
       detection *content*, not necessarily the live detector services. OPEN.
 
-### Front end (redesign in progress)
+### Front end
+- [x] **LAYOUT LOCKED (2026-09-25, git tag `design-baseline-v1`).** The current layout is the final
+      baseline. Spec + change protocol: `docs/design_system.md`. All future front-end work extends this
+      system without diverging; retune token values but never rename tokens; bump the `?v=` cache-bust
+      when CSS/JS changes; record visual changes in the design_system.md change log.
 - [x] New design system `web/assets/site.css`: Linear + Vanta + Datadog, dark-first, proven cyber palette.
 - [x] Generated SVG imagery (no icons): hero crosswalk, compliance coverage, training terminal, two tracks.
 - [x] Homepage `web/index.html` rebuilt on the new system, two pillars, business-plan aligned.

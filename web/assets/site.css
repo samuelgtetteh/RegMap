@@ -1,10 +1,14 @@
 /* ============================================================================
-   RegMap design system. One system for every page.
+   RegMap design system. One system for every page.  ***LOCKED BASELINE***
+   This is the final layout. Frozen 2026-09-25 (git tag design-baseline-v1).
+   Spec and change protocol: docs/design_system.md. Extend this system, do not
+   diverge; retune token VALUES but never rename or remove a token; bump the ?v=
+   cache-bust in every page when this file changes.
+
    Linear (crisp dark, tight type, gradient accents) + Vanta (compliance trust:
    coverage rings, status badges, framework grids) + Datadog (dense data panels).
    Training surfaces borrow TryHackMe / HackTheBox energy (terminal, graded).
-   Dark first, with a light theme. Token names are stable so every page restyles
-   at once. No em-dashes or en-dashes anywhere.
+   Dark first, with a light theme. No em-dashes or en-dashes anywhere.
    ============================================================================ */
 
 :root{
