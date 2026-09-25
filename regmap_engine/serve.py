@@ -837,6 +837,7 @@ def projects_list(principal=Depends(auth.require_key)):
 
 @app.post("/projects")
 def projects_create(req: ProjectReq, principal=Depends(auth.require_key)):
+    _require_account(principal, "save your work")
     pid = billing.create_project(principal["account_id"], req.name, req.target_fid, req.source_kind, req.data)
     return {"id": pid, "name": req.name}
 
@@ -851,6 +852,7 @@ def projects_get(pid: str, principal=Depends(auth.require_key)):
 
 @app.put("/projects/{pid}")
 def projects_update(pid: str, req: ProjectUpdateReq, principal=Depends(auth.require_key)):
+    _require_account(principal, "save your work")
     n = billing.update_project(principal["account_id"], pid, req.name, req.target_fid, req.data)
     if not n:
         raise HTTPException(404, "project not found")
@@ -859,6 +861,7 @@ def projects_update(pid: str, req: ProjectUpdateReq, principal=Depends(auth.requ
 
 @app.delete("/projects/{pid}")
 def projects_delete(pid: str, principal=Depends(auth.require_key)):
+    _require_account(principal, "manage saved projects")
     n = billing.delete_project(principal["account_id"], pid)
     if not n:
         raise HTTPException(404, "project not found")
@@ -918,8 +921,9 @@ def project_export(pid: str, fmt: str = "xlsx", principal=Depends(auth.require_k
 
     One row per source control with its status, the target provisions the analyst accepted (and
     rejected), and the note. Built from the saved review, so it is the reviewed record, not a raw
-    model dump.
+    model dump. Downloading requires an account (guests can request email delivery instead).
     """
+    _require_account(principal, "download files")
     p = billing.get_project(principal["account_id"], pid)
     if not p:
         raise HTTPException(404, "project not found")
@@ -1272,6 +1276,24 @@ SESSION_COOKIE = "regmap_session"
 # it on for any real deployment, which is what REGMAP_SECURE_COOKIES exists for.
 SECURE_COOKIES = os.environ.get("REGMAP_SECURE_COOKIES", "false").lower() in ("1", "true", "yes")
 
+# Email sending is not wired yet. Until it is, verification and reset LINKS are returned in the API
+# response (and logged) so the flow is testable. Set REGMAP_EMAIL_ENABLED=true once a real sender exists,
+# and the links stop being returned in responses.
+EMAIL_ENABLED = os.environ.get("REGMAP_EMAIL_ENABLED", "false").lower() in ("1", "true", "yes")
+
+
+def _auth_link(request, kind, token):
+    """A link back to the account page carrying a one-time token, e.g. /account.html?verify=<token>."""
+    return f"{str(request.base_url).rstrip('/')}/account.html?{kind}={token}"
+
+
+def _require_account(principal, action):
+    """Gate a signed-in-only action. Guests can use the product, but saving and downloading need an
+    account (see docs/auth_tracker.md). Raises 401 for the anonymous principal."""
+    if not principal or principal.get("account_id") in (None, "anonymous"):
+        raise HTTPException(401, detail=f"sign in to {action}")
+    return principal
+
 
 def _set_session_cookie(resp, token):
     resp.set_cookie(
@@ -1292,16 +1314,24 @@ class RegisterReq(BaseModel):
 
 @app.post("/auth/register")
 def auth_register(req: RegisterReq, request: Request):
-    """Create an account and sign in. Lands on the free plan, so the new user is metered from the start."""
+    """Create an account and sign in. Lands on the free plan, so the new user is metered from the start.
+
+    Also issues an email verification link. No email sender is wired yet, so pre-launch the link is
+    returned here (and logged); production emails it and stops returning it.
+    """
     aid, err = billing.register(req.email, req.password, req.name)
     if err:
         raise HTTPException(400, detail=err)
-    token, _, lerr = billing.login(req.email, req.password,
-                                   request.headers.get("user-agent"))
-    if lerr:
+    token, _, lerr = billing.login(req.email, req.password, request.headers.get("user-agent"))
+    if lerr and lerr != "totp_required":
         raise HTTPException(500, detail="account created but sign-in failed; try logging in")
+    vtok = billing.create_auth_token(aid, "verify", billing.VERIFY_TTL_H)
+    link = _auth_link(request, "verify", vtok)
+    print(f"[regmap] email verify link for {req.email.strip().lower()}: {link}", flush=True)
     body = {"account_id": aid, "email": req.email.strip().lower(), "plan": "free",
-            "message": "account created"}
+            "email_verified": False, "message": "account created"}
+    if not EMAIL_ENABLED:
+        body["verify_link"] = link
     resp = JSONResponse(body)
     _set_session_cookie(resp, token)
     return resp
@@ -1317,12 +1347,17 @@ def auth_login(req: LoginReq, request: Request):
     if not billing.verify_session(request.cookies.get(SESSION_COOKIE)):
         pass  # no existing session; continue to authenticate
     token, aid, err = billing.login(req.email, req.password, request.headers.get("user-agent"))
+    if err == "totp_required":
+        # Password was correct but two-factor is on. No session yet; the client finishes at
+        # /auth/login/totp with a code. A short pending token proves the password step succeeded.
+        pending = billing.create_auth_token(aid, "totp", billing.RESET_TTL_H)
+        return JSONResponse({"totp_required": True, "pending": pending,
+                             "email": req.email.strip().lower()})
     if err:
-        # 401 with a deliberately vague message — see billing.login: the same text is returned for an
-        # unknown email and a wrong password, so this cannot be used to enumerate accounts.
+        # 401 with a deliberately vague message: the same text is returned for an unknown email and a
+        # wrong password, so this cannot be used to enumerate accounts.
         raise HTTPException(401, detail=err)
-    resp = JSONResponse({"account_id": aid, "email": req.email.strip().lower(),
-                         "message": "signed in"})
+    resp = JSONResponse({"account_id": aid, "email": req.email.strip().lower(), "message": "signed in"})
     _set_session_cookie(resp, token)
     return resp
 
@@ -1360,6 +1395,7 @@ def auth_session(request: Request,
         "authenticated": True, "guest": False,
         "auth_enforced": auth.REQUIRE_AUTH,
         "account_id": p["account_id"], "email": p.get("email"),
+        "email_verified": billing.is_email_verified(p["account_id"]),
         "via": p.get("auth", "session"),
         "admin": "admin" in {s.strip() for s in (p.get("scopes") or "").split(",") if s.strip()},
         "plan": {"id": p.get("plan_id"), "name": p.get("name"),
@@ -1387,3 +1423,79 @@ def auth_create_key(req: KeyReq, principal=Depends(auth.require_key)):
     kid, raw = billing.create_key(principal["account_id"], req.label or "web", scopes="")
     return {"key_id": kid, "api_key": raw,
              "note": "Copy this now, only its hash is stored, so it cannot be shown again."}
+
+
+# --- email verification -----------------------------------------------------------------------------
+class TokenBody(BaseModel):
+    token: str
+
+
+@app.post("/auth/verify")
+def auth_verify(req: TokenBody):
+    """Confirm an email address from the one-time link. The token is single-use and expiring."""
+    aid = billing.consume_auth_token(req.token, "verify")
+    if not aid:
+        raise HTTPException(400, detail="this verification link is invalid or has expired")
+    billing.set_email_verified(aid)
+    return {"verified": True}
+
+
+@app.post("/auth/verify/resend")
+def auth_verify_resend(request: Request, principal=Depends(auth.require_key)):
+    _require_account(principal, "resend a verification email")
+    tok = billing.create_auth_token(principal["account_id"], "verify", billing.VERIFY_TTL_H)
+    link = _auth_link(request, "verify", tok)
+    print(f"[regmap] email verify link (resend) for {principal.get('email')}: {link}", flush=True)
+    out = {"sent": True}
+    if not EMAIL_ENABLED:
+        out["verify_link"] = link
+    return out
+
+
+# --- password reset ---------------------------------------------------------------------------------
+class ResetRequestBody(BaseModel):
+    email: str
+
+
+@app.post("/auth/reset/request")
+def auth_reset_request(req: ResetRequestBody, request: Request):
+    """Start a password reset. Always returns 200 with no hint about whether the email exists, so it
+    cannot be used to enumerate accounts."""
+    aid = billing.account_by_email(req.email)
+    out = {"sent": True, "message": "if that email has an account, a reset link is on its way"}
+    if aid:
+        tok = billing.create_auth_token(aid, "reset", billing.RESET_TTL_H)
+        link = _auth_link(request, "reset", tok)
+        print(f"[regmap] password reset link for {req.email.strip().lower()}: {link}", flush=True)
+        if not EMAIL_ENABLED:
+            out["reset_link"] = link
+    return out
+
+
+class ResetBody(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=10)
+
+
+@app.post("/auth/reset")
+def auth_reset(req: ResetBody):
+    aid = billing.consume_auth_token(req.token, "reset")
+    if not aid:
+        raise HTTPException(400, detail="this reset link is invalid or has expired")
+    billing.set_password(aid, req.new_password)
+    return {"reset": True, "message": "password updated, you can sign in now"}
+
+
+class PasswordChangeBody(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=10)
+
+
+@app.post("/auth/password")
+def auth_password(req: PasswordChangeBody, principal=Depends(auth.require_key)):
+    """Change the password while signed in. Requires the current password."""
+    _require_account(principal, "change your password")
+    if not billing.check_password(principal["account_id"], req.current_password):
+        raise HTTPException(400, detail="current password is incorrect")
+    billing.set_password(principal["account_id"], req.new_password)
+    return {"changed": True}

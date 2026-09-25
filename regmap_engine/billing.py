@@ -66,7 +66,26 @@ accounts = Table(
     # Null for accounts created by the operator CLI (API-key only). Set by self-serve
     # registration. Never stores the password itself -- see hash_password().
     Column("password_hash", String(255)),
+    Column("email_verified", Boolean, default=False),
+    # Brute-force protection: consecutive failed logins and a lockout window.
+    Column("failed_logins", Integer, default=0),
+    Column("lockout_until", DateTime(timezone=True)),
+    # Two-factor (TOTP, Google Authenticator compatible). Secret and recovery codes are set on enrol.
+    Column("totp_secret", String(64)),
+    Column("totp_enabled", Boolean, default=False),
+    Column("recovery_codes", Text),                        # JSON list of sha256(code)
     Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+)
+
+# Single-use, expiring tokens for email verification and password reset (only the hash is stored).
+auth_tokens = Table(
+    "auth_tokens", metadata,
+    Column("token_hash", String(64), primary_key=True),
+    Column("account_id", String(40), index=True, nullable=False),
+    Column("kind", String(16), nullable=False),            # verify | reset
+    Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("used_at", DateTime(timezone=True)),
 )
 
 api_keys = Table(
@@ -510,25 +529,115 @@ def set_password(account_id, password):
                   .values(password_hash=hash_password(password)))
 
 
-def login(email, password, user_agent=None):
-    """Verify credentials and open a session. Returns (raw_token, account_id, error)."""
-    email = (email or "").strip().lower()
+def check_password(account_id, password):
+    """Verify a password for an account without any session/lockout side effects (for reauth)."""
     with engine().begin() as c:
-        row = c.execute(select(accounts.c.id, accounts.c.password_hash, accounts.c.active)
-                        .where(accounts.c.email == email)).mappings().first()
-    # Deliberately identical message for "no such user" and "wrong password", so the endpoint cannot be
-    # used to discover which email addresses are registered.
-    if not row or not row["password_hash"] or not verify_password(password, row["password_hash"]):
-        return None, None, "email or password is incorrect"
-    if not row["active"]:
-        return None, None, "this account is deactivated"
+        row = c.execute(select(accounts.c.password_hash).where(accounts.c.id == account_id)).first()
+    return bool(row and row[0] and verify_password(password, row[0]))
+
+
+LOGIN_MAX_FAILS = int(os.environ.get("REGMAP_LOGIN_MAX_FAILS", "5"))
+LOGIN_LOCKOUT_MIN = int(os.environ.get("REGMAP_LOGIN_LOCKOUT_MIN", "15"))
+VERIFY_TTL_H = int(os.environ.get("REGMAP_VERIFY_TTL_H", "48"))
+RESET_TTL_H = int(os.environ.get("REGMAP_RESET_TTL_H", "2"))
+
+
+def open_session(account_id, user_agent=None):
+    """Issue a session cookie value for an account and record the server-side session row."""
     raw = secrets.token_urlsafe(32)
     with engine().begin() as c:
         c.execute(insert(sessions).values(
-            token_hash=hashlib.sha256(raw.encode()).hexdigest(), account_id=row["id"],
+            token_hash=hashlib.sha256(raw.encode()).hexdigest(), account_id=account_id,
             expires_at=datetime.now(timezone.utc) + timedelta(days=SESSION_DAYS),
             user_agent=(user_agent or "")[:255]))
-    return raw, row["id"], None
+    return raw
+
+
+def login(email, password, user_agent=None):
+    """Verify credentials and open a session. Returns (raw_token, account_id, error).
+
+    Brute-force protection: after LOGIN_MAX_FAILS consecutive wrong passwords the account is locked for
+    LOGIN_LOCKOUT_MIN minutes. error == "totp_required" is a signal, not a failure: the password was
+    correct but two-factor is on, so the caller must finish at /auth/login/totp before a session opens.
+    """
+    email = (email or "").strip().lower()
+    now = datetime.now(timezone.utc)
+    with engine().begin() as c:
+        row = c.execute(select(accounts.c.id, accounts.c.password_hash, accounts.c.active,
+                               accounts.c.failed_logins, accounts.c.lockout_until, accounts.c.totp_enabled)
+                        .where(accounts.c.email == email)).mappings().first()
+    if row and row["lockout_until"]:
+        lu = row["lockout_until"]
+        lu = lu.replace(tzinfo=timezone.utc) if lu.tzinfo is None else lu
+        if lu > now:
+            return None, None, "too many attempts, try again in a few minutes"
+    # Deliberately identical message for "no such user" and "wrong password", so the endpoint cannot be
+    # used to discover which email addresses are registered.
+    if not row or not row["password_hash"] or not verify_password(password, row["password_hash"]):
+        if row:
+            fails = (row["failed_logins"] or 0) + 1
+            vals = {"failed_logins": fails}
+            if fails >= LOGIN_MAX_FAILS:
+                vals = {"failed_logins": 0, "lockout_until": now + timedelta(minutes=LOGIN_LOCKOUT_MIN)}
+            with engine().begin() as c:
+                c.execute(update(accounts).where(accounts.c.id == row["id"]).values(**vals))
+        return None, None, "email or password is incorrect"
+    if not row["active"]:
+        return None, None, "this account is deactivated"
+    with engine().begin() as c:                         # correct password: clear the failure counter
+        c.execute(update(accounts).where(accounts.c.id == row["id"])
+                  .values(failed_logins=0, lockout_until=None))
+    if row["totp_enabled"]:
+        return None, row["id"], "totp_required"
+    return open_session(row["id"], user_agent), row["id"], None
+
+
+# ---- email verification + password reset tokens --------------------------------------------------
+def create_auth_token(account_id, kind, ttl_hours):
+    """One-time token (only its hash is stored). Returns the raw token to put in a link."""
+    raw = secrets.token_urlsafe(32)
+    with engine().begin() as c:
+        c.execute(insert(auth_tokens).values(
+            token_hash=hashlib.sha256(raw.encode()).hexdigest(), account_id=account_id, kind=kind,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=ttl_hours)))
+    return raw
+
+
+def consume_auth_token(raw, kind):
+    """Validate a token of the given kind and mark it used. Returns the account_id or None."""
+    if not raw:
+        return None
+    th = hashlib.sha256(raw.encode()).hexdigest()
+    now = datetime.now(timezone.utc)
+    with engine().begin() as c:
+        row = c.execute(select(auth_tokens).where(
+            auth_tokens.c.token_hash == th, auth_tokens.c.kind == kind)).mappings().first()
+        if not row or row["used_at"]:
+            return None
+        exp = row["expires_at"]
+        exp = exp.replace(tzinfo=timezone.utc) if exp.tzinfo is None else exp
+        if exp < now:
+            return None
+        c.execute(update(auth_tokens).where(auth_tokens.c.token_hash == th).values(used_at=now))
+    return row["account_id"]
+
+
+def set_email_verified(account_id):
+    with engine().begin() as c:
+        c.execute(update(accounts).where(accounts.c.id == account_id).values(email_verified=True))
+
+
+def account_by_email(email):
+    email = (email or "").strip().lower()
+    with engine().begin() as c:
+        row = c.execute(select(accounts.c.id).where(accounts.c.email == email)).first()
+    return row[0] if row else None
+
+
+def is_email_verified(account_id):
+    with engine().begin() as c:
+        row = c.execute(select(accounts.c.email_verified).where(accounts.c.id == account_id)).first()
+    return bool(row and row[0])
 
 
 def verify_session(raw):
