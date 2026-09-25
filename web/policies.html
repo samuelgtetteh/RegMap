@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RegMap: policy library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css?v=6">
+<link rel="stylesheet" href="assets/app.css?v=6">
+<style>
+  .pol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+  .pol{display:flex;flex-direction:column}
+  .pol .body{gap:8px}
+  .pol .num{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600}
+  .pol h3{font-size:16.5px;margin-top:2px}
+  .pol p{margin:0;color:var(--muted);font-size:13.5px}
+  .pol .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:4px}
+  .pol ul{margin:2px 0 0;padding-left:17px;color:var(--muted);font-size:13px;line-height:1.65}
+  .pill.soon{color:var(--faint);background:color-mix(in srgb,var(--faint) 16%,transparent)}
+  .pill.soon::before{background:var(--faint)}
+  .pol .maps{font-family:var(--mono);font-size:11px;color:var(--faint)}
+</style>
+</head>
+<body data-page="policy">
+
+<section class="section pad bleed" style="padding-top:34px">
+  <div class="eyebrow">Policy library</div>
+  <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Policies every company should have on file</h1>
+  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 14px;max-width:76ch">
+    The written policies that guide how your organization uses and protects its IT. Start from these
+    ready-made templates. Industry-specific customization, one-click generation, mapping to your controls,
+    and export are on the roadmap, so this library grows over time.</p>
+  <div class="note" style="max-width:76ch"><b>Progress path.</b> Below are the first 10 essential policies
+    every company with IT infrastructure needs. Adoption and customization are coming next; for now, use
+    these as a starting point and reference.</div>
+</section>
+
+<section class="section tight pad bleed">
+  <div class="pol-grid" id="grid"></div>
+</section>
+
+<section class="section pad bleed">
+  <div class="panel reveal" style="padding:clamp(24px,4vw,40px);background:
+      radial-gradient(600px 300px at 85% 0%,var(--accent-soft),transparent),var(--surface)">
+    <div class="eyebrow">Coming soon</div>
+    <h2 style="font-size:clamp(20px,2.6vw,28px);margin:8px 0 10px;max-width:60ch">Customizable, industry-ready policies</h2>
+    <p style="color:var(--muted);font-size:14.5px;max-width:70ch;margin:0 0 16px">
+      Next on this tab: pick an industry (healthcare, finance, SaaS, defense) and generate a tailored,
+      editable policy set; map each policy to the controls and frameworks it satisfies; track versions and
+      approvals; and export an audit-ready policy pack.</p>
+    <a class="btn ghost" href="/compliance.html">Map controls to frameworks →</a>
+  </div>
+</section>
+
+<script src="assets/shell.js?v=6"></script>
+<script>
+(function () {
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  const POLICIES = [
+    { cat: "Governance", title: "Acceptable Use Policy",
+      purpose: "Defines how employees and contractors may use company systems, networks, devices and data, and what is prohibited.",
+      covers: ["Permitted and prohibited use", "Personal use limits and monitoring", "Software, download and email rules", "Consequences of misuse"],
+      maps: "NIST PL-4, AC · ISO A.5" },
+    { cat: "Governance", title: "Information Security Policy",
+      purpose: "The umbrella policy stating the organization's commitment to protecting the confidentiality, integrity and availability of information.",
+      covers: ["Scope, roles and responsibilities", "Security objectives and risk management", "Policy hierarchy and exceptions", "Management commitment and review cadence"],
+      maps: "NIST PM, PL · ISO A.5.1" },
+    { cat: "Access", title: "Access Control Policy",
+      purpose: "Governs who can access which systems and data, enforcing least privilege and separation of duties.",
+      covers: ["Provisioning and deprovisioning", "Least privilege and role-based access", "Periodic access reviews", "Privileged account handling"],
+      maps: "NIST AC-2, AC-3, AC-6 · HIPAA 164.312(a)" },
+    { cat: "Access", title: "Password & Authentication Policy",
+      purpose: "Sets requirements for credentials and authentication, including multi-factor authentication.",
+      covers: ["Length, complexity and reuse rules", "MFA for remote and privileged access", "Secure storage and hashing", "Lockout and recovery"],
+      maps: "NIST IA-2, IA-5 · HIPAA 164.312(d) · CIS 5/6" },
+    { cat: "Data", title: "Data Classification & Handling Policy",
+      purpose: "Classifies data by sensitivity and defines how each class is stored, shared, retained and disposed of.",
+      covers: ["Classification levels and labeling", "Handling and encryption per class", "Retention schedules", "Secure disposal"],
+      maps: "NIST MP, SC · ISO A.5.12" },
+    { cat: "Operations", title: "Incident Response Policy",
+      purpose: "Defines how the organization detects, reports, responds to and recovers from security incidents.",
+      covers: ["Incident definitions and severity", "Roles, contacts and escalation", "Containment, eradication, recovery", "Post-incident review and lessons"],
+      maps: "NIST IR-4, IR-6, IR-8 · HIPAA 164.308(a)(6)" },
+    { cat: "Resilience", title: "Backup & Disaster Recovery Policy",
+      purpose: "Ensures critical data and systems can be restored after loss, corruption or disaster.",
+      covers: ["What is backed up and how often", "Offsite and immutable copies", "Restore testing", "RTO and RPO targets"],
+      maps: "NIST CP-9, CP-10 · HIPAA 164.308(a)(7) · ISO A.8.13" },
+    { cat: "Access", title: "Remote Access & Remote Work Policy",
+      purpose: "Secures access to company systems from outside the corporate network.",
+      covers: ["VPN or zero-trust requirements", "Device posture and MFA", "Approved networks", "Home-office security expectations"],
+      maps: "NIST AC-17, AC-19 · HIPAA 164.312(e) · CIS 12" },
+    { cat: "Operations", title: "Change Management Policy",
+      purpose: "Ensures changes to systems and infrastructure are requested, reviewed, tested and approved before deployment.",
+      covers: ["Change request and approval", "Risk and impact assessment", "Testing and rollback", "Emergency changes and the change log"],
+      maps: "NIST CM-3, CM-4 · ISO A.8.32" },
+    { cat: "Endpoints", title: "BYOD & Mobile Device Policy",
+      purpose: "Governs use of personal and mobile devices to access company data.",
+      covers: ["Enrollment and mobile device management", "Encryption and screen lock", "Separation of work and personal data", "Remote wipe and lost-device reporting"],
+      maps: "NIST AC-19, MP-7 · HIPAA 164.310 · CIS 4" },
+  ];
+
+  document.getElementById("grid").innerHTML = POLICIES.map((p, i) => `
+    <div class="tile pol reveal"><div class="body">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="num">${String(i + 1).padStart(2, "0")}</span>
+        <span class="pill info" style="padding:2px 9px">${esc(p.cat)}</span>
+      </div>
+      <h3>${esc(p.title)}</h3>
+      <p>${esc(p.purpose)}</p>
+      <div class="lbl">Covers</div>
+      <ul>${p.covers.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+      <div class="foot" style="margin-top:12px;justify-content:space-between">
+        <span class="maps">${esc(p.maps)}</span>
+        <span class="pill soon">customize soon</span>
+      </div>
+    </div></div>`).join("");
+
+  // scroll-reveal picks up the new tiles
+  document.querySelectorAll(".pol").forEach(el => el.classList.add("in"));
+})();
+</script>
+</body>
+</html>

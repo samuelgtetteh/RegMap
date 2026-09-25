@@ -102,6 +102,9 @@ training), `pricing.html` (CU pricing), `console.html` (compliance console at `/
 - **2026-09-25 console continuous monitoring.** Added a "Continuous monitoring" section between the
   panels and "Do the work": coming-soon cards for Identity and OT/ICS control monitoring (confirm mapped
   controls are operating). Reuses existing components; no token changes.
+- **2026-09-25 Policy tab.** New page `web/policies.html` and a "Policy" nav entry between Compliance and
+  Labs (in `shell.js`). A library of the 10 essential IT policies as cards (tiles + pills), each mapped to
+  control families; industry customization is a coming-soon roadmap. Cache-bust bumped to v=6.
 - **2026-09-25 company footer.** Full multi-column footer (brand + blurb + social; Product / Solutions /
   Resources / Company columns; a bottom bar with copyright and Privacy/Terms/Cookies/Licensing) injected
   once from `shell.js` so it is identical on every page (it removes any per-page `<footer>` first).

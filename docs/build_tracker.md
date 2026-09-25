@@ -72,6 +72,20 @@ quiz. Every component maps to the same graded ground truth so progress is object
 - [ ] Expand `labs.html` into the full training experience (reading, video, labs, real-world builds).
 - [ ] Account / sign-in surface in the shell (`account.html`), and gate paid items.
 
+### Policy tab (new progress path, added 2026-09-25)
+The Policy tab (`web/policies.html`, nav between Compliance and Labs) is a library of customizable,
+industry-ready policies companies adopt. Shares the compliance ground truth: each policy maps to the
+controls and frameworks it satisfies.
+- [x] Page + nav + the first 10 essential IT policies (Acceptable Use, Information Security, Access
+      Control, Password/Authentication, Data Classification, Incident Response, Backup/DR, Remote Access,
+      Change Management, BYOD/Mobile), each with purpose, key contents, and mapped control families.
+- [ ] Adopt a policy: view the full template text, edit/customize it in the browser.
+- [ ] Industry tailoring: pick an industry (healthcare, finance, SaaS, defense) and generate a tailored set.
+- [ ] Map each policy to the user's controls/frameworks (reuse the compliance engine).
+- [ ] Versioning, approvals, and an export (DOCX/PDF) audit-ready policy pack.
+- [ ] Grow the library beyond the first 10 (Data Retention, Vendor/Third-Party, Encryption, Physical
+      Security, Privacy, Email/Communications, Vulnerability Management, Logging/Monitoring).
+
 ### Business / plan
 - [x] Business plan reframed to two co-equal pillars; training is a major selling point (§1, 3, 7, 8, 10).
 - [ ] Propagate the two-pillar framing to executive_summary, one_pager, pitch_deck_outline.
