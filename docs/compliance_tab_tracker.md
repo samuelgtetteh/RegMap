@@ -40,6 +40,59 @@ a public framework but their own program.
 Status: [x] backend endpoint (`POST /map/custom`) · [x] frontend tab ("Your framework") · [x] free-limit
 + paid note (`REGMAP_CUSTOM_FREE_MAX`, default 25) · [ ] export of results (next).
 
+## Next up (GREEN-LIT, building now): the audit-grade workflow
+
+Decision (2026-09-25): build the workflow that turns a mapping from a query into a deliverable an auditor
+accepts. This is the single biggest jump from demo to paid tool, because it is exactly the consulting
+hours we save. Three linked pieces, built in this order. All three are the PAID tier (free stays
+query-only), except a lightweight in-session review that works before sign-in.
+
+### A. Review + status (per suggested mapping)
+For every suggested control-to-target mapping, the analyst decides:
+- **Action:** Accept / Reject / Edit (swap in a different target control).
+- **Status:** Met / Partial / Gap / Not applicable.
+- **Note:** free-text justification.
+The engine suggests, the expert confirms. This is the human-in-the-loop the business plan promises.
+
+- [ ] UI: inline controls on each result row (accept/reject, a status select, a note field), plus a
+      per-control roll-up (how many decided, coverage by status).
+- [ ] Works in-session immediately (state held in the page); persists once saved (piece B).
+
+### B. Saved projects (persistence)
+A **project** = a named crosswalk: the source control set (custom or catalog), the target framework, and
+every decision/status/note/evidence link. Reopen and continue; track progress over time.
+
+- [ ] Data model (new tables in `billing.py`, dual-dialect SQLite/Postgres, keyed by `account_id`):
+      - `projects(id, account_id, name, source_kind, source_ref, target_fid, created_at, updated_at)`
+      - `project_items(id, project_id, source_id, source_title, source_text, target_id, score,
+        provenance, status, action, note, evidence_ref, updated_at)`
+- [ ] Endpoints: `POST /projects` (create), `GET /projects` (list mine), `GET /projects/{id}`,
+      `PATCH /projects/{id}` (rename), `DELETE /projects/{id}`, `PUT /projects/{id}/items` (save decisions,
+      upsert in bulk). All behind `auth.require_key`, scoped to the caller's account.
+- [ ] UI: Save / Save as / Open project, a project list, autosave on decision changes.
+
+### C. Audit-ready export
+One click to a shareable package from a project (or the current in-session mapping).
+
+- [ ] `GET /projects/{id}/export?fmt=xlsx|json|docx`. XLSX and JSON first (stdlib/openpyxl already in
+      the platform); DOCX by reusing the advisor's `docx_report` builder.
+- [ ] Columns per obligation: source id/title, suggested target id/title, score, provenance
+      (official/derived/model), status, action, note, evidence link, mapped-on date.
+- [ ] Free tier: JSON only, capped rows, watermark. Paid: full XLSX/DOCX, no cap.
+
+### Build order for this workflow
+1. [ ] A (in-session review UI) on the "Your framework" and "Map a control" results, no persistence yet.
+2. [ ] B1 (schema + `POST/GET/PATCH/DELETE /projects`, `PUT /items`).
+3. [ ] B2 (Save/Open UI + autosave), which makes A durable.
+4. [ ] C (export XLSX/JSON, then DOCX).
+5. [ ] Gate paid pieces behind an entitlement; keep in-session review free.
+
+### Open decisions before/while building
+- **Entitlement flag:** how "paid" is represented. Simplest now: a boolean/`features` column on the
+  account (operator-set), checked by these endpoints. Full billing (Stripe) is Phase C in `build_log.md`.
+- **DB:** SQLite is fine for now (already durable via the PVC); Postgres when multi-writer is needed.
+- **In-session vs account:** review works before sign-in (ephemeral); saving/exporting requires an account.
+
 ## Recommendations: what makes this a must-have paid tool
 
 Ordered by impact. Each notes why it matters and a suggested free/paid split. These are for review, not
@@ -94,13 +147,14 @@ yet committed.
 ## Build order
 
 1. [x] Bring your own framework (endpoint + tab + free limit). DONE 2026-09-25.
-2. [ ] Export results of any mapping to XLSX/JSON (extend to DOCX via the advisor).
-3. [ ] Review + status workflow (needs light persistence).
-4. [ ] Saved projects (needs the billing DB or a new table).
-5. [ ] Coverage dashboard / multi-target.
-6. [ ] The rest of Tier 2 and 3 in priority order.
+2. [ ] **The audit-grade workflow (GREEN-LIT, next): review + status, then saved projects, then export.**
+       See "Next up" above for the A/B/C plan, schema, endpoints and step order.
+3. [ ] Coverage dashboard / multi-target.
+4. [ ] The rest of Tier 2 and 3 in priority order.
 
 ## Change log
 
 - 2026-09-25: created. Feature: bring your own framework built (POST /map/custom, "Your framework" tab,
-  free cap 25 controls/run). Recommendations recorded above for review.
+  free cap 25 controls/run). Recommendations recorded for review.
+- 2026-09-25: green-lit the audit-grade workflow (review + status, saved projects, export) as the next
+  build; recorded the A/B/C plan, data model and endpoints under "Next up".
