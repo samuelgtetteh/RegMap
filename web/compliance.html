@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RegMap: map any control to any framework</title>
-<link rel="stylesheet" href="assets/site.css?v=8">
-<link rel="stylesheet" href="assets/app.css?v=8">
+<link rel="stylesheet" href="assets/site.css?v=9">
+<link rel="stylesheet" href="assets/app.css?v=9">
 <style>
   /* page-local: the two-mode tab switch (uses the shell tokens) */
   .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
@@ -122,6 +122,13 @@
     <select id="pOpen"><option value="">Open project…</option></select>
     <button class="btn ghost sm" id="pNew" type="button">New</button>
     <button class="btn ghost sm" id="pDel" type="button">Delete</button>
+    <select id="pExport" title="Export the reviewed crosswalk">
+      <option value="">Export…</option>
+      <option value="xlsx">Excel (.xlsx)</option>
+      <option value="docx">Word (.docx)</option>
+      <option value="csv">CSV</option>
+      <option value="json">JSON</option>
+    </select>
     <span class="sp"></span>
     <span id="pStatus" class="mono" style="font-size:12px;color:var(--faint)"></span>
   </div>
@@ -163,8 +170,8 @@
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=8"></script>
-<script src="assets/shell.js?v=8"></script>
+<script src="assets/api.js?v=9"></script>
+<script src="assets/shell.js?v=9"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -523,7 +530,7 @@
   /* ---- saved projects (Step B) -------------------------------------------- */
   let curProj = null;                       // {id, name} of the open project, or null for unsaved
   const pName = $("pName"), pSave = $("pSave"), pOpen = $("pOpen"), pNew = $("pNew"),
-        pDel = $("pDel"), pStatus = $("pStatus");
+        pDel = $("pDel"), pStatus = $("pStatus"), pExport = $("pExport");
   const projData = () => ({ kind: "custom", target: cTgt.value, top_k: Number(cTopk.value),
                             controls: cText.value, decisions: DECISIONS });
 
@@ -570,10 +577,22 @@
     clearTimeout(_autosaveT);
     _autosaveT = setTimeout(() => saveProject(true), 1200);
   }
+  async function doExport(fmt) {
+    if (!fmt) return;
+    pExport.value = "";
+    if (!cText.value.trim()) { cOut.innerHTML = `<div class="note err">Add controls and map them first, then export.</div>`; return; }
+    await saveProject(true);                 // flush current state (creates the project if new)
+    if (!curProj) return;
+    const a = document.createElement("a");
+    a.href = "/projects/" + encodeURIComponent(curProj.id) + "/export?fmt=" + encodeURIComponent(fmt);
+    a.download = ""; document.body.appendChild(a); a.click(); a.remove();
+    pStatus.textContent = "exported " + fmt;
+  }
   pSave.addEventListener("click", () => saveProject(false));
   pNew.addEventListener("click", newProject);
   pDel.addEventListener("click", deleteProject);
   pOpen.addEventListener("change", () => { if (pOpen.value) openProject(pOpen.value); });
+  pExport.addEventListener("change", () => doExport(pExport.value));
 
   cText.addEventListener("input", updCount);
   async function loadFile(f) {

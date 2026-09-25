@@ -35,8 +35,10 @@ Run locally:  uvicorn serve:app --host 0.0.0.0 --port 8000
 import base64
 import hashlib
 import hmac
+import io
 import os
 import random
+import re
 import json as _json
 import time
 from pathlib import Path
@@ -45,7 +47,7 @@ from typing import List, Optional
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -861,6 +863,149 @@ def projects_delete(pid: str, principal=Depends(auth.require_key)):
     if not n:
         raise HTTPException(404, "project not found")
     return {"id": pid, "deleted": True}
+
+
+# --- audit-ready export (Compliance workflow, step C) ---------------------------------------------
+_STATUS_LABEL = {"met": "Met", "partial": "Partial", "gap": "Gap", "na": "Not applicable"}
+_EXPORT_COLS = [("source_id", "Source ID"), ("source", "Source control"), ("status", "Status"),
+                ("mapped_to", "Mapped to"), ("rejected", "Rejected"), ("note", "Note")]
+
+
+def _parse_controls_text(raw):
+    """Parse a saved control set the same way the browser does, so ids line up with the decisions."""
+    raw = (raw or "").strip()
+    out = []
+    if raw[:1] == "[":
+        try:
+            for i, o in enumerate(_json.loads(raw)):
+                t = str(o.get("text") or o.get("description") or "")
+                if t.strip():
+                    out.append({"id": str(o.get("id") or f"C{i+1}"), "text": t})
+            return out
+        except Exception:
+            pass
+    i = 0
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        i += 1
+        m = re.match(r"^([A-Za-z0-9._\-()/ ]{1,24}?)\s*[,:|\t]\s*(.+)$", line)
+        out.append({"id": m.group(1).strip() if m else f"C{i}", "text": m.group(2).strip() if m else line})
+    return out
+
+
+def _export_rows(data, tgt_ctl):
+    decisions = data.get("decisions", {}) or {}
+    rows = []
+    for s in _parse_controls_text(data.get("controls", "")):
+        d = decisions.get(s["id"], {}) or {}
+        tmap = d.get("targets", {}) or {}
+        lab = lambda ids: "; ".join((f"{t} {tgt_ctl.get(t, {}).get('title', '')}").strip() for t in ids)
+        rows.append({
+            "source_id": s["id"], "source": s["text"],
+            "status": _STATUS_LABEL.get(d.get("status", ""), d.get("status", "") or ""),
+            "mapped_to": lab([t for t, v in tmap.items() if v == "accept"]),
+            "rejected": lab([t for t, v in tmap.items() if v == "reject"]),
+            "note": d.get("note", "") or "",
+        })
+    return rows
+
+
+@app.get("/projects/{pid}/export")
+def project_export(pid: str, fmt: str = "xlsx", principal=Depends(auth.require_key)):
+    """Export a saved project as an audit-ready crosswalk: fmt = json | csv | xlsx | docx.
+
+    One row per source control with its status, the target provisions the analyst accepted (and
+    rejected), and the note. Built from the saved review, so it is the reviewed record, not a raw
+    model dump.
+    """
+    p = billing.get_project(principal["account_id"], pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    data = p.get("data") or {}
+    tgt = _resolve_fid(data.get("target") or p.get("target_fid") or "")
+    tgt_ctl = _controls.get(tgt, {}) if tgt else {}
+    tgt_name = _registry.get(tgt, {}).get("name", tgt) if tgt else (data.get("target") or "")
+    rows = _export_rows(data, tgt_ctl)
+    name = p.get("name") or "project"
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "_", name)[:60] or "project"
+    stamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
+    headers = {"source_id": "Source ID", "source": "Source control", "status": "Status",
+               "mapped_to": "Mapped to", "rejected": "Rejected", "note": "Note"}
+
+    if fmt == "json":
+        return JSONResponse({"project": name, "target_framework": tgt_name, "exported_at": stamp,
+                             "columns": [c[1] for c in _EXPORT_COLS], "rows": rows})
+
+    if fmt == "csv":
+        import csv
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow([c[1] for c in _EXPORT_COLS])
+        for r in rows:
+            w.writerow([r[c[0]] for c in _EXPORT_COLS])
+        return Response(buf.getvalue(), media_type="text/csv",
+                        headers={"Content-Disposition": f'attachment; filename="{safe}.csv"'})
+
+    if fmt == "xlsx":
+        try:
+            import openpyxl
+            from openpyxl.styles import Alignment, Font, PatternFill
+        except Exception:
+            raise HTTPException(501, "xlsx export unavailable (openpyxl not installed)")
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Crosswalk"
+        ws.append([f"RegMap crosswalk: {name}"])
+        ws.append([f"Target framework: {tgt_name}"])
+        ws.append([f"Exported {stamp}. Model suggestions, expert-reviewed."])
+        ws.append([])
+        ws.append([c[1] for c in _EXPORT_COLS])
+        for cell in ws[ws.max_row]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="6366F1")
+        for r in rows:
+            ws.append([r[c[0]] for c in _EXPORT_COLS])
+        for i, wd in enumerate([14, 60, 14, 34, 34, 40], 1):
+            ws.column_dimensions[chr(64 + i)].width = wd
+        for row in ws.iter_rows(min_row=5):
+            for cell in row:
+                cell.alignment = Alignment(vertical="top", wrap_text=True)
+        b = io.BytesIO()
+        wb.save(b)
+        return Response(b.getvalue(),
+                        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        headers={"Content-Disposition": f'attachment; filename="{safe}.xlsx"'})
+
+    if fmt == "docx":
+        try:
+            import docx
+        except Exception:
+            raise HTTPException(501, "docx export unavailable (python-docx not installed)")
+        doc = docx.Document()
+        doc.add_heading(f"RegMap crosswalk: {name}", level=1)
+        doc.add_paragraph(f"Target framework: {tgt_name}")
+        doc.add_paragraph(f"Exported {stamp}. Model suggestions, expert-reviewed; not authoritative "
+                          f"unless an official crosswalk applies.")
+        t = doc.add_table(rows=1, cols=len(_EXPORT_COLS))
+        try:
+            t.style = "Light Grid Accent 1"
+        except Exception:
+            pass
+        for i, c in enumerate(_EXPORT_COLS):
+            t.rows[0].cells[i].text = c[1]
+        for r in rows:
+            cells = t.add_row().cells
+            for i, c in enumerate(_EXPORT_COLS):
+                cells[i].text = str(r[c[0]])
+        b = io.BytesIO()
+        doc.save(b)
+        return Response(b.getvalue(),
+                        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        headers={"Content-Disposition": f'attachment; filename="{safe}.docx"'})
+
+    raise HTTPException(400, "fmt must be one of: json, csv, xlsx, docx")
 
 
 # =====================================================================================================

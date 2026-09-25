@@ -76,17 +76,18 @@ every decision/status/note/evidence link. Reopen and continue; track progress ov
 ### C. Audit-ready export
 One click to a shareable package from a project (or the current in-session mapping).
 
-- [ ] `GET /projects/{id}/export?fmt=xlsx|json|docx`. XLSX and JSON first (stdlib/openpyxl already in
-      the platform); DOCX by reusing the advisor's `docx_report` builder.
-- [ ] Columns per obligation: source id/title, suggested target id/title, score, provenance
-      (official/derived/model), status, action, note, evidence link, mapped-on date.
-- [ ] Free tier: JSON only, capped rows, watermark. Paid: full XLSX/DOCX, no cap.
+- [x] `GET /projects/{id}/export?fmt=json|csv|xlsx|docx`. DONE 2026-09-25. Built from the saved review
+      (openpyxl for XLSX, python-docx for DOCX, stdlib for JSON/CSV). Frontend: an "Export…" dropdown on
+      the project bar that saves first, then downloads. Verified all four formats produce valid files.
+- [x] Columns per source control: Source ID, Source control, Status, Mapped to (accepted targets +
+      titles), Rejected, Note.
+- [ ] Later: add score/provenance/evidence columns and a paid gate (all formats are free pre-launch).
 
 ### Build order for this workflow
 1. [x] A (in-session review UI) on the "Your framework" and "Map a control" results. DONE 2026-09-25.
 2. [x] B1 (schema + `GET/POST /projects`, `GET/PUT/DELETE /projects/{id}`). DONE 2026-09-25.
 3. [x] B2 (Save/Open UI + autosave), which makes A durable. DONE 2026-09-25.
-4. [ ] C (export XLSX/JSON, then DOCX). NEXT.
+4. [x] C (export json/csv/xlsx/docx). DONE 2026-09-25.
 5. [ ] Gate paid pieces behind an entitlement; keep in-session review free. (Enforcement is off for
       pre-launch, so nothing is gated yet.)
 

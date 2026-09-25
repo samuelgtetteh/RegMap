@@ -100,6 +100,18 @@ controls and frameworks it satisfies.
 - [ ] Stripe payments (Phase C): subscriptions, overage, webhooks, self-serve signup, usage dashboard.
 - [ ] Add training/skills plans (per-seat, team) to the pricing and billing model.
 
+## Queued requests (raised mid-task; do after the current work)
+
+- [ ] **Authentication for the project.** The founder wants auth. RegMap ALREADY has a purpose-built auth
+      system (`regmap_engine/auth.py` + `billing.py` accounts/api_keys/sessions; `/auth/register`, `/login`,
+      `/logout`, `/session`, `/keys`; scrypt passwords; guest browsing; `regmap_engine/web/account.html`).
+      It is currently OFF in dev (`REGMAP_REQUIRE_AUTH=false`). The founder also has an auth build from a
+      DIFFERENT project on this machine and asked to find it and port what is useful. NEXT STEP: locate
+      that other auth, compare it with RegMap's existing auth, and recommend finish-existing vs port-parts
+      (do not blindly replace the existing auth, it is wired into billing/quota/sessions). Decide, then
+      wire an account UI into the current `web/` shell (login/register/account), since the shell has no
+      account page yet.
+
 ## Session log
 
 **2026-09-25** Consolidated the repo; built the single entry point; made the `web/` shell the one front
