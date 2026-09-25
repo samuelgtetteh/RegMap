@@ -6,7 +6,7 @@
     { id: "home",       label: "Home",       href: "/" },
     { id: "compliance", label: "Compliance", href: "/compliance.html" },
     { id: "policy",     label: "Policy",     href: "/policies.html" },
-    { id: "labs",       label: "Labs",       href: "/labs.html" },
+    { id: "labs",       label: "RegMap University", href: "/labs.html" },
     { id: "pricing",    label: "Pricing",    href: "/pricing.html" },
     { id: "dashboard",  label: "Console",    href: "/dashboard" },
   ];
@@ -24,14 +24,14 @@
        <nav class="nav-links">${links}</nav>
        <span class="nav-sp"></span>
        <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
-       <a class="btn ghost sm nav-desk" href="/dashboard">Open app</a>
+       <a class="btn ghost sm nav-desk" href="/labs.html">Learning Hub</a>
        <a class="btn primary sm nav-desk" href="/compliance.html">Start free</a>
        <button class="icon-btn nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">≡</button>
      </div>
      <div class="mobile-menu pad" id="mobileMenu" hidden>
        ${mlinks}
        <div class="m-cta">
-         <a class="btn ghost sm" href="/dashboard">Open app</a>
+         <a class="btn ghost sm" href="/labs.html">Learning Hub</a>
          <a class="btn primary sm" href="/compliance.html">Start free</a>
        </div>
      </div>`;
