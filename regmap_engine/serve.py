@@ -954,7 +954,7 @@ def pricing():
         "minimum_charge_cu": cu.MIN_CU,
         "deterministic": True,
         "billed_on": "the shape of the request",
-        "not_billed_on": ("elapsed time — so server load, queueing and cold caches never change what "
+        "not_billed_on": ("elapsed time, so server load, queueing and cold caches never change what "
                           "you are charged"),
         "examples_cu": examples,
         "free_endpoints": ["/health", "/frameworks", "/pairs", "/frameworks/{id}/controls",
@@ -1094,4 +1094,4 @@ def auth_create_key(req: KeyReq, principal=Depends(auth.require_key)):
         raise HTTPException(401, detail="sign in to create an API key")
     kid, raw = billing.create_key(principal["account_id"], req.label or "web", scopes="")
     return {"key_id": kid, "api_key": raw,
-             "note": "Copy this now — only its hash is stored, so it cannot be shown again."}
+             "note": "Copy this now, only its hash is stored, so it cannot be shown again."}
