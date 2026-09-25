@@ -1,19 +1,41 @@
-<svg viewBox="0 0 440 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OT and ICS sensor telemetry against a control threshold">
+<svg viewBox="0 0 440 150" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-label="Animated preview: OT and ICS telemetry against a control threshold">
   <defs>
     <linearGradient id="mg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#22D3EE"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient>
+    <linearGradient id="mscan" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8B5CF6" stop-opacity="0"/><stop offset="1" stop-color="#8B5CF6" stop-opacity=".34"/></linearGradient>
     <style>.h{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;fill:#7C8AA6;letter-spacing:.14em}</style>
   </defs>
-  <rect x="0" y="0" width="440" height="150" fill="#0F1420"/>
+  <rect width="440" height="150" fill="#0F1420"/>
   <g stroke="#1E2637" stroke-width="1"><line x1="0" y1="40" x2="440" y2="40"/><line x1="0" y1="76" x2="440" y2="76"/><line x1="0" y1="112" x2="440" y2="112"/></g>
   <text x="16" y="24" class="h">OT / ICS TELEMETRY</text>
+
   <!-- control threshold -->
   <line x1="0" y1="58" x2="440" y2="58" stroke="#FB7185" stroke-width="1.4" stroke-dasharray="5 5" stroke-opacity=".7"/>
   <text x="372" y="53" class="h" fill="#FB7185">THRESHOLD</text>
-  <!-- normal sensor traces -->
+
+  <!-- steady sensors -->
   <path d="M0,96 L44,92 L88,98 L132,90 L176,95 L220,92 L264,97 L308,93 L352,96 L396,92 L440,95" fill="none" stroke="url(#mg)" stroke-width="2" stroke-opacity=".85" stroke-linejoin="round"/>
   <path d="M0,116 L44,114 L88,118 L132,113 L176,117 L220,112 L264,118 L308,114 L352,117 L396,113 L440,116" fill="none" stroke="#34D399" stroke-width="1.6" stroke-opacity=".7" stroke-linejoin="round"/>
-  <!-- one sensor breaches the control threshold -->
-  <path d="M0,84 L60,82 L110,80 L150,78 L188,46 L206,40 L226,80 L280,82 L330,80 L380,82 L440,80" fill="none" stroke="#FB7185" stroke-width="2.4" stroke-linejoin="round"/>
-  <circle cx="206" cy="40" r="5" fill="#FB7185"/>
-  <g transform="translate(214,30)"><rect x="0" y="0" width="118" height="20" rx="10" fill="#1b1220" stroke="#FB7185" stroke-opacity=".5"/><circle cx="13" cy="10" r="4" fill="#FB7185"/><text x="23" y="14" class="h" fill="#FB7185">CONTROL BREACH</text></g>
+
+  <!-- breaching sensor -->
+  <path id="mbreach" d="M0,84 L60,82 L110,80 L150,78 L188,46 L206,40 L226,80 L280,82 L330,80 L380,82 L440,80" fill="none" stroke="#FB7185" stroke-width="2.4" stroke-linejoin="round"/>
+  <circle r="4" fill="#FB7185">
+    <animateMotion dur="5.5s" repeatCount="indefinite"><mpath xlink:href="#mbreach"/></animateMotion>
+  </circle>
+
+  <!-- scanning bar -->
+  <rect y="0" width="64" height="150" fill="url(#mscan)">
+    <animate attributeName="x" values="-64;440" dur="4s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- breach flash + label -->
+  <circle cx="206" cy="40" r="5" fill="#FB7185">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;.45;.55;.82;1" dur="5.5s" repeatCount="indefinite"/>
+    <animate attributeName="r" values="5;8;5" dur="1s" repeatCount="indefinite"/>
+  </circle>
+  <g transform="translate(214,9)">
+    <rect width="122" height="20" rx="10" fill="#1b1220" stroke="#FB7185" stroke-opacity=".5"/>
+    <circle cx="13" cy="10" r="4" fill="#FB7185"/>
+    <text x="23" y="14" class="h" fill="#FB7185">CONTROL BREACH</text>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;.45;.55;.85;1" dur="5.5s" repeatCount="indefinite"/>
+  </g>
 </svg>

@@ -1,0 +1,35 @@
+<svg viewBox="0 0 440 150" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-label="Animated preview: live identity signal monitoring">
+  <defs>
+    <linearGradient id="ig" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6366F1"/><stop offset="1" stop-color="#22D3EE"/></linearGradient>
+    <linearGradient id="iscan" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#22D3EE" stop-opacity="0"/><stop offset="1" stop-color="#22D3EE" stop-opacity=".38"/></linearGradient>
+    <style>.h{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;fill:#7C8AA6;letter-spacing:.14em}</style>
+  </defs>
+  <rect width="440" height="150" fill="#0F1420"/>
+  <g stroke="#1E2637" stroke-width="1"><line x1="0" y1="46" x2="440" y2="46"/><line x1="0" y1="86" x2="440" y2="86"/><line x1="0" y1="118" x2="440" y2="118"/></g>
+  <text x="16" y="24" class="h">LIVE IDENTITY SIGNAL</text>
+
+  <path id="iwave" d="M0,96 L40,92 L80,100 L120,90 L160,98 L200,60 L214,40 L230,96 L280,98 L320,90 L360,100 L400,93 L440,97"
+        fill="none" stroke="url(#ig)" stroke-width="2.2" stroke-linejoin="round"/>
+
+  <!-- pulse travelling along the signal -->
+  <circle r="4.5" fill="#22D3EE">
+    <animateMotion dur="5s" repeatCount="indefinite"><mpath xlink:href="#iwave"/></animateMotion>
+  </circle>
+
+  <!-- scanning bar sweeping across -->
+  <rect y="0" width="64" height="150" fill="url(#iscan)">
+    <animate attributeName="x" values="-64;440" dur="3.6s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- periodic anomaly + label -->
+  <circle cx="214" cy="40" r="5" fill="#FB7185">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;.5;.58;.82;1" dur="6s" repeatCount="indefinite"/>
+    <animate attributeName="r" values="5;7.5;5" dur="1.1s" repeatCount="indefinite"/>
+  </circle>
+  <g transform="translate(196,9)">
+    <rect width="90" height="20" rx="10" fill="#1b1220" stroke="#FB7185" stroke-opacity=".5"/>
+    <circle cx="14" cy="10" r="4" fill="#FB7185"/>
+    <text x="24" y="14" class="h" fill="#FB7185">ANOMALY</text>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;.5;.58;.86;1" dur="6s" repeatCount="indefinite"/>
+  </g>
+</svg>

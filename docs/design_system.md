@@ -101,5 +101,10 @@ training), `pricing.html` (CU pricing), `console.html` (compliance console at `/
   component changes.
 - **2026-09-25 console continuous monitoring.** Added a "Continuous monitoring" section between the
   panels and "Do the work": coming-soon cards for Identity and OT/ICS control monitoring (confirm mapped
-  controls are operating), using `.tile` + `.thumb` banners (`img/track-soc.svg`, new `img/mon-otics.svg`).
-  Reuses existing components; no token changes.
+  controls are operating). Reuses existing components; no token changes.
+- **2026-09-25 animated monitoring previews.** Replaced the static monitoring banners with looping
+  animated SVGs (SMIL, `repeatCount=indefinite`): `img/mon-identity.svg` (live signal, travelling pulse,
+  sweeping scan bar, periodic anomaly) and `img/mon-otics.svg` (telemetry breaching a control threshold).
+  New `.mon-banner` shows the full animation without cropping (unlike `.thumb` which uses object-fit
+  cover). Animated SVGs are the "looped video" pattern for previews of coming-soon capabilities; there is
+  no video generator wired, and SVG stays crisp and tiny. Verified frames advance in the browser.

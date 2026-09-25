@@ -28,6 +28,9 @@
   .scrolllist{max-height:420px;overflow-y:auto;padding-right:6px}
   .subhead{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:12px 0 4px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
   .qa{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+  /* looping animated preview banners (full aspect, no crop) */
+  .mon-banner{border-bottom:1px solid var(--line);background:var(--surface-2);line-height:0}
+  .mon-banner img{width:100%;height:auto;display:block}
 </style>
 </head>
 <body data-page="dashboard">
@@ -70,7 +73,7 @@
     Identity and OT/ICS engines we already have, developed further as we go.</p>
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
     <div class="tile reveal">
-      <div class="thumb"><img src="assets/img/track-soc.svg" alt="Identity signal with an alert" width="440" height="150"></div>
+      <div class="mon-banner"><img src="assets/img/mon-identity.svg?v=1" alt="Animated preview: live identity signal monitoring" width="440" height="150" loading="lazy"></div>
       <div class="body">
         <h3>Identity control monitoring</h3>
         <p>Watch authentication and access signals to confirm identity controls are actually enforced,
@@ -79,7 +82,7 @@
       </div>
     </div>
     <div class="tile reveal">
-      <div class="thumb"><img src="assets/img/mon-otics.svg" alt="OT and ICS telemetry against a threshold" width="440" height="150"></div>
+      <div class="mon-banner"><img src="assets/img/mon-otics.svg?v=1" alt="Animated preview: OT and ICS telemetry against a control threshold" width="440" height="150" loading="lazy"></div>
       <div class="body">
         <h3>OT / ICS control monitoring</h3>
         <p>Watch operational-technology and industrial-control telemetry to confirm the controls
