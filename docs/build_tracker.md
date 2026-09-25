@@ -32,6 +32,11 @@ quiz. Every component maps to the same graded ground truth so progress is object
       graded on what they built. Reuses the lab-environment work (`cloud-target-lab`, k8s lab sessions).
 - [ ] **Gamification** XP, streaks, ranks, badges, leaderboards (TryHackMe / HackTheBox energy).
 - [ ] **Evidence record** a shareable "performed these tasks, scored X" record tied to NICE work roles.
+- [ ] **Saved progress / resume (required).** A student must be able to pause a lab, reading path, video,
+      or real-world build and come back later to continue exactly where they left off. Reuse the saved-
+      projects persistence pattern (`billing.py` `projects` table + `/projects` endpoints, keyed by
+      account): add a learner-progress store (per user, per course/lab: position, answers, XP, streak,
+      completion). This is a first-class RegMap University requirement, not an add-on.
 
 ## Status by area
 
