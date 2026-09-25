@@ -43,6 +43,10 @@ for _p in (ROOT / "regmap_engine", ROOT / "backend"):
     if _sp not in sys.path:
         sys.path.insert(0, _sp)
 
+# The single front end is the repo-level web/ shell (the "Prove you can do the job" site), not the
+# engine's standalone pages. serve.py reads this at import, so it must be set before the import below.
+os.environ.setdefault("REGMAP_WEB_DIR", str(ROOT / "web"))
+
 # The engine is the product; build on its app rather than beside it. sys.path
 # must be set before this import, hence the placement.
 from serve import app  # noqa: E402

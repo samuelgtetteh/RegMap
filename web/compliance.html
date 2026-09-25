@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegMap — map any control to any framework</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  /* page-local: the two-mode tab switch (uses the shell tokens) */
+  .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:12px;margin-top:6px}
+  .tabs button{font:inherit;font-size:13.5px;font-weight:600;color:var(--muted);background:transparent;
+    border:0;border-radius:9px;padding:8px 15px;cursor:pointer}
+  .tabs button.active{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+  .mode[hidden]{display:none}
+</style>
+</head>
+<body data-page="compliance">
+
+<section class="section pad bleed" style="padding-top:34px">
+  <div class="eyebrow">Compliance engine</div>
+  <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Map any control to any framework</h1>
+  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 14px;max-width:72ch">
+    Map one control and see the ranked equivalents in another framework, or run a whole control set and
+    get coverage plus the official gap list. Where an official crosswalk exists, authoritative mappings
+    are marked, so you always see the model against the record.
+  </p>
+  <div class="tabs">
+    <button id="tab-map" class="active" type="button">Map a control</button>
+    <button id="tab-gaps" type="button">Coverage &amp; gaps</button>
+  </div>
+</section>
+
+<!-- ===================== MODE 1: map a control ===================== -->
+<div class="mode" id="mode-map">
+<section class="section tight pad bleed">
+  <div class="xwalk-bar">
+    <label class="fld">From framework
+      <select id="src"><option value="">Loading…</option></select>
+    </label>
+    <div class="arrow">→</div>
+    <label class="fld">To framework
+      <select id="tgt"><option value="">Loading…</option></select>
+    </label>
+  </div>
+
+  <div class="xwalk-meta" id="routeMeta"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px" id="qGrid">
+    <label class="fld">Control in the source framework
+      <select id="ctl"><option value="">— choose a framework first —</option></select>
+    </label>
+    <label class="fld">…or describe the requirement
+      <textarea id="txt" placeholder="e.g. multi-factor authentication for remote access"></textarea>
+    </label>
+  </div>
+
+  <div style="display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap">
+    <button class="btn primary" id="go">Map it →</button>
+    <label class="fld" style="flex-direction:row;align-items:center;gap:8px;text-transform:none">
+      <span style="font-size:12px">Results</span>
+      <select id="topk" style="width:auto;padding:7px 10px">
+        <option>5</option><option selected>10</option><option>15</option><option>25</option>
+      </select>
+    </label>
+    <span id="status" style="font-size:13px;color:var(--muted)"></span>
+  </div>
+</section>
+<hr class="divider">
+<section class="section pad bleed" id="out" style="padding-top:22px"></section>
+</div>
+
+<!-- ===================== MODE 2: coverage & gaps ===================== -->
+<div class="mode" id="mode-gaps" hidden>
+<section class="section tight pad bleed">
+  <div class="xwalk-bar">
+    <label class="fld">Controls you operate (source)
+      <select id="gsrc"><option value="">Loading…</option></select>
+    </label>
+    <div class="arrow">→</div>
+    <label class="fld">Framework to satisfy (target)
+      <select id="gtgt"><option value="">Loading…</option></select>
+    </label>
+  </div>
+  <div class="xwalk-meta" id="gRouteMeta"></div>
+  <div style="display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap">
+    <button class="btn primary" id="ggo">Analyse coverage →</button>
+    <span id="gstatus" style="font-size:13px;color:var(--muted)"></span>
+  </div>
+</section>
+<hr class="divider">
+<section class="section pad bleed" id="gout" style="padding-top:22px"></section>
+</div>
+
+<footer class="site-footer pad bleed">
+  RegMap · every mapping carries its provenance — official, inverted, or derived through a hub.
+</footer>
+
+<script src="assets/api.js"></script>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = RegMap.esc;
+  let FRAMEWORKS = [], PAIRS = [];
+
+  /* ---- tab switch --------------------------------------------------------- */
+  const tabMap = $("tab-map"), tabGaps = $("tab-gaps");
+  function show(mode) {
+    const onMap = mode === "map";
+    $("mode-map").hidden = !onMap; $("mode-gaps").hidden = onMap;
+    tabMap.classList.toggle("active", onMap); tabGaps.classList.toggle("active", !onMap);
+  }
+  tabMap.addEventListener("click", () => show("map"));
+  tabGaps.addEventListener("click", () => show("gaps"));
+
+  /* ---- shared boot: frameworks + the pair graph --------------------------- */
+  const optsFor = predicate => FRAMEWORKS.map(f => {
+    const label = f.controls ? `${f.name} (${f.controls})` : `${f.name} — coming soon`;
+    const why = f.access === "licence-required" && !f.available ? " — licence required" : "";
+    const ok = predicate ? predicate(f) : f.available;
+    return `<option value="${esc(f.id)}" ${ok ? "" : "disabled"}>${esc(label + why)}</option>`;
+  }).join("");
+
+  async function boot() {
+    try {
+      const [fw, pr] = await Promise.all([RegMap.frameworks(), RegMap.pairs()]);
+      FRAMEWORKS = fw.frameworks; PAIRS = pr.pairs;
+    } catch (e) {
+      $("out").innerHTML = `<div class="note err">${esc(e.message)}</div>`;
+      $("gout").innerHTML = `<div class="note err">${esc(e.message)}</div>`;
+      return;
+    }
+    bootMap();
+    bootGaps();
+  }
+
+  /* ======================= MODE 1: map a control ========================== */
+  const src = $("src"), tgt = $("tgt"), ctl = $("ctl"), txt = $("txt"),
+        go = $("go"), out = $("out"), status = $("status"), routeMeta = $("routeMeta"), topk = $("topk");
+
+  const busy = (on, msg) => {
+    go.disabled = on;
+    status.innerHTML = on ? `<span class="spin"></span> ${esc(msg || "working…")}` : "";
+  };
+  const fail = m => { out.innerHTML = `<div class="note err">${esc(m)}</div>`; };
+
+  async function bootMap() {
+    src.innerHTML = `<option value="">— select —</option>` + optsFor();
+    tgt.innerHTML = `<option value="">— select —</option>` + optsFor();
+    const best = PAIRS.filter(p => p.authoritative)
+                      .sort((a, b) => b.source_controls - a.source_controls)[0];
+    if (best) { src.value = best.source; tgt.value = best.target; }
+    await onSource();
+    onPair();
+    if (src.value && tgt.value && ctl.options.length > 1) { ctl.selectedIndex = 1; run(); }
+  }
+
+  async function onSource() {
+    const f = src.value;
+    if (!f) { ctl.innerHTML = `<option value="">— choose a framework first —</option>`; return; }
+    ctl.innerHTML = `<option value="">Loading controls…</option>`;
+    try {
+      const d = await RegMap.controls(f);
+      ctl.innerHTML = `<option value="">— free text instead —</option>` + d.controls.map(c =>
+        `<option value="${esc(c.id)}">${esc(c.id + (c.title ? " · " + c.title : ""))}</option>`).join("");
+    } catch (e) { ctl.innerHTML = `<option value="">unavailable</option>`; status.textContent = e.message; }
+  }
+
+  function onPair() {
+    routeMeta.innerHTML = "";
+    const a = src.value, b = tgt.value;
+    if (!a || !b) return;
+    if (a === b) { routeMeta.innerHTML = `<span class="pill warn">same framework</span>`; return; }
+    const p = PAIRS.find(p => p.source === a && p.target === b);
+    if (!p) {
+      routeMeta.innerHTML = `<span class="pill crit">no route</span>`
+        + `<span>No official mapping and no hub path — the model can still rank the target framework, `
+        + `but there is nothing authoritative to check it against.</span>`;
+      return;
+    }
+    const b2 = RegMap.routeBadge(p.route, p.authoritative);
+    routeMeta.innerHTML = `<span class="pill ${b2.cls}">${esc(b2.label)}</span>`
+      + `<span>${p.source_controls} → ${p.target_controls} controls</span>`
+      + (p.authoritative ? "" : `<span>derived mappings are advisory, not authoritative</span>`);
+  }
+
+  async function run() {
+    const payload = { target: tgt.value, top_k: Number(topk.value) };
+    if (!payload.target) return fail("Choose a target framework.");
+    if (src.value) payload.source = src.value;
+    if (ctl.value) payload.source_id = ctl.value;
+    else if (txt.value.trim()) payload.text = txt.value.trim();
+    else return fail("Pick a control, or describe the requirement in your own words.");
+    busy(true, "mapping…");
+    let d;
+    try { d = await RegMap.map(payload); }
+    catch (e) { busy(false); return fail(e.message); }
+    busy(false);
+    renderMap(d);
+  }
+
+  function renderMap(d) {
+    const off = d.official;
+    const hits = d.results.filter(r => r.official).length;
+    const total = off && off.target_ids ? off.target_ids.length : 0;
+    let cov = "";
+    if (total) {
+      const pct = Math.round((hits / total) * 100);
+      const cls = pct >= 70 ? "good" : pct >= 40 ? "mid" : "bad";
+      cov = `<div class="cov">
+        <div><span class="k">official mappings</span><span class="v">${total}</span></div>
+        <div><span class="k">found in top ${d.results.length}</span><span class="v ${cls}">${hits}</span></div>
+        <div><span class="k">coverage</span><span class="v ${cls}">${pct}%</span></div>
+        <div><span class="k">route</span><span class="v" style="font-size:14px;padding-top:4px">${esc(off.route)}</span></div>
+      </div>`;
+    } else if (off && d.query.source_id) {
+      cov = `<div class="note">An official mapping exists between these frameworks, but
+             <b>${esc(d.query.source_id)}</b> has no target in it — the ranking below is the
+             model's suggestion only.</div>`;
+    } else if (off) {
+      cov = `<div class="note">Free-text queries can't be checked against the official mapping.
+             Pick a control from the source framework to see the authoritative answer alongside the
+             ranking.</div>`;
+    } else if (d.source) {
+      cov = `<div class="note">No official mapping between these frameworks, so nothing below is
+             confirmed — treat it as a starting point for review.</div>`;
+    }
+
+    const rows = d.results.map((r, i) => {
+      const pct = r.score == null ? null : Math.max(0, Math.min(100, Math.round(r.score * 100)));
+      return `<div class="res ${r.official ? "is-official" : ""}">
+        <div class="rank">${i + 1}</div>
+        <div>
+          <span class="cid">${esc(r.id)}</span>
+          ${r.official ? `<span class="pill ok" style="margin-left:8px">official</span>` : ""}
+          ${r.title ? `<div class="ctitle">${esc(r.title)}</div>` : ""}
+          <div class="ctext">${esc(r.text)}</div>
+        </div>
+        <div class="right">
+          ${pct == null ? `<span class="score">—</span>`
+            : `<div class="meter"><i style="width:${pct}%"></i></div><span class="score">${r.score.toFixed(3)}</span>`}
+        </div>
+      </div>`;
+    }).join("");
+
+    const q = d.query.source_id ? `${d.query.source_id} — ${d.source_framework}` : `“${d.query.text}”`;
+    out.innerHTML = `
+      <div class="row-head">
+        <h2 style="font-size:20px">${esc(d.target_framework)}</h2>
+        <span style="font-size:13px;color:var(--muted)">
+          ${esc(q)} · method ${esc(d.method)}${d.method === "tfidf"
+            ? " (embedder unavailable — lexical fallback)" : ""}
+        </span>
+      </div>
+      ${cov}
+      <div class="res-list">${rows}</div>`;
+  }
+
+  src.addEventListener("change", async () => { await onSource(); onPair(); });
+  tgt.addEventListener("change", onPair);
+  ctl.addEventListener("change", () => { if (ctl.value) txt.value = ""; });
+  txt.addEventListener("input",  () => { if (txt.value.trim()) ctl.value = ""; });
+  txt.addEventListener("keydown", e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) run(); });
+  go.addEventListener("click", run);
+
+  /* ======================= MODE 2: coverage & gaps ======================== */
+  const gsrc = $("gsrc"), gtgt = $("gtgt"), ggo = $("ggo"),
+        gout = $("gout"), gstatus = $("gstatus"), gRouteMeta = $("gRouteMeta");
+
+  function bootGaps() {
+    // Only rankable sources with an authoritative route make an honest coverage report.
+    gsrc.innerHTML = `<option value="">— select —</option>` + optsFor();
+    gtgt.innerHTML = `<option value="">— select —</option>` + optsFor();
+    const best = PAIRS.filter(p => p.authoritative)
+                      .sort((a, b) => b.source_controls - a.source_controls)[0];
+    if (best) { gsrc.value = best.source; gtgt.value = best.target; }
+    onGapPair();
+  }
+
+  function onGapPair() {
+    gRouteMeta.innerHTML = "";
+    const a = gsrc.value, b = gtgt.value;
+    if (!a || !b) return;
+    const p = PAIRS.find(p => p.source === a && p.target === b);
+    if (!p) { gRouteMeta.innerHTML = `<span class="pill crit">no route</span>`
+        + `<span>No official crosswalk between these frameworks to compute gaps from.</span>`; return; }
+    const b2 = RegMap.routeBadge(p.route, p.authoritative);
+    gRouteMeta.innerHTML = `<span class="pill ${b2.cls}">${esc(b2.label)}</span>`
+      + `<span>${p.source_controls} → ${p.target_controls} controls</span>`
+      + (p.authoritative ? "" : `<span>derived route — the gap list is advisory, not authoritative</span>`);
+  }
+
+  async function runGaps() {
+    if (!gsrc.value || !gtgt.value) { gout.innerHTML = `<div class="note err">Pick a source and a target framework.</div>`; return; }
+    ggo.disabled = true;
+    gstatus.innerHTML = `<span class="spin"></span> analysing the whole control set…`;
+    let d;
+    try { d = await RegMap.bulk({ source: gsrc.value, target: gtgt.value, top_k: 5 }); }
+    catch (e) { ggo.disabled = false; gstatus.textContent = "";
+      gout.innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+    ggo.disabled = false; gstatus.textContent = "";
+    renderGaps(d);
+  }
+
+  function renderGaps(d) {
+    const c = d.counts;
+    const pct = d.coverage_pct == null ? 0 : d.coverage_pct;
+    const cls = pct >= 70 ? "good" : pct >= 40 ? "mid" : "bad";
+    const chips = d.gaps.map(g =>
+      `<div class="gap-chip"><b>${esc(g.id)}</b><span title="${esc(g.title)}">${esc(g.title || "")}</span></div>`
+    ).join("");
+    gout.innerHTML = `
+      <div class="row-head">
+        <h2 style="font-size:20px">${esc(d.source_framework)} → ${esc(d.target_framework)}</h2>
+        <span style="font-size:13px;color:var(--muted)">route ${esc(d.route)}${
+          d.authoritative ? "" : " · advisory"}</span>
+      </div>
+      <div class="cov">
+        <div><span class="k">controls mapped</span><span class="v">${c.controls_submitted}</span></div>
+        <div><span class="k">with official mapping</span><span class="v">${c.with_official_mapping}</span></div>
+        <div><span class="k">target covered</span><span class="v ${cls}">${c.target_covered}/${c.target_universe}</span></div>
+        <div><span class="k">coverage</span><span class="v ${cls}">${pct}%</span></div>
+        <div><span class="k">gaps</span><span class="v ${c.target_gaps ? "bad" : "good"}">${c.target_gaps}</span></div>
+      </div>
+      <div class="bar" style="margin:6px 0 4px"><i style="width:${pct}%"></i></div>
+      ${d.truncated ? `<div class="note" style="margin-top:12px">${esc(d.note || "")}</div>` : ""}
+      <h3 style="font-size:15px;margin:22px 0 2px">Uncovered target provisions (${d.gaps.length})</h3>
+      <p style="font-size:13px;color:var(--muted);margin:4px 0 0">
+        Target controls that no control in the source set maps to, by the official crosswalk. This number
+        is about the published mapping, not the model, so it can go straight into a report.</p>
+      ${d.gaps.length ? `<div class="gap-grid">${chips}</div>`
+        : `<div class="note" style="margin-top:10px">No gaps — every target provision is covered.</div>`}`;
+  }
+
+  gsrc.addEventListener("change", onGapPair);
+  gtgt.addEventListener("change", onGapPair);
+  ggo.addEventListener("click", runGaps);
+
+  boot();
+})();
+</script>
+</body>
+</html>

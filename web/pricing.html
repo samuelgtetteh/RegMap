@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegMap — pricing</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="pricing">
+
+<section class="section pad bleed" style="padding-top:34px">
+  <div class="eyebrow">Pricing</div>
+  <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Metered by the work, not the clock</h1>
+  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 0;max-width:72ch">
+    You are charged in Compute Units, and a Compute Unit is a deterministic function of the request, so
+    the same call costs the same every time regardless of server load. The formula is public, below.
+  </p>
+</section>
+
+<section class="section tight pad bleed" id="plans"></section>
+
+<section class="section pad bleed" id="detail"></section>
+
+<footer class="site-footer pad bleed">
+  RegMap · deterministic metering — you are never billed for our queueing or a cold cache.
+</footer>
+
+<script src="assets/api.js"></script>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  const esc = RegMap.esc;
+  const $ = id => document.getElementById(id);
+  const num = v => v == null ? "unlimited" : (typeof v === "number" ? v.toLocaleString() : v);
+
+  async function boot() {
+    let d;
+    try { d = await RegMap.pricing(); }
+    catch (e) { $("plans").innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+
+    // ---- plans as tiles ----
+    $("plans").innerHTML = `
+      <div class="row-head"><h2>Plans</h2></div>
+      <div class="grid">
+        ${d.plans.map(p => `
+          <div class="tile" style="box-shadow:none"><div class="body">
+            <h3>${esc(p.name)}</h3>
+            <p style="font-size:22px;font-weight:700;color:var(--ink);margin:2px 0">
+              ${p.monthly_cu == null ? "Custom" : num(p.monthly_cu) + " CU"}
+              <span style="font-size:13px;font-weight:500;color:var(--muted)">${p.monthly_cu == null ? "" : "/ month"}</span>
+            </p>
+            <div class="foot">
+              ${p.allow_overage
+                ? `<span class="pill ok">overage ${p.overage_cu_price}/CU</span>`
+                : `<span class="pill warn">hard cap</span>`}
+              <span class="mono">${esc(p.id)}</span>
+            </div>
+          </div></div>`).join("")}
+      </div>`;
+
+    // ---- the CU formula + worked examples ----
+    const wu = d.work_units || {};
+    $("detail").innerHTML = `
+      <div class="row-head"><h2>How a Compute Unit is derived</h2></div>
+      <div class="cov" style="margin-bottom:16px">
+        <div><span class="k">formula</span><span class="v" style="font-size:15px">${esc(d.formula)}</span></div>
+        <div><span class="k">cpu rate</span><span class="v">${num(d.device_rate.cpu)}×</span></div>
+        <div><span class="k">gpu rate</span><span class="v">${num(d.device_rate.gpu)}×</span></div>
+        <div><span class="k">minimum charge</span><span class="v">${num(d.minimum_charge_cu)}</span></div>
+        <div><span class="k">deterministic</span><span class="v ${d.deterministic ? "good" : "bad"}">${d.deterministic ? "yes" : "no"}</span></div>
+      </div>
+
+      <table class="mtx cfg" style="max-width:640px">
+        <tr><th>Work unit</th><th class="mono">units</th></tr>
+        <tr><td>Per query encoded</td><td class="mono">${num(wu.per_query_encode)}</td></tr>
+        <tr><td>Per 1,000 corpus vectors scored</td><td class="mono">${num(wu.per_1000_corpus_vectors_scored)}</td></tr>
+        <tr><td>Per returned result</td><td class="mono">${num(wu.per_returned_result)}</td></tr>
+      </table>
+
+      <p class="lead" style="font-size:14px;color:var(--muted);margin:18px 0 8px">
+        Billed on <b>${esc(d.billed_on)}</b>. Not billed on ${esc(d.not_billed_on)}.</p>
+
+      <h3 style="font-size:15px;margin:22px 0 8px">What a call costs</h3>
+      <table class="mtx cfg" style="max-width:640px">
+        <tr><th>Example request</th><th class="mono">CU</th></tr>
+        ${Object.entries(d.examples_cu || {}).map(([k, v]) =>
+          `<tr><td>${esc(k)}</td><td class="mono">${esc(String(v))}</td></tr>`).join("")}
+      </table>
+
+      <h3 style="font-size:15px;margin:22px 0 8px">Free endpoints</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 10px">Browsing and account views never cost a Compute Unit.</p>
+      <div class="gap-grid">
+        ${(d.free_endpoints || []).map(e => `<div class="gap-chip"><b style="color:var(--ok)">${esc(e)}</b></div>`).join("")}
+      </div>`;
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

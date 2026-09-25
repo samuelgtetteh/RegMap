@@ -56,7 +56,10 @@ import compute_units as cu
 from eval_crosswalk import rank_tfidf, rank_bm25, score, aggregate
 
 HERE = Path(__file__).resolve().parent
-WEB = HERE / "web"                 # the RegMap product website (served by this engine)
+# The product website. Defaults to the engine's own web/ so the engine still runs standalone; the
+# unified entry point (../main.py) points this at the repo-level web/ shell so the whole platform
+# shares one front end.
+WEB = Path(os.environ.get("REGMAP_WEB_DIR") or (HERE / "web"))
 EMB_CACHE = HERE / "catalog" / ".embeddings"   # derived vectors; gitignored, safe to delete
 # Defaults to the retrained model. regmap-embedder (@0.1) stays on disk untouched because the DTRAP
 # paper's figures are reproducible only against it -- point REGMAP_MODEL there to reproduce them.
