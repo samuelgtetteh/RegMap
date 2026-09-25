@@ -99,3 +99,7 @@ training), `pricing.html` (CU pricing), `console.html` (compliance console at `/
   `/frameworks` `planned_controls`); a "coming soon" stat added. Answerable-pairs panel now lists every
   pair in a scrollable list (`.scrolllist`) instead of truncating with "and N more". No token or
   component changes.
+- **2026-09-25 console continuous monitoring.** Added a "Continuous monitoring" section between the
+  panels and "Do the work": coming-soon cards for Identity and OT/ICS control monitoring (confirm mapped
+  controls are operating), using `.tile` + `.thumb` banners (`img/track-soc.svg`, new `img/mon-otics.svg`).
+  Reuses existing components; no token changes.

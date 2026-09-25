@@ -40,9 +40,17 @@ quiz. Every component maps to the same graded ground truth so progress is object
 - [x] Single entry point `main.py` (`uvicorn main:app`); engine + platform routers on one app (`aa3e551`).
 - [x] Single front end: the `web/` shell is the front door; engine APIs wired in (`169bea6`).
 - [ ] Align the Docker image to `main:app` so the container serves the unified app (still `serve:app` / `app:app`).
-- [ ] Decide the fate of the identity and OT/ICS detector code. Artifacts are present and load
-      (`0b8e015`), but the product is refocused on compliance + training. The SOC training track needs
-      detection *content*, not necessarily the live detector services. OPEN.
+- [x] **Decided the fate of the Identity and OT/ICS engines: repurpose them as continuous compliance
+      monitoring** (confirm mapped controls are operating, not just documented). Surfaced on the console
+      as coming-soon cards (Identity control monitoring, OT/ICS control monitoring); to be developed
+      further. Artifacts remain present and load (`0b8e015`).
+
+### Continuous monitoring (new pillar-1 capability, coming soon)
+- [x] Console cards for Identity and OT/ICS control monitoring, framed as "confirm compliance is being
+      met", marked coming soon.
+- [ ] Build Identity control monitoring: watch auth/access signals, confirm AC/IA controls, flag drift.
+- [ ] Build OT/ICS control monitoring: watch telemetry against control thresholds, flag breaches.
+- [ ] Tie monitor findings back to the mapped controls and the evidence/report layer.
 
 ### Front end
 - [x] **LAYOUT LOCKED (2026-09-25, git tag `design-baseline-v1`).** The current layout is the final
