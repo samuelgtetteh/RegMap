@@ -39,7 +39,8 @@
     "version": "2022",
     "access": "paraphrase-only",
     "license_note": "ISO text is copyrighted: map control IDs + own paraphrase only.",
-    "text": "mapping-only"
+    "text": "mapping-only",
+    "planned": 93
   },
   "pci_dss4": {
     "name": "PCI DSS 4.0",
@@ -47,7 +48,8 @@
     "version": "4.0",
     "access": "paraphrase-only",
     "license_note": "PCI SSC text is copyrighted: IDs + own paraphrase only.",
-    "text": "mapping-only"
+    "text": "mapping-only",
+    "planned": 277
   },
   "soc2": {
     "name": "SOC 2 (Trust Services Criteria)",
@@ -55,7 +57,8 @@
     "version": "2017 TSC",
     "access": "paraphrase-only",
     "license_note": "AICPA TSC text is copyrighted: IDs + own paraphrase only.",
-    "text": "mapping-only"
+    "text": "mapping-only",
+    "planned": 64
   },
   "cis_v8": {
     "name": "CIS Controls v8",
@@ -63,7 +66,8 @@
     "version": "8",
     "access": "paraphrase-only",
     "license_note": "CIS content requires attribution; check redistribution terms.",
-    "text": "mapping-only"
+    "text": "mapping-only",
+    "planned": 153
   },
   "hitrust_csf": {
     "name": "HITRUST CSF",
@@ -71,7 +75,8 @@
     "version": "v11",
     "access": "licence-required",
     "license_note": "BLOCKED: proprietary. Acquire a HITRUST licence before shipping.",
-    "text": "mapping-only"
+    "text": "mapping-only",
+    "planned": 156
   },
   "cobit": {
     "name": "COBIT 2019",
@@ -79,7 +84,8 @@
     "version": "2019",
     "access": "licence-required",
     "license_note": "BLOCKED: proprietary (ISACA). Acquire a licence before shipping.",
-    "text": "mapping-only"
+    "text": "mapping-only",
+    "planned": 40
   },
   "gdpr": {
     "name": "GDPR",
@@ -87,7 +93,8 @@
     "version": "2016/679",
     "access": "public",
     "license_note": "EU regulation text is publicly available.",
-    "text": "mapping-only"
+    "text": "mapping-only",
+    "planned": 99
   },
   "fedramp": {
     "name": "FedRAMP",
@@ -95,7 +102,8 @@
     "version": "Rev.5 baselines",
     "access": "public",
     "license_note": "US Government work (public domain).",
-    "text": "mapping-only"
+    "text": "mapping-only",
+    "planned": 325
   },
   "cmmc": {
     "name": "CMMC 2.0",
@@ -103,7 +111,8 @@
     "version": "2.0",
     "access": "public",
     "license_note": "US Government work (public domain).",
-    "text": "mapping-only"
+    "text": "mapping-only",
+    "planned": 110
   },
   "nist_ssdf": {
     "name": "NIST SSDF (SP 800-218)",
@@ -120,7 +129,8 @@
     "access": "paraphrase-only",
     "hub": true,
     "license_note": "SCF content is licensed; only the NIST-published mapping ids are used here.",
-    "text": "mapping-only"
+    "text": "mapping-only",
+    "planned": 1200
   },
   "nist_80172": {
     "name": "NIST SP 800-172 Rev.3 (enhanced CUI)",

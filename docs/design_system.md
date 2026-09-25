@@ -94,3 +94,8 @@ training), `pricing.html` (CU pricing), `console.html` (compliance console at `/
 - **2026-09-25 `c702245` (LOCKED baseline, tag `design-baseline-v1`).** New design system (Linear +
   Vanta + Datadog), SVG imagery, rebuilt homepage and compliance console, mobile menu, responsive
   hardening, cache-busting. This is the final layout; entries below record changes on top of it.
+- **2026-09-25 console content.** Framework catalog now also lists the 10 coming-soon frameworks with a
+  "coming soon" pill and their planned control counts (registry `planned` field, surfaced as
+  `/frameworks` `planned_controls`); a "coming soon" stat added. Answerable-pairs panel now lists every
+  pair in a scrollable list (`.scrolllist`) instead of truncating with "and N more". No token or
+  component changes.

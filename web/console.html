@@ -12,12 +12,21 @@
 <style>
   .grid2{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
   @media(max-width:900px){.grid2{grid-template-columns:1fr}}
-  .fwrow{display:grid;grid-template-columns:1fr 120px 60px;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+  .fwrow{display:grid;grid-template-columns:1fr 120px 64px;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
   .fwrow:last-child{border-bottom:0}
+  .fwrow.soon{opacity:.78}
   .fwrow .bar{height:8px;border-radius:5px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
   .fwrow .bar>i{display:block;height:100%;background:var(--grad)}
+  .fwrow.soon .bar>i{background:repeating-linear-gradient(90deg,var(--line-2) 0 6px,transparent 6px 11px)}
+  .fwrow .cnt{font-family:var(--mono);text-align:right;font-size:13px}
+  .fwrow.soon .cnt{color:var(--muted)}
+  .pill.soon{color:var(--faint);background:color-mix(in srgb,var(--faint) 16%,transparent)}
+  .pill.soon::before{background:var(--faint)}
   .pairrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
   .pairrow:last-child{border-bottom:0}
+  /* scrollable lists so every framework and pair is explorable */
+  .scrolllist{max-height:420px;overflow-y:auto;padding-right:6px}
+  .subhead{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:12px 0 4px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
   .qa{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
 </style>
 </head>
@@ -35,7 +44,7 @@
     <div class="cell"><div class="stat"><span class="k">frameworks live</span><span class="n" id="s-fw">–</span></div></div>
     <div class="cell"><div class="stat"><span class="k">controls indexed</span><span class="n" id="s-ctl">–</span></div></div>
     <div class="cell"><div class="stat"><span class="k">answerable pairs</span><span class="n" id="s-pairs">–</span></div></div>
-    <div class="cell"><div class="stat"><span class="k">official routes</span><span class="n" id="s-off">–</span></div></div>
+    <div class="cell"><div class="stat"><span class="k">coming soon</span><span class="n" id="s-soon">–</span></div></div>
   </div>
 </section>
 
@@ -43,11 +52,11 @@
   <div class="grid2">
     <div class="panel reveal">
       <div class="panel-head"><h3>Framework catalog</h3><span class="sub" id="fw-sub"></span></div>
-      <div class="panel-body" id="fw-body"><div class="note"><span class="spin"></span> loading frameworks</div></div>
+      <div class="panel-body"><div class="scrolllist" id="fw-body"><div class="note"><span class="spin"></span> loading frameworks</div></div></div>
     </div>
     <div class="panel reveal">
       <div class="panel-head"><h3>Answerable pairs</h3><span class="sub" id="pr-sub"></span></div>
-      <div class="panel-body" id="pr-body"><div class="note"><span class="spin"></span> loading pairs</div></div>
+      <div class="panel-body"><div class="scrolllist" id="pr-body"><div class="note"><span class="spin"></span> loading pairs</div></div></div>
     </div>
   </div>
 </section>
@@ -81,6 +90,22 @@
   const $ = id => document.getElementById(id);
   const esc = RegMap.esc;
 
+  const accessPill = f => {
+    const cls = f.access === "public" ? "ok" : f.access === "licence-required" ? "crit" : "warn";
+    return `<span class="pill ${cls}" style="padding:1px 8px">${esc(f.access)}</span>`;
+  };
+
+  const fwRow = (f, max, soon) => `
+    <div class="fwrow${soon ? " soon" : ""}">
+      <div>
+        <div style="font-weight:600;font-size:13.5px">${esc(f.name)}</div>
+        <div class="mono" style="font-size:11px;color:var(--faint)">${esc(f.id)} · ${
+          soon ? `<span class="pill soon" style="padding:1px 8px">coming soon</span> ${accessPill(f)}` : accessPill(f)}</div>
+      </div>
+      <div class="bar"><i style="width:${Math.round(100 * (soon ? f.planned_controls : f.controls) / max)}%"></i></div>
+      <div class="cnt">${(soon ? f.planned_controls : f.controls).toLocaleString()}</div>
+    </div>`;
+
   async function boot() {
     let fw, pr;
     try { [fw, pr] = await Promise.all([RegMap.frameworks(), RegMap.pairs()]); }
@@ -91,40 +116,35 @@
       return;
     }
     const frameworks = fw.frameworks, pairs = pr.pairs;
-    const populated = frameworks.filter(f => f.controls);
-    const totalCtl = frameworks.reduce((a, f) => a + (f.controls || 0), 0);
+    const live = frameworks.filter(f => f.controls).sort((a, b) => b.controls - a.controls);
+    const soon = frameworks.filter(f => !f.controls)
+                           .sort((a, b) => (b.planned_controls || 0) - (a.planned_controls || 0));
+    const totalCtl = live.reduce((a, f) => a + f.controls, 0);
     const official = pairs.filter(p => p.authoritative).length;
+    // bars share one scale across live and planned so counts are comparable
+    const max = Math.max(1, ...frameworks.map(f => Math.max(f.controls, f.planned_controls || 0)));
 
-    $("s-fw").textContent = populated.length;
+    $("s-fw").textContent = live.length;
     $("s-ctl").textContent = totalCtl.toLocaleString();
     $("s-pairs").textContent = pairs.length;
-    $("s-off").textContent = official;
+    $("s-soon").textContent = soon.length;
 
-    // framework catalog, biggest first
-    const max = Math.max(1, ...populated.map(f => f.controls));
-    $("fw-sub").textContent = `${populated.length} of ${frameworks.length} imported`;
-    $("fw-body").innerHTML = populated
-      .sort((a, b) => b.controls - a.controls)
-      .map(f => {
-        const cls = f.access === "public" ? "ok" : f.access === "licence-required" ? "crit" : "warn";
-        return `<div class="fwrow">
-          <div><div style="font-weight:600;font-size:13.5px">${esc(f.name)}</div>
-            <div class="mono" style="font-size:11px;color:var(--faint)">${esc(f.id)} · <span class="pill ${cls}" style="padding:1px 8px">${esc(f.access)}</span></div></div>
-          <div class="bar"><i style="width:${Math.round(100 * f.controls / max)}%"></i></div>
-          <div class="mono" style="text-align:right;font-size:13px">${f.controls}</div>
-        </div>`;
-      }).join("");
+    $("fw-sub").textContent = `${live.length} live · ${soon.length} coming soon`;
+    $("fw-body").innerHTML =
+      `<div class="subhead">Live now</div>` + live.map(f => fwRow(f, max, false)).join("") +
+      (soon.length ? `<div class="subhead">Coming soon (planned control counts)</div>`
+        + soon.map(f => fwRow(f, max, true)).join("") : "");
 
-    // pairs
+    // every pair listed, scrollable to explore
     const rankable = pairs.filter(p => p.rankable).length;
-    $("pr-sub").textContent = `${rankable} rankable`;
-    $("pr-body").innerHTML = pairs.slice(0, 12).map(p => {
+    $("pr-sub").textContent = `${pairs.length} pairs · ${rankable} rankable`;
+    $("pr-body").innerHTML = pairs.map(p => {
       const b = RegMap.routeBadge(p.route, p.authoritative);
       return `<div class="pairrow">
-        <span class="mono" style="font-size:12.5px">${esc(p.source)} <span style="color:var(--faint)">→</span> ${esc(p.target)}</span>
+        <span class="mono" style="font-size:12.5px">${esc(p.source)} <span style="color:var(--faint)">&#8594;</span> ${esc(p.target)}</span>
         <span class="pill ${b.cls}">${esc(b.label)}</span>
       </div>`;
-    }).join("") + (pairs.length > 12 ? `<div style="font-size:12px;color:var(--faint);margin-top:10px">and ${pairs.length - 12} more</div>` : "");
+    }).join("");
   }
   boot();
 })();

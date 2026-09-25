@@ -393,6 +393,7 @@ def frameworks():
         access = f.get("access", "public")
         out.append({"id": fid, "name": f.get("name", fid), "family": f.get("family"),
                     "version": f.get("version"), "controls": f["controls"],
+                    "planned_controls": int(f.get("planned", 0)),
                     "access": access, "hub": bool(f.get("hub")),
                     "available": bool(f["controls"]) and (access != "licence-required" or fid in LICENSED),
                     "license_note": f.get("license_note", "")})
