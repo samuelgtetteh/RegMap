@@ -21,3 +21,7 @@ models/regmap-embedder-v2-best/
 
 # billing ledger (development only); production uses managed Postgres via DATABASE_URL
 *.db
+
+# Local-only admin/dev credentials (never committed)
+*.local.md
+secrets.local*
