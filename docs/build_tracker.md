@@ -24,19 +24,27 @@ Both pillars are a co-equal selling point in the business plan (`business_plan/b
 Each track (Cybersecurity / SOC Analyst, IT Audit / GRC) is a complete learning experience, not just a
 quiz. Every component maps to the same graded ground truth so progress is objective:
 
-- [ ] **Reading material** concept briefs, the one resource that matters per topic.
-- [ ] **Video tutorials** short walkthroughs per skill.
-- [ ] **Graded labs** auto-graded exercises on real crosswalks (precision/recall). BUILT: `web/labs.html`.
+RegMap University was rebuilt into a full learning hub on 2026-09-26 (`web/labs.html`): a hub with two
+tracks (SOC Analyst / Cybersecurity, IT Audit / GRC), four courses, and ten lessons across reading,
+video, and graded-lab types, with hash-routed hub/course/lesson views, XP + rank + day-streak
+gamification, and saved-progress/resume backed by a new `learning_progress` store.
+
+- [x] **Reading material** concept briefs. DONE: real briefs on crosswalks, control anatomy, coverage vs
+      gaps, and evidence. Extend with more topics over time.
+- [~] **Video tutorials** short walkthroughs per skill. Lesson type + animated looped preview built;
+      real recorded videos are still to be produced.
+- [x] **Graded labs** auto-graded exercises on real crosswalks (precision/recall). Embedded as a lesson
+      type in the hub; passing awards XP and completes the lesson.
 - [ ] **Real-world practice** the learner creates actual systems and interacts with them (stand up a
       cloud environment, misconfigure/harden it, scan it, map findings to controls, assemble evidence),
-      graded on what they built. Reuses the lab-environment work (`cloud-target-lab`, k8s lab sessions).
-- [ ] **Gamification** XP, streaks, ranks, badges, leaderboards (TryHackMe / HackTheBox energy).
+      graded on what they built. Reuses the lab-environment work (`cloud-target-lab`, k8s lab sessions). NOT YET.
+- [~] **Gamification** XP, streaks, ranks. DONE: XP per lesson, 5 ranks (Novice to Senior), day-streak.
+      Still to add: badges and leaderboards.
 - [ ] **Evidence record** a shareable "performed these tasks, scored X" record tied to NICE work roles.
-- [ ] **Saved progress / resume (required).** A student must be able to pause a lab, reading path, video,
-      or real-world build and come back later to continue exactly where they left off. Reuse the saved-
-      projects persistence pattern (`billing.py` `projects` table + `/projects` endpoints, keyed by
-      account): add a learner-progress store (per user, per course/lab: position, answers, XP, streak,
-      completion). This is a first-class RegMap University requirement, not an add-on.
+      Graded-lab results already cite the NICE task; a shareable transcript is NOT YET built.
+- [x] **Saved progress / resume (required). DONE 2026-09-26.** New `learning_progress` table + `GET/PUT
+      /learning/{key}`; the hub loads progress on boot (backend when signed in, localStorage for guests),
+      saves on every change, and offers "Resume where you left off". Per-user completion, XP, and streak.
 
 ## Status by area
 

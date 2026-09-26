@@ -146,6 +146,16 @@ projects = Table(
     Column("updated_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
 )
 
+learning_progress = Table(
+    # RegMap University (#training pillar): a per-user, per-key JSON blob holding course/lesson progress,
+    # XP, streak, and completion, so a learner can pause and resume exactly where they left off.
+    "learning_progress", metadata,
+    Column("account_id", String(40), primary_key=True),
+    Column("pkey", String(64), primary_key=True),          # e.g. "university"
+    Column("data", Text),                                   # JSON
+    Column("updated_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+)
+
 project_members = Table(
     # Collaboration (#13): who, besides the owner, can work on a project, and at what role.
     "project_members", metadata,
@@ -480,6 +490,36 @@ def list_activity(pid, limit=200):
             project_activity.c.project_id == pid)
             .order_by(project_activity.c.created_at.desc()).limit(limit)).mappings().all()
     return [dict(r) for r in rows]
+
+
+# ---- RegMap University: learner progress ---------------------------------------------------------
+def get_learning(account_id, key):
+    with engine().begin() as c:
+        row = c.execute(select(learning_progress.c.data).where(
+            learning_progress.c.account_id == account_id,
+            learning_progress.c.pkey == key)).first()
+    if not row:
+        return {}
+    try:
+        return json.loads(row[0] or "{}")
+    except Exception:
+        return {}
+
+
+def put_learning(account_id, key, data):
+    now = datetime.now(timezone.utc)
+    payload = json.dumps(data or {})
+    with engine().begin() as c:
+        exists = c.execute(select(learning_progress.c.pkey).where(
+            learning_progress.c.account_id == account_id, learning_progress.c.pkey == key)).first()
+        if exists:
+            c.execute(learning_progress.update().where(
+                learning_progress.c.account_id == account_id, learning_progress.c.pkey == key)
+                .values(data=payload, updated_at=now))
+        else:
+            c.execute(insert(learning_progress).values(
+                account_id=account_id, pkey=key, data=payload, updated_at=now))
+    return True
 
 
 # ---- usage + quota -------------------------------------------------------------------------------

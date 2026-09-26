@@ -1244,6 +1244,30 @@ def projects_delete(pid: str, principal=Depends(auth.require_key)):
 
 
 # =====================================================================================================
+# REGMAP UNIVERSITY: learner progress (saved progress / resume)
+# =====================================================================================================
+class LearningReq(BaseModel):
+    data: dict = Field(default_factory=dict, description="the learner's progress blob for this key")
+
+
+@app.get("/learning/{key}")
+def learning_get(key: str, principal=Depends(auth.require_key)):
+    """Return the signed-in learner's saved progress for a key (e.g. 'university'). Guests get nothing;
+    the page keeps their progress in the browser instead."""
+    if not principal or principal.get("account_id") in (None, "anonymous"):
+        return {"key": key, "data": {}, "authenticated": False}
+    return {"key": key, "data": billing.get_learning(principal["account_id"], key), "authenticated": True}
+
+
+@app.put("/learning/{key}")
+def learning_put(key: str, req: LearningReq, principal=Depends(auth.require_key)):
+    """Save the learner's progress so they can resume later. Requires an account (like saving a project)."""
+    _require_account(principal, "save your progress")
+    billing.put_learning(principal["account_id"], key[:64], req.data)
+    return {"saved": True}
+
+
+# =====================================================================================================
 # COLLABORATION (#13): members + roles, comments, and an approval / activity trail
 # =====================================================================================================
 def _iso_rows(rows):

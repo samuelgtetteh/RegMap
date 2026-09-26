@@ -2,234 +2,425 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RegMap University</title>
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=30">
-<link rel="stylesheet" href="assets/app.css?v=30">
+<link rel="stylesheet" href="assets/site.css?v=32">
+<link rel="stylesheet" href="assets/app.css?v=32">
+<style>
+  /* RegMap University hub */
+  .u-hero{padding-top:34px}
+  .xpbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:18px;padding:14px 18px;
+    background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-sm)}
+  .xp-rank{font-size:15px;font-weight:800}
+  .xp-rank .r{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .xp-meter{flex:1;min-width:180px}
+  .xp-track{height:8px;border-radius:5px;background:var(--surface-2);overflow:hidden;border:1px solid var(--line)}
+  .xp-track>i{display:block;height:100%;background:var(--grad);transition:width .5s}
+  .xp-sub{font-size:12px;color:var(--muted);margin-top:5px}
+  .xp-stat{text-align:center}.xp-stat b{font-size:20px;display:block}.xp-stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono)}
+  .u-resume{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px;padding:16px 18px;
+    border:1px solid var(--accent);border-radius:16px;background:var(--accent-soft)}
+  .u-resume .grow{flex:1;min-width:200px}
+  .track{margin-top:34px}
+  .track-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .track-head .t-ico{width:38px;height:38px;border-radius:11px;background:var(--grad);flex:none}
+  .track-head h2{font-size:20px;margin:0}
+  .track-head p{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+  .course-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px}
+  .course{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:18px;cursor:pointer;
+    transition:border-color .15s,transform .1s;display:flex;flex-direction:column;gap:8px}
+  .course:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .course h3{font-size:16px;margin:0}
+  .course .blurb{font-size:13px;color:var(--muted);line-height:1.5;flex:1}
+  .course .cprog{display:flex;align-items:center;gap:10px;margin-top:6px}
+  .cprog-bar{flex:1;height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden;border:1px solid var(--line)}
+  .cprog-bar>i{display:block;height:100%;background:var(--grad)}
+  .cprog-pct{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .course .done-badge{color:var(--ok);font-weight:700;font-size:12px}
+  /* course + lesson views */
+  .crumb{font-size:13px;color:var(--muted);margin-bottom:8px}
+  .crumb a{color:var(--accent);cursor:pointer}
+  .lesson-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+  .lrow{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;
+    background:var(--surface);cursor:pointer;transition:border-color .15s}
+  .lrow:hover{border-color:var(--accent)}
+  .lrow .tick{width:26px;height:26px;border-radius:50%;border:2px solid var(--line-2);flex:none;display:grid;place-items:center;font-size:14px;color:var(--muted)}
+  .lrow.done .tick{background:var(--ok);border-color:var(--ok);color:#fff}
+  .lrow .grow{flex:1}.lrow .l-type{font-family:var(--mono);font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em}
+  .lrow .l-title{font-size:15px;font-weight:600;margin-top:2px}
+  .lrow .xp-tag{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:700}
+  .reading{max-width:72ch;font-size:15px;line-height:1.7}
+  .reading h3{font-size:18px;margin:22px 0 8px}
+  .reading p{margin:0 0 12px}.reading ul{margin:0 0 12px;padding-left:22px}.reading li{margin-bottom:6px}
+  .reading .key{background:var(--surface-2);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:10px;padding:12px 14px;margin:12px 0}
+  .vid{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface);max-width:640px}
+  .vid svg{display:block;width:100%;height:auto}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:var(--ink);color:var(--bg);font-weight:700;font-size:14px;padding:11px 18px;border-radius:12px;
+    box-shadow:var(--shadow);transition:.3s;z-index:80;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
 </head>
 <body data-page="labs">
 
-<section class="section pad bleed" style="padding-top:34px">
-  <div class="eyebrow">RegMap University · Learning Hub</div>
-  <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Prove you can do the job</h1>
-  <p class="lead" style="color:var(--muted);font-size:15px;margin:8px 0 0;max-width:74ch">
-    RegMap University is the hands-on learning hub. The first graded lab is below; reading briefs, video
-    tutorials, and real-world build labs are coming. Start with <b>Map the control</b>.</p>
-  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 0;max-width:74ch">
-    You are given a control from one framework and a set of candidate provisions from another. Select the
-    ones that genuinely map. Your answer is scored against the <b>official published crosswalk</b>, not
-    against an opinion, so this is the same judgement an auditor is paid to make.
-  </p>
-  <div class="note" style="margin-top:16px;max-width:74ch">
-    <b>Selecting everything will fail you.</b> Scoring uses precision and recall, so over-selecting is
-    penalised exactly as much as missing. That is deliberate: an auditor who maps a control to everything
-    has done no work.
-  </div>
-</section>
-
-<section class="section tight pad bleed">
-  <div class="xwalk-bar">
-    <label class="fld">From framework
-      <select id="src"><option value="">Loading…</option></select>
-    </label>
-    <div class="arrow">→</div>
-    <label class="fld">To framework
-      <select id="tgt"><option value="">Loading…</option></select>
-    </label>
-  </div>
-  <div class="xwalk-meta" id="routeMeta"></div>
-  <div style="display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap">
-    <button class="btn primary" id="newq">New exercise →</button>
-    <label class="fld" style="flex-direction:row;align-items:center;gap:8px;text-transform:none">
-      <span style="font-size:12px">Difficulty</span>
-      <select id="distractors" style="width:auto;padding:7px 10px">
-        <option value="4">easier: 4 distractors</option>
-        <option value="8" selected>standard: 8</option>
-        <option value="14">harder: 14</option>
-      </select>
-    </label>
-    <span id="tally" class="mono" style="font-size:12.5px;color:var(--muted)"></span>
-  </div>
-</section>
-
-<hr class="divider">
-
-<section class="section pad bleed" id="out" style="padding-top:22px"></section>
+<main id="u"></main>
+<div class="toast" id="toast"></div>
 
 <footer class="site-footer pad bleed">
-  RegMap · graded against official government crosswalks · NICE task T0267
+  RegMap University · graded against official government crosswalks · aligned to NICE work roles
 </footer>
 
-<script src="assets/api.js?v=30"></script>
-<script src="assets/shell.js?v=30"></script>
+<script src="assets/api.js?v=32"></script>
+<script src="assets/shell.js?v=32"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
-  const src = $("src"), tgt = $("tgt"), out = $("out"), newq = $("newq"),
-        routeMeta = $("routeMeta"), tally = $("tally"), distractors = $("distractors");
-  let PAIRS = [], FW = [], current = null;
-  const stats = { attempts: 0, passed: 0, f1: [] };
-
   const esc = RegMap.esc;
+  const host = $("u");
 
-  function showTally() {
-    if (!stats.attempts) { tally.textContent = ""; return; }
-    const avg = stats.f1.reduce((a, b) => a + b, 0) / stats.f1.length;
-    tally.textContent = `session: ${stats.passed}/${stats.attempts} passed · mean F1 ${avg.toFixed(2)}`;
-  }
+  /* ===================== curriculum ======================================== */
+  // Each lesson: reading (a concept brief), video (an animated preview of a walkthrough coming soon), or
+  // lab (a graded exercise on a real, official crosswalk). XP is awarded once per lesson.
+  const XP = { reading: 10, video: 10, lab: 30 };
+  const CURR = [
+    { id: "soc", name: "Cybersecurity / SOC Analyst", scene: "shield",
+      blurb: "Learn to read controls and map them the way a security analyst must.",
+      courses: [
+        { id: "soc-foundations", name: "Foundations of control mapping",
+          blurb: "What a crosswalk is, why it matters, and your first graded mapping.",
+          lessons: [
+            { id: "soc-f-read", type: "reading", title: "What is a crosswalk?", body: `
+              <p>A <b>crosswalk</b> maps a control in one framework to the equivalent control(s) in another.
+              It is how a team proves that the work they already do to satisfy one standard also satisfies
+              the next, without redoing the analysis from scratch.</p>
+              <h3>Why it matters</h3>
+              <p>Most organizations must satisfy several frameworks at once (SOC 2, ISO 27001, HIPAA,
+              NIST 800-53). Without a crosswalk, each audit is a separate project. With one, a single
+              control implementation is shown to cover many obligations.</p>
+              <div class="key"><b>The core skill:</b> deciding whether two controls truly address the same
+              risk, not just share keywords. That judgement is what an auditor is paid for, and what you
+              will practise in the graded labs.</div>
+              <h3>Authoritative vs suggested</h3>
+              <ul>
+                <li><b>Official</b> mappings come from a published government crosswalk. They are authoritative.</li>
+                <li><b>Derived</b> mappings are inferred through a shared hub framework. Advisory, review them.</li>
+                <li><b>Model suggestions</b> rank likely matches when no official mapping exists. Always for review.</li>
+              </ul>` },
+            { id: "soc-f-vid", type: "video", title: "How mapping works, end to end",
+              note: "A three-minute walkthrough of taking one control and finding its equivalents. Video coming soon; the preview loops the flow." },
+            { id: "soc-f-lab", type: "lab", title: "Graded lab: map a CSF outcome to 800-53",
+              source: "nist_csf2", target: "nist_80053", distractors: 8 },
+          ] },
+        { id: "soc-reading-control", name: "Reading a control",
+          blurb: "Break a control into its parts so you can map it precisely.",
+          lessons: [
+            { id: "soc-r-read", type: "reading", title: "Anatomy of a control", body: `
+              <p>Every control has a <b>subject</b> (what must be protected), an <b>action</b> (what must be
+              done), and often <b>conditions</b> (how often, by whom, to what standard). Mapping is matching
+              on the action and subject, not the surrounding prose.</p>
+              <div class="key"><b>Tip:</b> strip the boilerplate. "The organization develops, documents, and
+              disseminates an access control policy" is, at its core, <i>have an access control policy</i>.
+              Match on that.</div>
+              <p>When you compare two controls, ask: would evidence that satisfies one plausibly satisfy the
+              other? If yes, it is a mapping. If it only overlaps in topic, it is not.</p>` },
+            { id: "soc-r-lab", type: "lab", title: "Graded lab: HIPAA to 800-53",
+              source: "hipaa_security", target: "nist_80053", distractors: 8 },
+          ] },
+      ] },
+    { id: "grc", name: "IT Audit / GRC", scene: "legal",
+      blurb: "Build the coverage, gaps, and evidence view an auditor accepts.",
+      courses: [
+        { id: "grc-coverage", name: "Coverage and gaps",
+          blurb: "Measure a program against a framework and read the gap list.",
+          lessons: [
+            { id: "grc-c-read", type: "reading", title: "Coverage vs gaps", body: `
+              <p><b>Coverage</b> is the share of a target framework your controls satisfy. A <b>gap</b> is a
+              target provision that nothing you operate maps to. The gap list, drawn from the official
+              crosswalk, is what goes into a remediation plan.</p>
+              <div class="key"><b>Watch for:</b> a high coverage number built on weak mappings. Coverage is
+              only as trustworthy as the mappings behind it, which is why review and status matter.</div>` },
+            { id: "grc-c-vid", type: "video", title: "The audit-grade workflow",
+              note: "Review, status, evidence, export: how a mapping becomes a deliverable. Video coming soon." },
+            { id: "grc-c-lab", type: "lab", title: "Graded lab: 800-171 to 800-53",
+              source: "nist_80171", target: "nist_80053", distractors: 8 },
+          ] },
+        { id: "grc-evidence", name: "Evidence and defensibility",
+          blurb: "Make a crosswalk that stands up in an audit.",
+          lessons: [
+            { id: "grc-e-read", type: "reading", title: "Evidence that holds up", body: `
+              <p>A mapping is only as good as the evidence attached to it. For each accepted mapping, an
+              auditor wants to see <b>what</b> satisfies the control (a policy, a config, a scan, a ticket)
+              and <b>who</b> confirmed it.</p>
+              <ul><li>Attach evidence to the control, not the framework.</li>
+              <li>Prefer artifacts that regenerate (a scan, a report) over static claims.</li>
+              <li>Record the reviewer and the date; that is your approval trail.</li></ul>` },
+            { id: "grc-e-lab", type: "lab", title: "Graded lab: CSF to 800-53, harder",
+              source: "nist_csf2", target: "nist_80053", distractors: 14 },
+          ] },
+      ] },
+  ];
 
-  /* Only pairs with an AUTHORITATIVE mapping can be graded, a derived route is advisory, so grading
-     against it would be marking a learner against a guess. */
-  async function boot() {
-    let fw, pr;
-    try { [fw, pr] = await Promise.all([RegMap.frameworks(), RegMap.pairs()]); }
-    catch (e) { out.innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
-    FW = fw.frameworks;
-    PAIRS = pr.pairs.filter(p => p.authoritative && p.rankable);
-    if (!PAIRS.length) {
-      out.innerHTML = `<div class="note err">No pair has an official mapping to grade against.</div>`;
-      newq.disabled = true; return;
-    }
-    const name = id => (FW.find(f => f.id === id) || {}).name || id;
-    const sources = [...new Set(PAIRS.map(p => p.source))];
-    src.innerHTML = sources.map(s => `<option value="${esc(s)}">${esc(name(s))}</option>`).join("");
-    // default to the pair with the most official mappings behind it
-    const best = PAIRS.slice().sort((a, b) => b.source_controls - a.source_controls)[0];
-    src.value = best.source;
-    fillTargets(best.target);
-    onPair();
-    run();
-  }
+  const ALL_LESSONS = [];
+  CURR.forEach(t => t.courses.forEach(c => c.lessons.forEach(l =>
+    ALL_LESSONS.push(Object.assign({ trackId: t.id, courseId: c.id }, l)))));
+  const lessonById = id => ALL_LESSONS.find(l => l.id === id);
+  const courseById = id => { for (const t of CURR) { const c = t.courses.find(c => c.id === id); if (c) return { track: t, course: c }; } return null; };
 
-  function fillTargets(prefer) {
-    const name = id => (FW.find(f => f.id === id) || {}).name || id;
-    const ts = PAIRS.filter(p => p.source === src.value).map(p => p.target);
-    tgt.innerHTML = ts.map(t => `<option value="${esc(t)}">${esc(name(t))}</option>`).join("");
-    if (prefer && ts.includes(prefer)) tgt.value = prefer;
-  }
+  const RANKS = [[0, "Novice"], [60, "Apprentice"], [160, "Practitioner"], [320, "Analyst"], [640, "Senior"]];
+  const rankOf = xp => { let r = RANKS[0], nxt = null; for (let i = 0; i < RANKS.length; i++) { if (xp >= RANKS[i][0]) { r = RANKS[i]; nxt = RANKS[i + 1] || null; } } return { name: r[1], base: r[0], next: nxt }; };
 
-  function onPair() {
-    const p = PAIRS.find(p => p.source === src.value && p.target === tgt.value);
-    routeMeta.innerHTML = p
-      ? `<span class="pill ok">official: ${esc(p.route)}</span>`
-        + `<span>graded against the published crosswalk</span>`
-      : `<span class="pill crit">not gradable</span>`;
-  }
+  /* ===================== progress state (saved / resume) =================== */
+  const KEY = "university";
+  let state = { completed: {}, xp: 0, streak: 0, lastActive: null };
+  let authed = false;
 
-  /* ---- set an exercise ---------------------------------------------------- */
-  async function run() {
-    newq.disabled = true;
-    out.innerHTML = `<div class="note"><span class="spin"></span> setting an exercise…</div>`;
+  async function loadState() {
     try {
-      current = await RegMap.exercise({ source: src.value, target: tgt.value,
-                                        distractors: Number(distractors.value) });
-    } catch (e) {
-      newq.disabled = false;
-      out.innerHTML = `<div class="note err">${esc(e.message)}</div>`; return;
+      const r = await RegMap.learningGet(KEY);
+      authed = !!r.authenticated;
+      if (authed && r.data && Object.keys(r.data).length) { state = Object.assign(state, r.data); return; }
+    } catch (e) { /* fall through to local */ }
+    try { const raw = localStorage.getItem("regmap.university"); if (raw) state = Object.assign(state, JSON.parse(raw)); } catch (e) {}
+  }
+  let _saveT;
+  function saveState() {
+    try { localStorage.setItem("regmap.university", JSON.stringify(state)); } catch (e) {}
+    if (authed) { clearTimeout(_saveT); _saveT = setTimeout(() => { RegMap.learningPut(KEY, state).catch(() => {}); }, 400); }
+  }
+  function touchStreak() {
+    const today = new Date().toISOString().slice(0, 10);
+    if (state.lastActive === today) return;
+    const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    state.streak = (state.lastActive === y) ? (state.streak || 0) + 1 : 1;
+    state.lastActive = today;
+  }
+  function completeLesson(l) {
+    touchStreak();
+    if (!state.completed[l.id]) {
+      state.completed[l.id] = true;
+      state.xp = (state.xp || 0) + (XP[l.type] || 10);
+      toast(`+${XP[l.type] || 10} XP · ${l.title}`);
     }
-    newq.disabled = false;
-    render(current);
+    saveState();
+  }
+  const courseProgress = c => {
+    const done = c.lessons.filter(l => state.completed[l.id]).length;
+    return { done, total: c.lessons.length, pct: Math.round(done / c.lessons.length * 100) };
+  };
+  const firstIncomplete = () => ALL_LESSONS.find(l => !state.completed[l.id]);
+
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1800);
   }
 
-  function render(ex) {
-    out.innerHTML = `
-      <div class="row-head">
-        <h2 style="font-size:20px">${esc(ex.prompt.id)} · ${esc(ex.prompt.title || "")}</h2>
-        <span style="font-size:13px;color:var(--muted)">${esc(ex.source_framework)} →
-          ${esc(ex.target_framework)}</span>
-      </div>
-      <div class="cov" style="display:block">
-        <div class="k" style="margin-bottom:6px">the control you must map</div>
-        <div style="font-size:14px;line-height:1.6">${esc(ex.prompt.text)}</div>
-      </div>
-      <p class="lead" style="font-size:14px;color:var(--muted);margin:16px 0 10px">
-        ${esc(ex.instructions)}</p>
+  /* ===================== views ============================================= */
+  function xpBar() {
+    const r = rankOf(state.xp || 0);
+    const span = r.next ? (r.next[0] - r.base) : 1;
+    const into = (state.xp || 0) - r.base;
+    const pct = r.next ? Math.min(100, Math.round(into / span * 100)) : 100;
+    const total = ALL_LESSONS.length, done = ALL_LESSONS.filter(l => state.completed[l.id]).length;
+    return `<div class="xpbar">
+      <div><div class="xp-rank">Rank: <span class="r">${esc(r.name)}</span></div>
+        <div class="xp-sub">${state.xp || 0} XP${r.next ? ` · ${r.next[0] - (state.xp || 0)} to ${esc(r.next[1])}` : " · max rank"}</div></div>
+      <div class="xp-meter"><div class="xp-track"><i style="width:${pct}%"></i></div>
+        <div class="xp-sub">${done} of ${total} lessons complete</div></div>
+      <div class="xp-stat"><b>${state.streak || 0}</b><span>day streak</span></div>
+      ${authed ? "" : `<div class="xp-stat" style="text-align:right"><a class="btn ghost sm" href="/account.html">Sign in to save</a></div>`}
+    </div>`;
+  }
+
+  function renderHub() {
+    const resume = firstIncomplete();
+    const resumeCourse = resume ? courseById(resume.courseId) : null;
+    host.innerHTML = `
+      <section class="section pad bleed u-hero">
+        <div class="eyebrow">RegMap University · Learning Hub</div>
+        <h1 style="font-size:clamp(28px,3.8vw,42px);margin-top:6px">Prove you can do the job</h1>
+        <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 0;max-width:74ch">
+          Hands-on tracks where you do real compliance work and are graded against the same official
+          crosswalks companies rely on. Reading briefs, walkthroughs, and graded labs, with your progress
+          saved so you can pick up where you left off.</p>
+        ${xpBar()}
+        ${resume ? `<div class="u-resume">
+          <div class="grow"><b>Resume where you left off</b>
+            <div class="xp-sub">${esc(resumeCourse.track.name)} · ${esc(resumeCourse.course.name)} · ${esc(resume.title)}</div></div>
+          <button class="btn primary" data-goto="lesson:${esc(resume.id)}">Resume →</button></div>`
+          : `<div class="u-resume"><div class="grow"><b>You have completed every lesson. Outstanding.</b>
+            <div class="xp-sub">New tracks are on the way.</div></div></div>`}
+      </section>
+      <section class="section tight pad bleed">
+        ${CURR.map(t => `
+          <div class="track">
+            <div class="track-head"><span class="t-ico"></span>
+              <div><h2>${esc(t.name)}</h2><p>${esc(t.blurb)}</p></div></div>
+            <div class="course-grid">
+              ${t.courses.map(c => { const p = courseProgress(c); return `
+                <div class="course" data-goto="course:${esc(c.id)}">
+                  <h3>${esc(c.name)}</h3>
+                  <div class="blurb">${esc(c.blurb)}</div>
+                  <div class="cprog"><div class="cprog-bar"><i style="width:${p.pct}%"></i></div>
+                    <span class="cprog-pct">${p.done}/${p.total}</span></div>
+                  ${p.pct === 100 ? `<div class="done-badge">✓ Course complete</div>` : ""}
+                </div>`; }).join("")}
+            </div>
+          </div>`).join("")}
+      </section>`;
+  }
+
+  function renderCourse(courseId) {
+    const found = courseById(courseId); if (!found) return renderHub();
+    const { track, course } = found;
+    host.innerHTML = `
+      <section class="section pad bleed u-hero">
+        <div class="crumb"><a data-goto="hub">RegMap University</a> · ${esc(track.name)}</div>
+        <h1 style="font-size:clamp(24px,3.2vw,34px);margin-top:4px">${esc(course.name)}</h1>
+        <p class="lead" style="color:var(--muted);font-size:15px;margin:8px 0 0;max-width:74ch">${esc(course.blurb)}</p>
+        <div class="lesson-list">
+          ${course.lessons.map(l => { const done = !!state.completed[l.id]; return `
+            <div class="lrow ${done ? "done" : ""}" data-goto="lesson:${esc(l.id)}">
+              <div class="tick">${done ? "✓" : ""}</div>
+              <div class="grow"><div class="l-type">${esc(l.type)}</div><div class="l-title">${esc(l.title)}</div></div>
+              <div class="xp-tag">+${XP[l.type] || 10} XP</div>
+            </div>`; }).join("")}
+        </div>
+      </section>`;
+  }
+
+  const videoSVG = label => `
+    <svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Walkthrough preview">
+      <defs><linearGradient id="vg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366F1"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+      <rect width="640" height="300" fill="var(--surface-2)"/>
+      <circle cx="320" cy="140" r="46" fill="url(#vg)"><animate attributeName="r" values="42;50;42" dur="2.4s" repeatCount="indefinite"/></circle>
+      <path d="M308 118 L308 162 L346 140 Z" fill="#fff"/>
+      <text x="320" y="212" text-anchor="middle" font-family="Inter,sans-serif" font-size="14" fill="var(--muted)">${esc(label)}</text>
+      <rect x="120" y="238" width="400" height="8" rx="4" fill="var(--surface)" stroke="var(--line)"/>
+      <rect x="120" y="238" width="0" height="8" rx="4" fill="url(#vg)"><animate attributeName="width" values="0;400;0" dur="6s" repeatCount="indefinite"/></rect>
+    </svg>`;
+
+  function renderLesson(lessonId) {
+    const l = lessonById(lessonId); if (!l) return renderHub();
+    const { track, course } = courseById(l.courseId);
+    touchStreak(); saveState();
+    const head = `<div class="crumb"><a data-goto="hub">RegMap University</a> ·
+      <a data-goto="course:${esc(course.id)}">${esc(course.name)}</a></div>
+      <h1 style="font-size:clamp(22px,3vw,30px);margin:4px 0 0">${esc(l.title)}</h1>`;
+    if (l.type === "reading") {
+      host.innerHTML = `<section class="section pad bleed u-hero">${head}
+        <div class="reading" style="margin-top:16px">${l.body}</div>
+        <div style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn primary" id="done">${state.completed[l.id] ? "Completed ✓ · back to course" : "Mark complete (+" + XP.reading + " XP)"}</button>
+          <button class="btn ghost" data-goto="course:${esc(course.id)}">Back to course</button></div>
+      </section>`;
+      $("done").addEventListener("click", () => { completeLesson(l); go("course:" + course.id); });
+      return;
+    }
+    if (l.type === "video") {
+      host.innerHTML = `<section class="section pad bleed u-hero">${head}
+        <p class="lead" style="color:var(--muted);font-size:15px;margin:12px 0 16px;max-width:72ch">${esc(l.note)}</p>
+        <div class="vid">${videoSVG(l.title)}</div>
+        <div style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn primary" id="done">${state.completed[l.id] ? "Completed ✓ · back to course" : "Mark watched (+" + XP.video + " XP)"}</button>
+          <button class="btn ghost" data-goto="course:${esc(course.id)}">Back to course</button></div>
+      </section>`;
+      $("done").addEventListener("click", () => { completeLesson(l); go("course:" + course.id); });
+      return;
+    }
+    // lab lesson
+    host.innerHTML = `<section class="section pad bleed u-hero">${head}
+      <p class="lead" style="color:var(--muted);font-size:14.5px;margin:12px 0 0;max-width:74ch">
+        You are given a control and a set of candidate provisions. Select the ones that genuinely map. Your
+        answer is scored against the <b>official published crosswalk</b> using precision and recall, so
+        over-selecting fails you exactly as much as missing. Pass to earn ${XP.lab} XP.</p>
+      <div id="labslot" style="margin-top:18px"></div>
+      <div style="margin-top:16px"><button class="btn ghost" data-goto="course:${esc(course.id)}">Back to course</button></div>
+    </section>`;
+    runLab(l, $("labslot"));
+  }
+
+  /* ---- graded lab (embedded) ---------------------------------------------- */
+  async function runLab(lesson, slot) {
+    slot.innerHTML = `<div class="note"><span class="spin"></span> setting an exercise…</div>`;
+    let ex;
+    try { ex = await RegMap.exercise({ source: lesson.source, target: lesson.target, distractors: lesson.distractors || 8 }); }
+    catch (e) { slot.innerHTML = `<div class="note err">This lab is not available right now (${esc(e.message)}).</div>`; return; }
+    slot.innerHTML = `
+      <div class="row-head"><h2 style="font-size:19px">${esc(ex.prompt.id)} · ${esc(ex.prompt.title || "")}</h2>
+        <span style="font-size:13px;color:var(--muted)">${esc(ex.source_framework)} → ${esc(ex.target_framework)}</span></div>
+      <div class="cov" style="display:block"><div class="k" style="margin-bottom:6px">the control you must map</div>
+        <div style="font-size:14px;line-height:1.6">${esc(ex.prompt.text)}</div></div>
+      <p class="lead" style="font-size:14px;color:var(--muted);margin:16px 0 10px">${esc(ex.instructions)}</p>
       <div class="res-list" id="cands">
-        ${ex.candidates.map((c, i) => `
+        ${ex.candidates.map(c => `
           <label class="res pick" data-id="${esc(c.id)}" style="cursor:pointer;grid-template-columns:26px 1fr">
             <input type="checkbox" value="${esc(c.id)}" style="width:16px;height:16px;margin-top:3px">
-            <div>
-              <span class="cid">${esc(c.id)}</span>
-              ${c.title ? `<div class="ctitle">${esc(c.title)}</div>` : ""}
-              <div class="ctext" style="-webkit-line-clamp:3">${esc(c.text)}</div>
-            </div>
-          </label>`).join("")}
+            <div><span class="cid">${esc(c.id)}</span>${c.title ? `<div class="ctitle">${esc(c.title)}</div>` : ""}
+              <div class="ctext" style="-webkit-line-clamp:3">${esc(c.text)}</div></div></label>`).join("")}
       </div>
       <div style="display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap">
         <button class="btn primary" id="submit">Submit answer</button>
-        <span id="picked" style="font-size:13px;color:var(--muted)">0 selected</span>
-      </div>
+        <span id="picked" style="font-size:13px;color:var(--muted)">0 selected</span></div>
       <div id="result" style="margin-top:20px"></div>`;
-
-    const boxes = [...out.querySelectorAll('#cands input[type=checkbox]')];
-    const upd = () => { $("picked").textContent =
-      `${boxes.filter(b => b.checked).length} selected`; };
-    boxes.forEach(b => b.addEventListener("change", upd));
-    $("submit").addEventListener("click", () => grade(boxes));
+    const boxes = [...slot.querySelectorAll('#cands input[type=checkbox]')];
+    boxes.forEach(b => b.addEventListener("change", () => $("picked").textContent = `${boxes.filter(x => x.checked).length} selected`));
+    $("submit").addEventListener("click", () => gradeLab(lesson, ex, boxes, slot));
   }
 
-  /* ---- grade + reveal ---------------------------------------------------- */
-  async function grade(boxes) {
+  async function gradeLab(lesson, ex, boxes, slot) {
     const selected = boxes.filter(b => b.checked).map(b => b.value);
     const btn = $("submit"); btn.disabled = true;
     let g;
-    try { g = await RegMap.grade({ token: current.token, selected }); }
-    catch (e) { btn.disabled = false;
-      $("result").innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
-
+    try { g = await RegMap.grade({ token: ex.token, selected }); }
+    catch (e) { btn.disabled = false; $("result").innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
     boxes.forEach(b => b.disabled = true);
-    const s = g.score, c = g.counts;
-    const cls = v => v >= 0.7 ? "good" : v >= 0.4 ? "mid" : "bad";
-
-    // colour each option by outcome so the learner sees exactly where the judgement went wrong
-    const byId = {};
-    g.correct.forEach(x => byId[x.id] = "correct");
-    g.missed.forEach(x => byId[x.id] = "missed");
-    g.incorrect.forEach(x => byId[x.id] = "incorrect");
-    out.querySelectorAll(".res.pick").forEach(el => {
-      const verdict = byId[el.dataset.id];
-      if (!verdict) return;
-      el.classList.add("mark-" + verdict);
-      const tagText = verdict === "correct" ? "correct"
-                    : verdict === "missed" ? "missed this one" : "does not map";
-      const pill = verdict === "correct" ? "ok" : verdict === "missed" ? "warn" : "crit";
-      el.querySelector(".cid").insertAdjacentHTML("afterend",
-        `<span class="pill ${pill}" style="margin-left:8px">${tagText}</span>`);
+    const s = g.score, c = g.counts, cls = v => v >= 0.7 ? "good" : v >= 0.4 ? "mid" : "bad";
+    const byId = {}; g.correct.forEach(x => byId[x.id] = "correct"); g.missed.forEach(x => byId[x.id] = "missed"); g.incorrect.forEach(x => byId[x.id] = "incorrect");
+    slot.querySelectorAll(".res.pick").forEach(el => {
+      const v = byId[el.dataset.id]; if (!v) return;
+      el.classList.add("mark-" + v);
+      const tag = v === "correct" ? "correct" : v === "missed" ? "missed this one" : "does not map";
+      const pill = v === "correct" ? "ok" : v === "missed" ? "warn" : "crit";
+      el.querySelector(".cid").insertAdjacentHTML("afterend", `<span class="pill ${pill}" style="margin-left:8px">${tag}</span>`);
     });
-
-    stats.attempts++; if (s.passed) stats.passed++; stats.f1.push(s.f1); showTally();
-
+    if (s.passed) completeLesson(lesson);
     $("result").innerHTML = `
       <div class="cov">
         <div><span class="k">precision</span><span class="v ${cls(s.precision)}">${s.precision.toFixed(2)}</span></div>
         <div><span class="k">recall</span><span class="v ${cls(s.recall)}">${s.recall.toFixed(2)}</span></div>
         <div><span class="k">F1</span><span class="v ${cls(s.f1)}">${s.f1.toFixed(2)}</span></div>
-        <div><span class="k">result</span><span class="v ${s.passed ? "good" : "bad"}"
-          style="font-size:15px;padding-top:4px">${s.passed ? "PASS" : "FAIL"}</span></div>
+        <div><span class="k">result</span><span class="v ${s.passed ? "good" : "bad"}" style="font-size:15px;padding-top:4px">${s.passed ? "PASS" : "FAIL"}</span></div>
         <div><span class="k">threshold</span><span class="v" style="font-size:15px;padding-top:4px">F1 ≥ ${s.pass_threshold}</span></div>
       </div>
-      <div class="note" style="margin-top:12px">
-        The official crosswalk lists <b>${c.official}</b> provision${c.official === 1 ? "" : "s"} for
-        ${esc(g.source_id)}. You selected ${c.selected}, of which <b>${c.correct}</b> were right;
-        you missed ${c.missed} and included ${c.incorrect} that do not map.
-        ${c.incorrect > 0 && c.missed === 0
-          ? " Recall was fine, the loss was precision, so you were too inclusive."
-          : ""}
-        ${c.missed > 0 && c.incorrect === 0
-          ? " Precision was fine, you were too conservative and left correct mappings out."
-          : ""}
-        <div class="sub" style="margin-top:8px">Evidence recorded against NICE task
-          ${esc(g.nice_task)} · route ${esc(g.route)}.</div>
-      </div>
-      <div style="margin-top:14px"><button class="btn ghost" id="again">Another exercise →</button></div>`;
-    $("again").addEventListener("click", run);
+      <div class="note" style="margin-top:12px">The official crosswalk lists <b>${c.official}</b> provision${c.official === 1 ? "" : "s"} for
+        ${esc(g.source_id)}. You selected ${c.selected}, of which <b>${c.correct}</b> were right; you missed ${c.missed} and included ${c.incorrect} that do not map.
+        <div class="sub" style="margin-top:8px">Evidence recorded against NICE task ${esc(g.nice_task)} · route ${esc(g.route)}.
+          ${s.passed ? ` Lesson complete, +${XP.lab} XP.` : " Pass (F1 ≥ " + s.pass_threshold + ") to complete this lesson."}</div></div>
+      <div style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap">
+        <button class="btn ghost" id="again">Try another →</button>
+        <button class="btn primary" data-goto="course:${esc(lesson.courseId)}">Back to course</button></div>`;
+    $("again").addEventListener("click", () => runLab(lesson, slot));
   }
 
-  src.addEventListener("change", () => { fillTargets(); onPair(); });
-  tgt.addEventListener("change", onPair);
-  newq.addEventListener("click", run);
-  boot();
+  /* ===================== routing =========================================== */
+  function go(route) { location.hash = "#" + route; render(); }
+  function render() {
+    const h = (location.hash || "#hub").slice(1);
+    if (h.startsWith("lesson:")) renderLesson(h.slice(7));
+    else if (h.startsWith("course:")) renderCourse(h.slice(7));
+    else renderHub();
+    window.scrollTo({ top: 0 });
+  }
+  // delegate clicks with data-goto
+  document.addEventListener("click", e => {
+    const el = e.target.closest("[data-goto]"); if (!el) return;
+    e.preventDefault(); go(el.getAttribute("data-goto"));
+  });
+  addEventListener("hashchange", render);
+
+  (async function boot() { await loadState(); render(); })();
 })();
 </script>
 </body>
