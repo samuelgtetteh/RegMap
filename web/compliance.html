@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RegMap: map any control to any framework</title>
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=20">
-<link rel="stylesheet" href="assets/app.css?v=20">
+<link rel="stylesheet" href="assets/site.css?v=21">
+<link rel="stylesheet" href="assets/app.css?v=21">
 <style>
   /* page-local: the two-mode tab switch (uses the shell tokens) */
   .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
@@ -110,6 +110,42 @@
   .rem-card ol{margin:0 0 12px;padding-left:20px;font-size:13.5px;line-height:1.7}
   .rem-card .disc{font-size:12px;color:var(--muted);font-style:italic}
   .rem-card .rem-actions{display:flex;gap:10px;margin-bottom:10px}
+  /* Help document (in-tab guide) */
+  .help-btn{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:13px;font-weight:600;
+    color:var(--accent);background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+    border-radius:10px;padding:8px 13px;cursor:pointer;margin-left:auto}
+  .help-btn:hover{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+  .help-q{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;
+    background:var(--accent);color:#fff;font-size:12px;font-weight:800}
+  .help-overlay{position:fixed;inset:0;background:rgba(6,8,20,.55);backdrop-filter:blur(3px);z-index:60;
+    display:flex;justify-content:center;align-items:flex-start;padding:5vh 16px;overflow:auto}
+  .help-overlay[hidden]{display:none}
+  .help-doc{background:var(--surface);border:1px solid var(--line);border-radius:18px;max-width:920px;width:100%;
+    box-shadow:0 24px 60px rgba(0,0,0,.35);overflow:hidden;margin-bottom:5vh}
+  .help-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 26px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+  .help-head h2{font-size:20px;margin:0}
+  .help-head .sub{font-size:13px;color:var(--muted);margin-top:2px}
+  .help-close{font:inherit;font-size:22px;line-height:1;border:0;background:none;cursor:pointer;color:var(--muted);
+    padding:4px 8px;border-radius:8px}
+  .help-close:hover{color:var(--ink);background:var(--surface-2)}
+  .help-body{display:grid;grid-template-columns:210px 1fr;gap:0}
+  .help-toc{border-right:1px solid var(--line);padding:18px 14px;font-size:13px;position:sticky;top:66px;align-self:start}
+  .help-toc a{display:block;color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:8px}
+  .help-toc a:hover{color:var(--ink);background:var(--surface-2)}
+  .help-content{padding:22px 28px;max-height:70vh;overflow:auto}
+  .help-content h3{font-size:16px;margin:26px 0 8px;scroll-margin-top:14px}
+  .help-content h3:first-child{margin-top:0}
+  .help-content p,.help-content li{font-size:14px;line-height:1.65;color:var(--ink)}
+  .help-content p{margin:0 0 10px}
+  .help-content ul,.help-content ol{margin:0 0 12px;padding-left:20px}
+  .help-content li{margin-bottom:5px}
+  .help-content .tag{display:inline-block;font-size:11px;font-weight:700;font-family:var(--mono);
+    padding:1px 7px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
+  .help-content .callout{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;font-size:13.5px;margin:6px 0 14px}
+  .help-content code{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);padding:1px 5px;border-radius:5px}
+  @media(max-width:720px){.help-body{grid-template-columns:1fr}.help-toc{display:none}}
   .ctl-card{padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:20px}
   .ctl-card:last-child{border-bottom:0}
   #cText.dropping{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--accent-soft)}
@@ -130,10 +166,15 @@
     get coverage plus the official gap list. Where an official crosswalk exists, authoritative mappings
     are marked, so you always see the model against the record.
   </p>
-  <div class="tabs">
-    <button id="tab-map" class="active" type="button">Map a control</button>
-    <button id="tab-gaps" type="button">Coverage &amp; gaps</button>
-    <button id="tab-custom" type="button">Your framework</button>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="tabs">
+      <button id="tab-map" class="active" type="button">Map a control</button>
+      <button id="tab-gaps" type="button">Coverage &amp; gaps</button>
+      <button id="tab-custom" type="button">Your framework</button>
+    </div>
+    <button id="helpOpen" type="button" class="help-btn" aria-haspopup="dialog">
+      <span class="help-q">?</span> How to use this
+    </button>
   </div>
 </section>
 
@@ -262,12 +303,140 @@
 <section class="section pad bleed" id="cOut" style="padding-top:22px"></section>
 </div>
 
+<!-- ===================== Help document (how to use) ===================== -->
+<div class="help-overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-label="How to use the Compliance engine" hidden>
+  <div class="help-doc">
+    <div class="help-head">
+      <div>
+        <h2>How to use the Compliance engine</h2>
+        <div class="sub">A full guide to mapping, reviewing, and exporting an audit-ready crosswalk.</div>
+      </div>
+      <button class="help-close" id="helpClose" aria-label="Close help">&times;</button>
+    </div>
+    <div class="help-body">
+      <nav class="help-toc">
+        <a href="#h-overview">Overview</a>
+        <a href="#h-map">Map a control</a>
+        <a href="#h-gaps">Coverage &amp; gaps</a>
+        <a href="#h-custom">Your framework</a>
+        <a href="#h-review">Review &amp; status</a>
+        <a href="#h-why">Why a match</a>
+        <a href="#h-triage">Confidence triage</a>
+        <a href="#h-evidence">Evidence</a>
+        <a href="#h-multi">Compare frameworks</a>
+        <a href="#h-remediate">Remediation</a>
+        <a href="#h-save">Save &amp; export</a>
+        <a href="#h-trust">Reading the results</a>
+        <a href="#h-faq">FAQ</a>
+      </nav>
+      <div class="help-content">
+        <h3 id="h-overview">Overview</h3>
+        <p>RegMap maps the security controls you operate onto the frameworks you must satisfy. It ranks the
+          most equivalent control in a target framework for any control you give it, marks where an
+          <b>official crosswalk</b> exists, and lets a reviewer confirm each mapping, attach evidence, and
+          export an audit-ready package. There are three tabs, each for a different starting point.</p>
+        <div class="callout">You can use every feature as a guest. Signing in only adds two things: saving
+          your work (projects) and downloading exports. Nothing else is gated.</div>
+
+        <h3 id="h-map">Tab 1: Map a control</h3>
+        <p>Use this when you want the equivalents of a <b>single control</b> in another framework.</p>
+        <ol>
+          <li>Pick a <b>From framework</b> and a <b>To framework</b>. The route badge shows whether an
+            official mapping, an inverted one, or a derived (hub) route connects them.</li>
+          <li>Either choose a specific control from the <b>From</b> framework, or type free text describing
+            a control in your own words.</li>
+          <li>Click <b>Map</b>. You get the ranked target controls, each with a match score, an
+            <span class="tag">official</span> tag where the published crosswalk agrees, and the terms that
+            drove the match.</li>
+        </ol>
+
+        <h3 id="h-gaps">Tab 2: Coverage &amp; gaps</h3>
+        <p>Use this to measure a <b>whole source framework</b> against a target and get the official gap
+          list. It reports how much of the target is covered and lists the <b>uncovered target
+          provisions</b>. That gap number comes from the published mapping, not the model, so it can go
+          straight into a report. Each gap has a <b>Draft starter policy</b> action (see Remediation).</p>
+
+        <h3 id="h-custom">Tab 3: Your framework</h3>
+        <p>Use this when your starting point is your <b>own</b> internal or self-built control set.</p>
+        <ul>
+          <li>Paste your controls (one per line as <code>id, text</code>, or just the text), or drag and
+            drop a CSV or JSON file onto the box.</li>
+          <li>Pick the framework to map onto and click <b>Map my controls</b>.</li>
+          <li>Because a custom set has no official crosswalk, every result is a <b>model suggestion for
+            expert review</b>, clearly labelled as such.</li>
+        </ul>
+
+        <h3 id="h-review">Review &amp; status (the audit loop)</h3>
+        <p>The engine suggests; you confirm. On each result you can:</p>
+        <ul>
+          <li><b>Accept</b> or <b>Reject</b> a suggested target control.</li>
+          <li>Set the control's <b>status</b>: Met, Partial, Gap, or N/A.</li>
+          <li>Add a <b>note</b> to justify the decision.</li>
+        </ul>
+        <p>A roll-up at the top shows how many controls you have reviewed and the status breakdown. This is
+          the human-in-the-loop record an auditor accepts.</p>
+
+        <h3 id="h-why">Why a match (explainability)</h3>
+        <p>Under each result, the <b>why</b> chips show the meaningful terms your control shares with the
+          target control. They are a quick, visible reason for the suggestion, so you are never trusting a
+          bare score.</p>
+
+        <h3 id="h-triage">Confidence triage</h3>
+        <p>Above the results, a threshold slider flags every match below the cut-off as
+          <span class="tag">needs review</span> and dims it, with a live "N of M need review" count. Raise
+          the threshold to focus only on the strong matches; lower it to catch everything. Your threshold is
+          remembered.</p>
+
+        <h3 id="h-evidence">Evidence attachment</h3>
+        <p>Each control has an <b>Evidence</b> section. Add a label and a link (a Vanta or Drata report, a
+          scan result, a ticket, a policy document) so the crosswalk doubles as your audit binder. Evidence
+          is saved with the project and appears as its own column in every export.</p>
+
+        <h3 id="h-multi">Compare coverage across frameworks</h3>
+        <p>On the <b>Your framework</b> tab, open <b>Compare coverage across several frameworks</b>, tick two
+          or more targets, and click Compare. You get a coverage tile per framework (percent covered,
+          average score) and a <b>heatmap matrix</b>: your controls down the side, frameworks across the
+          top, each cell shaded by match strength. Click any framework to open it in the single-target view
+          for full review and export.</p>
+
+        <h3 id="h-remediate">Gap remediation guidance</h3>
+        <p>For any gap, <b>Draft starter policy</b> generates a first-draft policy statement and a short
+          implementation checklist from the control, with a copy button. It is a <b>starter draft to
+          adapt</b>, not an approved policy or legal advice.</p>
+
+        <h3 id="h-save">Save &amp; export</h3>
+        <p>On the <b>Your framework</b> tab, the project bar lets you name, <b>Save</b>, reopen, and delete a
+          project; your review, evidence, and notes are stored and reload exactly as you left them. <b>Export</b>
+          produces an audit-ready package in JSON, CSV, XLSX, or DOCX, one row per control with its status,
+          the accepted and rejected targets, evidence, and notes. Saving and downloading require an account.</p>
+
+        <h3 id="h-trust">Reading the results (trust levels)</h3>
+        <ul>
+          <li><span class="tag">official</span> the published crosswalk agrees; authoritative.</li>
+          <li><b>derived</b> connected through a hub framework; advisory, review it.</li>
+          <li><b>model suggestion</b> ranked by the model with no official mapping (all custom results);
+            always for expert review.</li>
+        </ul>
+
+        <h3 id="h-faq">FAQ</h3>
+        <p><b>Do I need to sign in?</b> No. Guests use every feature; sign in only to save work and download.</p>
+        <p><b>What does the score mean?</b> A relative similarity between your control and the target, from 0
+          to 1. Use it with the why chips and your own judgement, not on its own.</p>
+        <p><b>Is a custom mapping authoritative?</b> No. There is no official crosswalk for a control set that
+          is not in the catalog, so treat every custom result as a suggestion to review.</p>
+        <p><b>Why is a framework greyed out?</b> Coming-soon frameworks are listed but not yet rankable; the
+          console shows their planned control counts.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <footer class="site-footer pad bleed">
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=20"></script>
-<script src="assets/shell.js?v=20"></script>
+<script src="assets/api.js?v=21"></script>
+<script src="assets/shell.js?v=21"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -429,6 +598,22 @@
     });
   }
   TABS.forEach(m => $("tab-" + m).addEventListener("click", () => show(m)));
+
+  /* ---- Help document (how to use) ----------------------------------------- */
+  const helpOverlay = $("helpOverlay");
+  const openHelp = () => { helpOverlay.hidden = false; document.body.style.overflow = "hidden"; };
+  const closeHelp = () => { helpOverlay.hidden = true; document.body.style.overflow = ""; };
+  $("helpOpen").addEventListener("click", openHelp);
+  $("helpClose").addEventListener("click", closeHelp);
+  if (location.hash === "#help") openHelp();   // deep-link: /compliance.html#help opens the guide
+  helpOverlay.addEventListener("click", e => { if (e.target === helpOverlay) closeHelp(); });
+  addEventListener("keydown", e => { if (e.key === "Escape" && !helpOverlay.hidden) closeHelp(); });
+  // in-doc TOC: smooth-scroll within the scrollable content pane
+  helpOverlay.querySelectorAll(".help-toc a").forEach(a => a.addEventListener("click", e => {
+    e.preventDefault();
+    const el = helpOverlay.querySelector(a.getAttribute("href"));
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
 
   /* ---- shared boot: frameworks + the pair graph --------------------------- */
   const optsFor = predicate => FRAMEWORKS.map(f => {

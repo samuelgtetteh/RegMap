@@ -179,6 +179,15 @@ yet committed.
 3. [ ] Coverage dashboard / multi-target.
 4. [ ] The rest of Tier 2 and 3 in priority order.
 
+## Help document (DONE 2026-09-25)
+
+An in-tab **"How to use this"** help document: a Help button by the tabs opens a modal guide with a
+sticky table of contents and sections for every feature (the three tabs, review + status, explainability,
+confidence triage, evidence, multi-target compare, coverage heatmap, remediation, save + export, trust
+levels, and an FAQ). Deep-linkable at `/compliance.html#help`; closes on Escape or backdrop click. Pure
+front end in `web/compliance.html`. Requested by the founder as the user-facing manual for the system;
+extend it as features land. (Founder rule respected: no em/en-dashes in the copy.)
+
 ## Change log
 
 - 2026-09-25: created. Feature: bring your own framework built (POST /map/custom, "Your framework" tab,
