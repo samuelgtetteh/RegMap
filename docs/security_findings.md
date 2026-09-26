@@ -373,6 +373,11 @@ also flows into PDF/Word downloads via the document rendering code.
 Since saved policies can be shared with other users (the API has `members`, `memberAdd`), the XSS
 payload could target other collaborators.
 
+**IDOR check (secondary):** Verified that `/policies/saved/{id}` endpoints enforce ownership
+server-side. `GET /policies/saved/{id}`, `PUT`, and `DELETE` all filter by both `id` and
+`account_id` in their database queries (`serve.py` calls `billing.get_saved_policy(account_id, id)`),
+so a user cannot access or modify another user's saved policy even if they know the ID.
+
 ### Fix applied
 
 Added DOMPurify (from CDN: `https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js`)
