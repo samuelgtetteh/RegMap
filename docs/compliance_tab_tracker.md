@@ -158,8 +158,12 @@ yet committed.
 13. **Collaboration.** Multiple users, assignments, comments, an approval trail. PAID (team plans).
 14. **API and bulk import.** A team can push their control set and pull mappings programmatically, and
     import from GRC tools (Vanta, Drata, spreadsheets). PAID.
-15. **Templates and journeys.** Pre-built starting points for common paths (SOC 2 to ISO 27001, HIPAA to
-    800-53), so a new user reaches value in one click. FREE.
+15. **Templates and journeys. DONE 2026-09-25.** A "Quick starts" grid on the "Coverage & gaps" tab:
+    curated crosswalk cards (HIPAA to 800-53, CSF 2.0 to 800-53, 800-171 to 800-53, 800-53 to CSF 2.0)
+    that fill the source/target pickers and run coverage in one click. Cards referencing frameworks not
+    yet live (SOC 2 to ISO 27001, PCI to 800-53) show as "coming soon" and auto-activate when those
+    frameworks are added (driven by `TEMPLATES` + `fwLive`/`PAIRS`). Also added hash deep-links:
+    `#map`/`#gaps`/`#custom` open a tab, `#help` opens the guide. FREE.
 16. **Framework library growth.** Ship the coming-soon frameworks (ISO, SOC 2, PCI, CIS, CMMC, etc.); the
     tool is only as valuable as the frameworks it covers. Ongoing.
 
@@ -209,6 +213,8 @@ extend it as features land. (Founder rule respected: no em/en-dashes in the copy
   as "needs review" on both tabs, with a live count and a persisted threshold.
 - 2026-09-25: built Gap remediation guidance (#8, Tier 2): `POST /remediate` drafts a starter policy
   statement + implementation checklist per gap (deterministic templating), shown inline on the gaps tab
-  with copy + disclaimer. **Tier 2 is now complete (#6-#10).** Next: Tier 3 (versioning #11, continuous
-  re-mapping #12, collaboration #13, API/GRC import #14, templates #15, framework library growth #16), and
-  the paid-gating pass once billing is on.
+  with copy + disclaimer. **Tier 2 is now complete (#6-#10).**
+- 2026-09-25: built the in-tab Help document ("How to use this" modal) and Templates/journeys (#15,
+  Quick-starts grid on the gaps tab) + hash deep-links for tabs and help. Remaining: Tier 3 (#11 versioning,
+  #12 continuous re-mapping, #13 collaboration, #14 API/GRC import, #16 framework library growth) and the
+  paid-gating pass once billing is on. Next per founder: start Tier 3.

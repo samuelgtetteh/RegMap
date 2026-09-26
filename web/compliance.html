@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RegMap: map any control to any framework</title>
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=21">
-<link rel="stylesheet" href="assets/app.css?v=21">
+<link rel="stylesheet" href="assets/site.css?v=22">
+<link rel="stylesheet" href="assets/app.css?v=22">
 <style>
   /* page-local: the two-mode tab switch (uses the shell tokens) */
   .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
@@ -146,6 +146,20 @@
     padding:12px 14px;font-size:13.5px;margin:6px 0 14px}
   .help-content code{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);padding:1px 5px;border-radius:5px}
   @media(max-width:720px){.help-body{grid-template-columns:1fr}.help-toc{display:none}}
+  /* templates / quick starts (#15) */
+  .qs-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .qs-title{font-size:15px;font-weight:700}
+  .qs-sub{font-size:13px;color:var(--muted)}
+  .qs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .qs-card{text-align:left;border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+    background:var(--surface);cursor:pointer;font:inherit;transition:border-color .15s,transform .1s}
+  .qs-card:hover:not(:disabled){border-color:var(--accent);transform:translateY(-1px)}
+  .qs-card:disabled{opacity:.55;cursor:default}
+  .qs-card .qs-pair{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .qs-card .qs-arrow{color:var(--accent)}
+  .qs-card .qs-blurb{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .qs-card .qs-soon{display:inline-block;margin-top:8px;font-size:11px;font-weight:700;font-family:var(--mono);
+    color:var(--muted);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
   .ctl-card{padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:20px}
   .ctl-card:last-child{border-bottom:0}
   #cText.dropping{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--accent-soft)}
@@ -220,6 +234,12 @@
 <!-- ===================== MODE 2: coverage & gaps ===================== -->
 <div class="mode" id="mode-gaps" hidden>
 <section class="section tight pad bleed">
+  <div class="qs-head">
+    <span class="qs-title">Quick starts</span>
+    <span class="qs-sub">Common crosswalks, one click. Or pick your own frameworks below.</span>
+  </div>
+  <div class="qs-grid" id="qsGrid"></div>
+  <hr class="divider" style="margin:20px 0">
   <div class="xwalk-bar">
     <label class="fld">Controls you operate (source)
       <select id="gsrc"><option value="">Loading…</option></select>
@@ -435,8 +455,8 @@
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=21"></script>
-<script src="assets/shell.js?v=21"></script>
+<script src="assets/api.js?v=22"></script>
+<script src="assets/shell.js?v=22"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -598,6 +618,7 @@
     });
   }
   TABS.forEach(m => $("tab-" + m).addEventListener("click", () => show(m)));
+  if (TABS.includes(location.hash.slice(1))) show(location.hash.slice(1));  // deep-link a tab
 
   /* ---- Help document (how to use) ----------------------------------------- */
   const helpOverlay = $("helpOverlay");
@@ -785,6 +806,36 @@
   const gsrc = $("gsrc"), gtgt = $("gtgt"), ggo = $("ggo"),
         gout = $("gout"), gstatus = $("gstatus"), gRouteMeta = $("gRouteMeta");
 
+  // Templates / journeys (#15): curated common crosswalks. A template that references frameworks not yet
+  // live is shown as "coming soon" and disabled, so the list adapts as the catalog grows.
+  const TEMPLATES = [
+    { s: "hipaa_security", t: "nist_80053", blurb: "Show where the HIPAA Security Rule maps onto NIST 800-53 controls." },
+    { s: "nist_csf2",      t: "nist_80053", blurb: "Turn NIST CSF 2.0 outcomes into concrete 800-53 controls." },
+    { s: "nist_80171",     t: "nist_80053", blurb: "Map CUI controls (800-171) onto the full 800-53 catalog." },
+    { s: "nist_80053",     t: "nist_csf2",  blurb: "Roll your 800-53 controls up to CSF 2.0 functions." },
+    { s: "soc2",           t: "iso_27001",  blurb: "A classic audit journey. Frameworks arriving soon." },
+    { s: "pci_dss",        t: "nist_80053", blurb: "Card-data controls onto 800-53. Framework arriving soon." },
+  ];
+  const fwName = id => (FRAMEWORKS.find(f => f.id === id) || {}).name || id;
+  const fwLive = id => { const f = FRAMEWORKS.find(f => f.id === id); return !!(f && f.controls); };
+
+  function renderTemplates() {
+    $("qsGrid").innerHTML = TEMPLATES.map((t, i) => {
+      const live = fwLive(t.s) && fwLive(t.t) && !!PAIRS.find(p => p.source === t.s && p.target === t.t);
+      const sName = fwName(t.s), tName = fwName(t.t);
+      return `<button class="qs-card" data-i="${i}" ${live ? "" : "disabled"}>
+        <span class="qs-pair">${esc(sName)} <span class="qs-arrow">→</span> ${esc(tName)}</span>
+        <span class="qs-blurb">${esc(t.blurb)}</span>
+        ${live ? "" : `<span class="qs-soon">coming soon</span>`}</button>`;
+    }).join("");
+    $("qsGrid").querySelectorAll(".qs-card:not(:disabled)").forEach(btn =>
+      btn.addEventListener("click", () => {
+        const t = TEMPLATES[+btn.dataset.i];
+        gsrc.value = t.s; gtgt.value = t.t; onGapPair(); runGaps();
+        $("gout").scrollIntoView({ behavior: "smooth", block: "start" });
+      }));
+  }
+
   function bootGaps() {
     // Only rankable sources with an authoritative route make an honest coverage report.
     gsrc.innerHTML = `<option value="">select</option>` + optsFor();
@@ -792,6 +843,7 @@
     const best = PAIRS.filter(p => p.authoritative)
                       .sort((a, b) => b.source_controls - a.source_controls)[0];
     if (best) { gsrc.value = best.source; gtgt.value = best.target; }
+    renderTemplates();
     onGapPair();
   }
 
