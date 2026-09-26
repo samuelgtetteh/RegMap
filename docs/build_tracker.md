@@ -75,6 +75,11 @@ gamification, and saved-progress/resume backed by a new `learning_progress` stor
       `regmap_engine/auth.py`). The k8s deployment already sets both to `true`; make sure any other live
       deploy path (docker run, another host) sets them true too, or flip the defaults back to `true`.
 - [ ] Turn on `REGMAP_REQUIRE_AUTH` and `REGMAP_SECURE_COOKIES` (behind TLS) for the live site.
+- [ ] **Fix security findings from AI audit (2026-09-26).** Full details in `docs/security_findings.md`.
+      Five findings: (1) HIGH - stored XSS via unauthenticated analytics injection (allowlist event names
+      server-side); (2) MEDIUM - `/admin.html` served without server-side auth check; (3) MEDIUM - all
+      security response headers missing (CSP, X-Frame-Options, HSTS etc.); (4) LOW - API key in
+      localStorage; (5) LOW - account operates without email verification. Fix (1), (2), (3) before launch.
 
 ### Front end
 - [x] **LAYOUT LOCKED (2026-09-25, git tag `design-baseline-v1`).** The current layout is the final

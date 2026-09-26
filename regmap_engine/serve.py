@@ -1313,6 +1313,41 @@ def saved_policies_update(pid: str, req: SavedPolicyReq, principal=Depends(auth.
 # =====================================================================================================
 # ANALYTICS (Phase 1): lightweight event capture (open) + admin-only reporting
 # =====================================================================================================
+
+# Allowlist of permitted event names. Any submission not on this list is silently dropped.
+# Add new event names here as features are built; never store arbitrary strings from the client.
+_ALLOWED_EVENT_NAMES: set = {
+    # navigation
+    "pageview", "session_start",
+    # auth
+    "auth_signup", "auth_login", "auth_verify_email", "auth_enable_2fa", "auth_logout",
+    # compliance
+    "map_run", "bulk_run", "custom_run", "multi_run", "remediate",
+    "export", "review_action", "evidence_add",
+    # projects
+    "project_save", "project_open", "recheck", "share_member_add", "comment_add", "approve",
+    # university
+    "lesson_open", "lesson_complete", "lab_pass", "transcript_publish",
+    # policy
+    "policy_open", "policy_customize", "policy_download", "policy_save",
+    # outbound / cta
+    "cta_click", "nav_click", "signin_prompt_shown",
+}
+
+# Permitted prop value types: only scalars (str, int, float, bool). No nested objects or lists.
+def _sanitize_props(raw: dict | None) -> dict:
+    if not raw or not isinstance(raw, dict):
+        return {}
+    cleaned = {}
+    for k, v in raw.items():
+        if not isinstance(k, str) or len(k) > 64:
+            continue
+        if isinstance(v, (str, int, float, bool)) and not isinstance(v, bool) or isinstance(v, bool):
+            cleaned[str(k)[:64]] = v if not isinstance(v, str) else v[:256]
+        # silently drop nested objects, lists, None
+    return cleaned
+
+
 class AnalyticsEvent(BaseModel):
     name: str = Field(..., max_length=48)
     path: Optional[str] = ""
@@ -1329,23 +1364,32 @@ class CollectReq(BaseModel):
 def analytics_collect(req: CollectReq, request: Request,
                       authorization: str = Header(None), x_api_key: str = Header(None)):
     """Ingest a batch of product-analytics events. Open to guests (that is the point); the account is
-    attached from the session when signed in. Privacy: anonymous visitor id, hashed IP, truncated UA."""
+    attached from the session when signed in. Privacy: anonymous visitor id, hashed IP, truncated UA.
+    Security: event names are validated against an allowlist; props are sanitized to scalar values only."""
     p = auth.resolve(authorization, x_api_key, request.cookies.get(SESSION_COOKIE))
     aid = p.get("account_id") if p and p.get("account_id") not in (None, "anonymous") else None
     vid = (req.visitor_id or "")[:40]
     ua = request.headers.get("user-agent") or ""
     ua_class = ("bot" if re.search(r"bot|crawl|spider|slurp|bing|preview", ua, re.I)
                 else "mobile" if re.search(r"Mobile|Android|iPhone|iPad|iPod", ua) else "desktop")
+    # Do not store bot events at all - keeps the database clean and prevents bot-driven injection
+    if ua_class == "bot":
+        return {"ok": True, "n": 0}
     ipsrc = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
              or (request.client.host if request.client else ""))
     ip_hash = hashlib.sha256((ANALYTICS_SALT + ipsrc).encode()).hexdigest()[:64] if ipsrc else ""
     now = _dt.datetime.now(_dt.timezone.utc)
     rows = []
     for e in req.events[:50]:
-        rows.append({"ts": now, "visitor_id": vid, "account_id": aid, "name": (e.name or "")[:48],
+        name = (e.name or "").strip()
+        # Reject any event name not on the allowlist - this is the XSS injection defence
+        if name not in _ALLOWED_EVENT_NAMES:
+            continue
+        rows.append({"ts": now, "visitor_id": vid, "account_id": aid, "name": name,
                      "path": (e.path or "")[:255], "referrer": (e.referrer or "")[:255],
-                     "props": _json.dumps(e.props or {})[:2000], "ua_class": ua_class, "ip_hash": ip_hash})
-    n = billing.record_events(rows)
+                     "props": _json.dumps(_sanitize_props(e.props))[:2000],
+                     "ua_class": ua_class, "ip_hash": ip_hash})
+    n = billing.record_events(rows) if rows else 0
     return {"ok": True, "n": n}
 
 

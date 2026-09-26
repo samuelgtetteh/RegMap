@@ -1,0 +1,187 @@
+# Security findings
+
+A log of security issues identified through code review, AI audit, or manual testing.
+Fix these before the site goes public. Listed by severity, highest first.
+
+No em-dashes or en-dashes anywhere in this file (founder rule).
+
+Last updated: 2026-09-26.
+
+---
+
+## How to use this document
+
+Each finding has a status:
+- **OPEN** - not yet fixed
+- **IN PROGRESS** - being worked on
+- **FIXED** - resolved, with commit reference
+
+Fix all HIGH and MEDIUM items before launch. LOW items should be fixed but are not blockers
+for a limited private launch.
+
+---
+
+## Finding 1 - Stored XSS via unauthenticated analytics injection
+
+**Severity:** HIGH
+**Status:** FIXED (2026-09-26)
+**Source:** AI security audit, 2026-09-26
+**File:** `regmap_engine/serve.py` (`POST /analytics/collect`), `web/admin.html`
+
+### What was found
+
+`POST /analytics/collect` accepts requests with no authentication. Any anonymous visitor or
+malicious third party can POST arbitrary event names directly to the endpoint. Those event
+names are stored in the database and rendered on the admin dashboard.
+
+The audit confirmed injection by posting `<img src=x onerror=alert(1)>` as an event name.
+It appeared immediately in the Events by type table on the admin page. The current rendering
+escaped it correctly via `RegMap.esc()`, so the payload did not execute. However that is a
+single thin line of defence. If any future admin view renders event names or event `props`
+with `innerHTML` without escaping, this becomes a working stored XSS attack against the admin
+panel. The `props` field (also submitted without auth) is unstructured and particularly risky.
+
+### Fix required
+
+1. Add server-side validation: allowlist permitted event name values (pageview, map_run,
+   lesson_complete, etc. from the event taxonomy in `docs/analytics_tracker.md`). Reject
+   anything not on the list with a 400 error.
+2. Sanitize and size-cap the `props` field server-side before storing.
+3. Consider requiring a CSRF token or same-site cookie check on `/analytics/collect` to
+   block cross-origin POST requests. Note: requiring full auth would break guest event
+   capture (guests are intentional), so the allowlist approach is the right primary fix.
+4. On the admin dashboard, ensure all rendered event names and props go through `esc()`
+   regardless of which code path renders them.
+
+---
+
+## Finding 2 - `/admin.html` has no server-side access control
+
+**Severity:** MEDIUM
+**Status:** OPEN
+**Source:** AI security audit, 2026-09-26
+**File:** `regmap_engine/serve.py` (route serving `admin.html`), `web/admin.html`
+
+### What was found
+
+The admin page HTML is served with `200 OK` to any request, authenticated or not. The data
+API correctly returns `403 administrator access only`, but the page shell itself loads for
+anyone who knows the URL. The client-side session check in `shell.js` that hides the Admin
+nav link for non-admins is not a security control.
+
+### Fix required
+
+The server should check the session before serving `admin.html`. If the session does not
+have `admin: true`, return a 302 redirect to `/` or a 403 response. This prevents the
+page source and its JavaScript from being studied by an attacker even if the data endpoints
+are correctly gated.
+
+---
+
+## Finding 3 - Security response headers missing on all routes
+
+**Severity:** MEDIUM
+**Status:** OPEN
+**Source:** AI security audit, 2026-09-26
+**File:** `regmap_engine/serve.py` (global middleware)
+
+### What was found
+
+Every response (HTML pages and API endpoints alike) is missing the following headers:
+
+- `Content-Security-Policy` - prevents XSS by restricting what scripts can run
+- `X-Frame-Options` - prevents clickjacking (the page being embedded in an iframe)
+- `X-Content-Type-Options` - prevents MIME-type sniffing
+- `Strict-Transport-Security` - enforces HTTPS on future visits
+- `Referrer-Policy` - controls how much referrer info is sent to third parties
+
+Additionally, the `Server: uvicorn` response header discloses the runtime stack, which
+helps attackers fingerprint the server.
+
+### Fix required
+
+Add a FastAPI middleware that injects these headers on every response:
+
+```python
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+Remove or replace the `Server` header (set it to a blank string or a generic value).
+Note: `unsafe-inline` in CSP is needed while inline scripts exist in the HTML files.
+The long-term fix is to move inline scripts to external files and remove `unsafe-inline`.
+
+---
+
+## Finding 4 - API key stored in localStorage
+
+**Severity:** LOW
+**Status:** OPEN
+**Source:** AI security audit, 2026-09-26
+**File:** `web/assets/api.js`
+
+### What was found
+
+The code stores an API key in `localStorage`. The `api.js` comments acknowledge this
+directly: "it is NOT a substitute for a session, because anything in localStorage is
+readable by any script on the origin." If any XSS is ever exploited (see Finding 1), the
+API key is trivially exfiltrated.
+
+### Fix required
+
+Once proper session auth is fully in place and stable, remove the API key from
+`localStorage`. The session cookie path (`credentials: "same-origin"`) is the correct
+pattern. The API key in localStorage is a legacy convenience; it should not exist in
+production for regular users.
+
+---
+
+## Finding 5 - Account operates without email verification
+
+**Severity:** LOW
+**Status:** OPEN
+**Source:** AI security audit, 2026-09-26
+**File:** `regmap_engine/serve.py`, `regmap_engine/auth.py`
+
+### What was found
+
+The `/auth/session` response returns `email_verified: false` on an `admin: true` account.
+The account is fully operational despite the email address never being confirmed. Email
+verification should gate sensitive capabilities (admin access, saving policies, publishing
+transcripts).
+
+### Fix required
+
+1. Wire a real email provider (currently no transactional email is configured).
+2. On registration, send a verification link and set `email_verified = false`.
+3. Gate admin privileges and sensitive write operations on `email_verified = true`.
+4. Provide a "resend verification" option on the account page.
+
+Note: this is also listed in the pre-launch checklist. Do not block a dev-only local
+instance on this but fix it before any public launch.
+
+---
+
+## Pre-launch security checklist
+
+These must all be done before the site is public:
+
+- [ ] Fix Finding 1: allowlist event names server-side on `/analytics/collect`
+- [ ] Fix Finding 2: server-side gate on `/admin.html` route
+- [ ] Fix Finding 3: add security headers middleware to serve.py
+- [ ] Fix Finding 4: remove API key from localStorage once session auth is stable
+- [ ] Fix Finding 5: wire email verification and gate sensitive ops on it
+- [ ] Enable `REGMAP_REQUIRE_AUTH=true` and `REGMAP_SECURE_COOKIES=true`
+- [ ] Enable `REGMAP_ENFORCE_QUOTA=true` and `REGMAP_ENFORCE_RATE_LIMIT=true`
+- [ ] Set `REGMAP_ANALYTICS_SALT` to a long random string (not the default)
+- [ ] Change the admin account password from the dev placeholder
+- [ ] Switch from SQLite to Postgres for production (concurrent write safety)
+
+---
+
+## Change log
+
+- 2026-09-26: document created from AI security audit findings.
