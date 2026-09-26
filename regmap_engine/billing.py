@@ -146,6 +146,18 @@ projects = Table(
     Column("updated_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
 )
 
+saved_policies = Table(
+    # A user's customized policy documents (field values and any full-text edits), so they can return to
+    # and update them. One row per saved policy (or policy set).
+    "saved_policies", metadata,
+    Column("id", String(40), primary_key=True),
+    Column("account_id", String(40), index=True, nullable=False),
+    Column("name", String(200), nullable=False),
+    Column("data", Text),                                   # JSON: {indices, vars, edits, ...}
+    Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+    Column("updated_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+)
+
 transcripts = Table(
     # A shareable evidence record: a public, read-only snapshot of a learner's progress and graded-lab
     # results, addressable by an opaque id. One stable transcript per account (re-published in place).
@@ -531,6 +543,58 @@ def put_learning(account_id, key, data):
             c.execute(insert(learning_progress).values(
                 account_id=account_id, pkey=key, data=payload, updated_at=now))
     return True
+
+
+# ---- saved (customized) policies -----------------------------------------------------------------
+def list_saved_policies(account_id):
+    with engine().begin() as c:
+        rows = c.execute(select(saved_policies.c.id, saved_policies.c.name, saved_policies.c.updated_at)
+                         .where(saved_policies.c.account_id == account_id)
+                         .order_by(saved_policies.c.updated_at.desc())).mappings().all()
+    return [dict(r) for r in rows]
+
+
+def get_saved_policy(account_id, pid):
+    with engine().begin() as c:
+        row = c.execute(select(saved_policies).where(
+            saved_policies.c.id == pid, saved_policies.c.account_id == account_id)).mappings().first()
+    if not row:
+        return None
+    d = dict(row)
+    try:
+        d["data"] = json.loads(d.get("data") or "{}")
+    except Exception:
+        d["data"] = {}
+    return d
+
+
+def create_saved_policy(account_id, name, data):
+    pid = "pol_" + secrets.token_hex(8)
+    now = datetime.now(timezone.utc)
+    with engine().begin() as c:
+        c.execute(insert(saved_policies).values(
+            id=pid, account_id=account_id, name=(name or "Policy")[:200],
+            data=json.dumps(data or {}), created_at=now, updated_at=now))
+    return pid
+
+
+def update_saved_policy(account_id, pid, name=None, data=None):
+    vals = {"updated_at": datetime.now(timezone.utc)}
+    if name is not None:
+        vals["name"] = name[:200]
+    if data is not None:
+        vals["data"] = json.dumps(data)
+    with engine().begin() as c:
+        r = c.execute(saved_policies.update().where(
+            saved_policies.c.id == pid, saved_policies.c.account_id == account_id).values(**vals))
+    return r.rowcount
+
+
+def delete_saved_policy(account_id, pid):
+    with engine().begin() as c:
+        r = c.execute(saved_policies.delete().where(
+            saved_policies.c.id == pid, saved_policies.c.account_id == account_id))
+    return r.rowcount
 
 
 # ---- shareable transcripts (RegMap University evidence record) -----------------------------------

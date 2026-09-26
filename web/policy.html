@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=35">
+<link rel="stylesheet" href="assets/site.css?v=36">
 <style>
   .pw{display:grid;grid-template-columns:320px 1fr;gap:26px;align-items:start}
   @media(max-width:900px){.pw{grid-template-columns:1fr}}
@@ -63,6 +63,10 @@
       <div id="fields"></div>
       <button class="btn ghost sm" id="editToggle" type="button" style="width:100%;justify-content:center;margin-bottom:6px">Edit full document text</button>
       <div class="edit-note" id="editNote" hidden>Editing the full text. Click anywhere in a document to change it. Field edits are paused while editing.</div>
+      <div class="fld2" style="margin-top:10px"><label for="saveName">Save as</label>
+        <input id="saveName" placeholder="e.g. Acme Access Control Policy"></div>
+      <button class="btn primary sm" id="saveBtn" type="button" style="width:100%;justify-content:center">Save to my account</button>
+      <div id="saveMsg" class="hint"></div>
       <div class="dl">
         <button class="btn primary sm" data-dl="word" type="button">Download Word</button>
         <button class="btn primary sm" data-dl="pdf" type="button">Download PDF</button>
@@ -83,24 +87,30 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
-<script src="assets/shell.js?v=35"></script>
-<script src="assets/policies-data.js?v=35"></script>
+<script src="assets/shell.js?v=36"></script>
+<script src="assets/policies-data.js?v=36"></script>
 <script>
 (function () {
   const RP = window.RegMapPolicy, esc = RP.esc;
   const params = new URLSearchParams(location.search);
-  const idx = (params.get("p") || "").split(",").map(x => parseInt(x, 10)).filter(n => !isNaN(n) && RP.list[n]);
-  const policies = idx.length ? idx.map(n => RP.list[n]) : [RP.list[0]];
+  let indices = (params.get("p") || "").split(",").map(x => parseInt(x, 10)).filter(n => !isNaN(n) && RP.list[n]);
+  if (!indices.length) indices = [0];
+  let policies = indices.map(n => RP.list[n]);
+  let savedId = params.get("saved") || null;   // when opening a previously saved policy
+  let savedName = "";
+  let authed = false;
 
   const VKEY = "regmap.policyVars";
   let vars = {};
   try { vars = JSON.parse(localStorage.getItem(VKEY) || "{}"); } catch (e) { vars = {}; }
 
-  // title
-  document.getElementById("pageTitle").textContent = policies.length === 1
-    ? policies[0].title : `Customize ${policies.length} policies`;
-  document.getElementById("custSub").textContent = policies.length === 1
-    ? "Your details are applied to this policy." : `Your details are applied to all ${policies.length} selected policies at once.`;
+  function setHeader() {
+    document.getElementById("pageTitle").textContent = policies.length === 1
+      ? policies[0].title : `Customize ${policies.length} policies`;
+    document.getElementById("custSub").textContent = policies.length === 1
+      ? "Your details are applied to this policy." : `Your details are applied to all ${policies.length} selected policies at once.`;
+  }
+  setHeader();
 
   // customization fields
   document.getElementById("fields").innerHTML = RP.FIELDS.map(f => `
@@ -114,7 +124,7 @@
   }
   function renderDocs() {
     document.getElementById("docs").innerHTML = policies.map(p =>
-      `<div class="docwrap">${RP.html(p, vars)}</div>`).join("");
+      `<div class="docwrap" data-idx="${RP.list.indexOf(p)}">${RP.html(p, vars)}</div>`).join("");
   }
   RP.FIELDS.forEach(f => {
     const el = document.getElementById("f-" + f.key);
@@ -139,8 +149,8 @@
   // ---- downloads ----
   const toast = m => { const t = document.getElementById("toast"); t.textContent = m; t.classList.add("show");
     clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1600); };
-  const baseName = policies.length === 1
-    ? policies[0].title.replace(/[^A-Za-z0-9]+/g, "_") : "RegMap_policies";
+  const baseName = () => (savedName || (policies.length === 1
+    ? policies[0].title : "RegMap_policies")).replace(/[^A-Za-z0-9]+/g, "_");
   function download(blob, name) {
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -184,7 +194,7 @@
     // HTML that Word opens natively (application/msword)
     return `<!doctype html><html xmlns:o="urn:schemas-microsoft-com:office:office"
       xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head>
-      <meta charset="utf-8"><title>${esc(baseName)}</title>
+      <meta charset="utf-8"><title>${esc(baseName())}</title>
       <style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#111;line-height:1.5}
       h1{font-size:18pt}h3{font-size:13pt;border-top:1px solid #ccc;padding-top:8px}
       .meta{font-family:Consolas,monospace;font-size:9pt;color:#555}
@@ -195,9 +205,9 @@
   document.querySelectorAll("[data-dl]").forEach(btn => btn.addEventListener("click", () => {
     readVars();
     const kind = btn.dataset.dl;
-    if (kind === "md") download(new Blob([combinedMarkdown()], { type: "text/markdown" }), baseName + ".md");
-    else if (kind === "txt") download(new Blob([combinedMarkdown()], { type: "text/plain" }), baseName + ".txt");
-    else if (kind === "word") download(new Blob(["﻿" + wordDoc()], { type: "application/msword" }), baseName + ".doc");
+    if (kind === "md") download(new Blob([combinedMarkdown()], { type: "text/markdown" }), baseName() + ".md");
+    else if (kind === "txt") download(new Blob([combinedMarkdown()], { type: "text/plain" }), baseName() + ".txt");
+    else if (kind === "word") download(new Blob(["﻿" + wordDoc()], { type: "application/msword" }), baseName() + ".doc");
     else if (kind === "print") window.print();
     else if (kind === "pdf") {
       const holder = document.createElement("div");
@@ -205,12 +215,59 @@
       holder.innerHTML = combinedHTMLBody();
       if (window.html2pdf) {
         toast("Building PDF…");
-        window.html2pdf().set({ margin: 12, filename: baseName + ".pdf",
+        window.html2pdf().set({ margin: 12, filename: baseName() + ".pdf",
           pagebreak: { mode: ["css", "legacy"] }, html2canvas: { scale: 2 },
           jsPDF: { unit: "pt", format: "a4" } }).from(holder).save().catch(() => window.print());
       } else { window.print(); }
     }
   }));
+
+  // ---- save to account ----------------------------------------------------
+  const saveBtn = document.getElementById("saveBtn"), saveMsg = document.getElementById("saveMsg"),
+        saveName = document.getElementById("saveName");
+  function captureEdits() {
+    const edits = {};
+    docsEls().forEach(el => { edits[el.dataset.idx] = el.innerHTML; });
+    return edits;
+  }
+  function applyEdits(edits) {
+    if (!edits) return;
+    docsEls().forEach(el => { if (edits[el.dataset.idx]) el.innerHTML = edits[el.dataset.idx]; });
+  }
+  async function doSave() {
+    readVars();
+    if (!authed) { saveMsg.innerHTML = `Sign in to save. <a href="/account.html" style="color:var(--accent);font-weight:600">Sign in</a>`; return; }
+    const name = (saveName.value.trim() || (policies.length === 1 ? policies[0].title : "My policy set"));
+    const payload = { name, data: { indices, vars, edits: captureEdits() } };
+    saveMsg.textContent = "Saving…";
+    try {
+      if (savedId) { await RegMap.savedPolicyUpdate(savedId, payload); }
+      else { const r = await RegMap.savedPolicyCreate(payload); savedId = r.id; }
+      savedName = name; saveBtn.textContent = "Update saved policy";
+      saveMsg.textContent = "Saved to your account.";
+    } catch (e) { saveMsg.textContent = "Could not save, please try again."; }
+  }
+  saveBtn.addEventListener("click", doSave);
+
+  async function loadSaved() {
+    try {
+      const p = await RegMap.savedPolicyGet(savedId);
+      const d = p.data || {};
+      if (Array.isArray(d.indices) && d.indices.length) {
+        indices = d.indices.filter(n => RP.list[n]); policies = indices.map(n => RP.list[n]);
+      }
+      if (d.vars) { vars = Object.assign(vars, d.vars); RP.FIELDS.forEach(f => { const el = document.getElementById("f-" + f.key); if (el) el.value = vars[f.key] || ""; }); }
+      savedName = p.name || ""; if (saveName) saveName.value = savedName;
+      saveBtn.textContent = "Update saved policy";
+      setHeader(); renderDocs(); applyEdits(d.edits);
+    } catch (e) { saveMsg.textContent = "Could not open that saved policy."; }
+  }
+
+  // session + saved load
+  RegMap.session().then(s => { authed = !!(s && s.authenticated);
+    if (!authed) saveMsg.innerHTML = `<a href="/account.html" style="color:var(--accent);font-weight:600">Sign in</a> to save your customized policy.`;
+    if (savedId) loadSaved();
+  }).catch(() => {});
 })();
 </script>
 </body>

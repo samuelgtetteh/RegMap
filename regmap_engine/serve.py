@@ -1267,6 +1267,52 @@ def learning_put(key: str, req: LearningReq, principal=Depends(auth.require_key)
     return {"saved": True}
 
 
+# ---- saved (customized) policies -----------------------------------------------------------------
+class SavedPolicyReq(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    data: dict = Field(default_factory=dict, description="indices, vars (field values), and any full-text edits")
+
+
+@app.get("/policies/saved")
+def saved_policies_list(principal=Depends(auth.require_key)):
+    _require_account(principal, "save a policy")
+    return {"policies": [_iso(p) for p in billing.list_saved_policies(principal["account_id"])]}
+
+
+@app.post("/policies/saved")
+def saved_policies_create(req: SavedPolicyReq, principal=Depends(auth.require_key)):
+    _require_account(principal, "save a policy")
+    pid = billing.create_saved_policy(principal["account_id"], req.name, req.data)
+    return {"id": pid, "name": req.name}
+
+
+@app.get("/policies/saved/{pid}")
+def saved_policies_get(pid: str, principal=Depends(auth.require_key)):
+    _require_account(principal, "open a saved policy")
+    p = billing.get_saved_policy(principal["account_id"], pid)
+    if not p:
+        raise HTTPException(404, "saved policy not found")
+    return _iso(p)
+
+
+@app.put("/policies/saved/{pid}")
+def saved_policies_update(pid: str, req: SavedPolicyReq, principal=Depends(auth.require_key)):
+    _require_account(principal, "save a policy")
+    n = billing.update_saved_policy(principal["account_id"], pid, req.name, req.data)
+    if not n:
+        raise HTTPException(404, "saved policy not found")
+    return {"id": pid, "updated": True}
+
+
+@app.delete("/policies/saved/{pid}")
+def saved_policies_delete(pid: str, principal=Depends(auth.require_key)):
+    _require_account(principal, "manage saved policies")
+    n = billing.delete_saved_policy(principal["account_id"], pid)
+    if not n:
+        raise HTTPException(404, "saved policy not found")
+    return {"id": pid, "deleted": True}
+
+
 class TranscriptReq(BaseModel):
     data: dict = Field(default_factory=dict, description="the public snapshot to publish")
     id: Optional[str] = Field(None, description="an existing transcript id to re-publish in place")

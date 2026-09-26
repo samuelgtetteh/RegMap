@@ -108,7 +108,12 @@ controls and frameworks it satisfies.
       (contenteditable) so the entire document can be edited in the browser, and downloads as Word (.doc),
       PDF (html2pdf), Markdown, and Text, plus Print. Multi-select on the library lets a user customize
       several policies at once with one set of details. Shared builder in `assets/policies-data.js`.
-- [ ] Save a customized policy to the account (reuse a persistence store) and versioning/approvals.
+- [x] **Save a customized policy to the account. DONE 2026-09-26.** New `saved_policies` table + endpoints
+      `GET/POST /policies/saved`, `GET/PUT/DELETE /policies/saved/{id}` (account-scoped). On policy.html a
+      "Save to my account" button stores the selected policy indices, field values, and any full-text edits
+      (Update when re-saving); opening `policy.html?saved=<id>` restores everything. policies.html shows a
+      "Your saved policies" section (open in a tab, delete) when signed in. Verified end to end (create,
+      list, get, guest 401). Still to add: versioning/approvals.
 - [ ] Industry tailoring: pick an industry (healthcare, finance, SaaS, defense) and generate a tailored set.
 - [ ] Map each policy to the user's controls/frameworks (reuse the compliance engine) and show live coverage.
 - [ ] Versioning, approvals, and an export as a combined DOCX/PDF audit-ready policy pack.
