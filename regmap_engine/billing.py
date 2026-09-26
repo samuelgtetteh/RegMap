@@ -646,7 +646,7 @@ def publish_transcript(account_id, data, tid=None):
                 c.execute(transcripts.update().where(transcripts.c.id == tid)
                           .values(data=payload, updated_at=now))
                 return tid
-        new_id = "tr_" + secrets.token_urlsafe(9)
+        new_id = "tr_" + secrets.token_urlsafe(16)   # 128 bits of entropy; unguessable
         c.execute(insert(transcripts).values(
             id=new_id, account_id=account_id, data=payload, created_at=now, updated_at=now))
     return new_id

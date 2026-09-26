@@ -1993,6 +1993,37 @@ SESSION_COOKIE = "regmap_session"
 # it on for any real deployment, which is what REGMAP_SECURE_COOKIES exists for.
 SECURE_COOKIES = os.environ.get("REGMAP_SECURE_COOKIES", "false").lower() in ("1", "true", "yes")
 
+# ----------------------------------------------------------------------------------------------------
+# Auth endpoint rate limiter — sliding window, in-memory, per IP
+# Limits: login/register 10 attempts per minute; reset/request 5 per minute.
+# Uses a plain dict of {key: [timestamp, ...]} with a periodic prune. No external dependencies.
+# ----------------------------------------------------------------------------------------------------
+import threading as _threading
+_rl_lock = _threading.Lock()
+_rl_store: dict = {}   # key -> list of float timestamps
+
+def _rl_check(key: str, max_calls: int, window_s: int = 60) -> bool:
+    """Return True (allowed) or False (rate-limited). Prunes expired entries in place."""
+    now = time.monotonic()
+    cutoff = now - window_s
+    with _rl_lock:
+        hits = [t for t in _rl_store.get(key, []) if t > cutoff]
+        if len(hits) >= max_calls:
+            _rl_store[key] = hits
+            return False
+        hits.append(now)
+        _rl_store[key] = hits
+        return True
+
+def _rl_key(request: Request, label: str) -> str:
+    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+          or (request.client.host if request.client else "unknown"))
+    return f"{label}:{ip}"
+
+def _require_not_rate_limited(request: Request, label: str, max_calls: int, window_s: int = 60):
+    if not _rl_check(_rl_key(request, label), max_calls, window_s):
+        raise HTTPException(429, detail="too many attempts, please wait a moment and try again")
+
 # Email sending is not wired yet. Until it is, verification and reset LINKS are returned in the API
 # response (and logged) so the flow is testable. Set REGMAP_EMAIL_ENABLED=true once a real sender exists,
 # and the links stop being returned in responses.
@@ -2219,9 +2250,10 @@ class RegisterReq(BaseModel):
 def auth_register(req: RegisterReq, request: Request):
     """Create an account and sign in. Lands on the free plan, so the new user is metered from the start.
 
-    Also issues an email verification link. No email sender is wired yet, so pre-launch the link is
-    returned here (and logged); production emails it and stops returning it.
+    Also issues an email verification link. The link is logged server-side only; it travels via email
+    in production. Rate limited: 10 registrations per IP per minute.
     """
+    _require_not_rate_limited(request, "register", max_calls=10)
     aid, err = billing.register(req.email, req.password, req.name)
     if err:
         raise HTTPException(400, detail=err)
@@ -2230,11 +2262,12 @@ def auth_register(req: RegisterReq, request: Request):
         raise HTTPException(500, detail="account created but sign-in failed; try logging in")
     vtok = billing.create_auth_token(aid, "verify", billing.VERIFY_TTL_H)
     link = _auth_link(request, "verify", vtok)
+    # SECURITY: the token travels only via email (or the server log in dev). It must NEVER appear
+    # in the JSON response body — an attacker could read the token from the response and verify
+    # any email address without inbox access, completely bypassing email verification.
     print(f"[regmap] email verify link for {req.email.strip().lower()}: {link}", flush=True)
     body = {"account_id": aid, "email": req.email.strip().lower(), "plan": "free",
-            "email_verified": False, "message": "account created"}
-    if not EMAIL_ENABLED:
-        body["verify_link"] = link
+            "email_verified": False, "message": "account created — check your email to verify"}
     resp = JSONResponse(body)
     _set_session_cookie(resp, token)
     return resp
@@ -2247,6 +2280,7 @@ class LoginReq(BaseModel):
 
 @app.post("/auth/login")
 def auth_login(req: LoginReq, request: Request):
+    _require_not_rate_limited(request, "login", max_calls=10)
     if not billing.verify_session(request.cookies.get(SESSION_COOKIE)):
         pass  # no existing session; continue to authenticate
     token, aid, err = billing.login(req.email, req.password, request.headers.get("user-agent"))
@@ -2349,11 +2383,9 @@ def auth_verify_resend(request: Request, principal=Depends(auth.require_key)):
     _require_account(principal, "resend a verification email")
     tok = billing.create_auth_token(principal["account_id"], "verify", billing.VERIFY_TTL_H)
     link = _auth_link(request, "verify", tok)
+    # SECURITY: token travels only via server log in dev, email in production. Never in the response.
     print(f"[regmap] email verify link (resend) for {principal.get('email')}: {link}", flush=True)
-    out = {"sent": True}
-    if not EMAIL_ENABLED:
-        out["verify_link"] = link
-    return out
+    return {"sent": True}
 
 
 # --- password reset ---------------------------------------------------------------------------------
@@ -2364,15 +2396,15 @@ class ResetRequestBody(BaseModel):
 @app.post("/auth/reset/request")
 def auth_reset_request(req: ResetRequestBody, request: Request):
     """Start a password reset. Always returns 200 with no hint about whether the email exists, so it
-    cannot be used to enumerate accounts."""
+    cannot be used to enumerate accounts. Rate limited: 5 per IP per minute."""
+    _require_not_rate_limited(request, "reset", max_calls=5)
     aid = billing.account_by_email(req.email)
     out = {"sent": True, "message": "if that email has an account, a reset link is on its way"}
     if aid:
         tok = billing.create_auth_token(aid, "reset", billing.RESET_TTL_H)
         link = _auth_link(request, "reset", tok)
+        # SECURITY: token travels only via server log in dev, email in production. Never in the response.
         print(f"[regmap] password reset link for {req.email.strip().lower()}: {link}", flush=True)
-        if not EMAIL_ENABLED:
-            out["reset_link"] = link
     return out
 
 

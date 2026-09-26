@@ -165,6 +165,109 @@ instance on this but fix it before any public launch.
 
 ---
 
+---
+
+## Finding 6 - Verification token returned in registration response body
+
+**Severity:** HIGH
+**Status:** FIXED (2026-09-26)
+**Source:** AI security audit, second pass, 2026-09-26
+**File:** `regmap_engine/serve.py` (`POST /auth/register`, `POST /auth/verify/resend`, `POST /auth/reset/request`)
+
+### What was found
+
+`POST /auth/register` returned the one-time verification URL (including the token) in the JSON
+response body when `EMAIL_ENABLED` was false. An attacker could register any email address, read
+the token directly from the response, call `POST /auth/verify` with it, and the account would be
+instantly verified without inbox access. Email verification was completely bypassable.
+
+The same pattern existed in `/auth/verify/resend` (returned `verify_link`) and
+`/auth/reset/request` (returned `reset_link`).
+
+### Fix applied
+
+The `verify_link` and `reset_link` fields were removed from all three response bodies. Tokens now
+travel only via the server log (`print(...)`) in dev mode, and via email in production. The log
+line is visible only to the server operator, not to the registering client.
+
+---
+
+## Finding 7 - No rate limiting on authentication endpoints
+
+**Severity:** HIGH
+**Status:** FIXED (2026-09-26)
+**Source:** AI security audit, second pass, 2026-09-26
+**File:** `regmap_engine/serve.py`
+
+### What was found
+
+`/auth/login`, `/auth/register`, and `/auth/reset/request` accepted unlimited concurrent requests.
+30 rapid failed logins all returned 401 with no throttle. This allowed unrestricted brute-force
+attacks, account creation spam, and inbox flooding via repeated reset requests.
+
+### Fix applied
+
+A sliding-window in-memory rate limiter (`_rl_check`, `_require_not_rate_limited`) was added.
+Limits per IP per 60 seconds:
+- `/auth/login` and `/auth/register`: 10 requests
+- `/auth/reset/request`: 5 requests
+
+Exceeding the limit returns `429` with a plain message. No external dependencies; uses a
+thread-safe dict of timestamps with in-place pruning. For production at scale, replace with
+Redis or a similar shared store so limits apply across multiple workers.
+
+---
+
+## Finding 8 - Public transcript endpoint leaks learning activity
+
+**Severity:** MEDIUM
+**Status:** RESOLVED by design (ID entropy upgraded)
+**Source:** AI security audit, second pass, 2026-09-26
+**File:** `regmap_engine/billing.py` (`publish_transcript`)
+
+### What was found
+
+`GET /transcript/{id}` returns full learning profile data with no authentication. The transcript
+ID `tr_50SFAW8ZNRAZ` was found in localStorage and confirmed accessible without credentials.
+
+### Resolution
+
+Transcripts are **intentionally public** by design: they are a shareable evidence record (the
+point is that an employer or certifier can view it without signing in). Access is controlled
+solely by the opacity of the ID.
+
+The original IDs used `secrets.token_urlsafe(9)` giving 72 bits of entropy. Upgraded to
+`secrets.token_urlsafe(16)` giving 128 bits, which is the cryptographic standard for unguessable
+identifiers. At 128 bits, enumerating IDs is computationally infeasible.
+
+If a future requirement calls for revocable or private transcripts, add a `public` flag to the
+`transcripts` table and gate the endpoint on it.
+
+---
+
+## Finding 9 - Cookie Secure and SameSite flags
+
+**Severity:** LOW
+**Status:** CONFIRMED CORRECT (no change needed)
+**Source:** AI security audit, second pass, 2026-09-26
+
+### What was found
+
+The auditor could not confirm `Secure` and `SameSite` flags on HTTP (dev). These are required in
+production over HTTPS.
+
+### Current state
+
+`_set_session_cookie` already sets:
+- `httponly=True` (script cannot read the cookie)
+- `samesite="lax"` (sent on top-level navigation, not cross-site POST)
+- `secure=SECURE_COOKIES` (off by default for localhost; set `REGMAP_SECURE_COOKIES=true` in production)
+
+The flags are correct. The operator must set `REGMAP_SECURE_COOKIES=true` in any HTTPS deployment.
+This is in the pre-launch checklist and `docs/hosting_options.md`.
+
+---
+
 ## Pre-launch security checklist
 
 These must all be done before the site is public:
