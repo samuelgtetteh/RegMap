@@ -135,8 +135,11 @@ yet committed.
    for the coverage heatmap (#6). PAID (planned). Later: drill-down from a cell into the single-target review. 
 8. **Gap remediation guidance.** For each gap, suggest the control to implement and a starter policy
    statement (reuses the advisor's drafting). PAID.
-9. **Confidence thresholds and triage.** Let the user set a confidence cutoff; auto-flag low-confidence
-   matches as "needs review" so effort goes where it matters. FREE basic, PAID tunable.
+9. **Confidence thresholds and triage. DONE 2026-09-25.** A threshold slider above each result set (on
+   both "Map a control" and "Your framework") flags every match below the cutoff as a "needs review" pill
+   and dims the row, with a live "N of M need review" count. The chosen threshold persists
+   (`localStorage regmap.confThreshold`). Pure view over the returned scores (`triageBar`/`applyTriage`/
+   `wireTriage`), no refetch. FREE basic; PAID would add auto-actions (bulk-set status on the flagged).
 10. **Explainability. DONE 2026-09-25.** Every suggested mapping now shows *why* it matched: the salient
     terms shared by the query and the target control, as chips under each result. Backend `_why_terms`
     in `serve.py` (stemmed overlap, stopword-filtered) adds a `why: [...]` array to each result on `/map`
@@ -189,4 +192,6 @@ yet committed.
   "Your framework" tab. Verified end to end (2 controls x 3 frameworks).
 - 2026-09-25: built Coverage dashboard/heatmap (#6, Tier 2): coverage tiles per framework + heatmap-shaded
   matrix (`covColor`) + drill-down from a tile/column into the single-target review. No new endpoint.
-  Tier 2 items #6, #7, #10 done; remaining Tier 2: remediation guidance (#8), confidence triage (#9).
+- 2026-09-25: built Confidence triage (#9, Tier 2): a threshold slider that flags low-confidence matches
+  as "needs review" on both tabs, with a live count and a persisted threshold. Tier 2 items #6, #7, #9,
+  #10 done; only #8 (gap remediation guidance) remains in Tier 2.

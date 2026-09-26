@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RegMap: map any control to any framework</title>
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=18">
-<link rel="stylesheet" href="assets/app.css?v=18">
+<link rel="stylesheet" href="assets/site.css?v=19">
+<link rel="stylesheet" href="assets/app.css?v=19">
 <style>
   /* page-local: the two-mode tab switch (uses the shell tokens) */
   .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
@@ -88,6 +88,16 @@
   table.cov th.fw{cursor:pointer}
   table.cov th.fw:hover{color:var(--accent)}
   table.cov th.fw .open{font-size:11px;color:var(--accent);font-weight:600;display:block}
+  /* confidence triage (#9): flag low-confidence matches so review effort goes where it matters */
+  .triage{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);
+    padding:8px 12px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;margin-bottom:10px}
+  .triage input[type=range]{width:160px;accent-color:var(--accent)}
+  .triage .t-val{font-family:var(--mono);font-weight:700;color:var(--ink)}
+  .triage .t-count{margin-left:auto;font-weight:600}
+  .res.low-conf{opacity:.62}
+  .nr-badge{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;color:var(--warn);
+    background:color-mix(in srgb,var(--warn) 16%,transparent);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);
+    border-radius:999px;padding:1px 8px;vertical-align:middle}
   .ctl-card{padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:20px}
   .ctl-card:last-child{border-bottom:0}
   #cText.dropping{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--accent-soft)}
@@ -244,8 +254,8 @@
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=18"></script>
-<script src="assets/shell.js?v=18"></script>
+<script src="assets/api.js?v=19"></script>
+<script src="assets/shell.js?v=19"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -272,6 +282,43 @@
   const whyChips = r => (r.why && r.why.length)
     ? `<div class="why"><span class="why-lbl">why</span>${r.why.map(w => `<span class="chip">${esc(w)}</span>`).join("")}</div>`
     : "";
+
+  // Confidence triage (#9): a per-results threshold that flags weak matches as "needs review", so
+  // an analyst's attention goes to the uncertain ones. Purely a view over the scores already returned.
+  let confThreshold = 0.5;
+  try { const v = parseFloat(localStorage.getItem("regmap.confThreshold")); if (v >= 0 && v <= 1) confThreshold = v; } catch (e) {}
+  const nrBadge = () => `<span class="nr-badge" hidden>needs review</span>`;
+  const triageBar = () => {
+    const pct = Math.round(confThreshold * 100);
+    return `<div class="triage">
+      <span>Flag matches below <span class="t-val">${pct}%</span> confidence as</span>
+      <span style="color:var(--warn);font-weight:700">needs review</span>
+      <input type="range" min="0" max="100" value="${pct}" class="t-range">
+      <span class="t-count"></span></div>`;
+  };
+  function applyTriage(scope) {
+    let low = 0, total = 0;
+    scope.querySelectorAll(".res[data-score]").forEach(row => {
+      total++;
+      const s = parseFloat(row.dataset.score);
+      const weak = isFinite(s) && s < confThreshold;
+      row.classList.toggle("low-conf", weak);
+      const b = row.querySelector(".nr-badge"); if (b) b.hidden = !weak;
+      if (weak) low++;
+    });
+    const c = scope.querySelector(".t-count");
+    if (c) c.textContent = total ? `${low} of ${total} need review` : "";
+  }
+  function wireTriage(scope) {
+    const r = scope.querySelector(".t-range"); if (!r) return;
+    r.addEventListener("input", () => {
+      confThreshold = (+r.value) / 100;
+      const v = scope.querySelector(".t-val"); if (v) v.textContent = r.value + "%";
+      try { localStorage.setItem("regmap.confThreshold", String(confThreshold)); } catch (e) {}
+      applyTriage(scope);
+    });
+    applyTriage(scope);
+  }
 
   const markClass = (sid, tid) => {
     const c = (DECISIONS[sid] && DECISIONS[sid].targets[tid]) || "";
@@ -491,11 +538,11 @@
     mapSids = [sid];
     const rows = d.results.map((r, i) => {
       const pct = r.score == null ? null : Math.max(0, Math.min(100, Math.round(r.score * 100)));
-      return `<div class="res ${r.official ? "is-official" : ""} ${markClass(sid, r.id)}">
+      return `<div class="res ${r.official ? "is-official" : ""} ${markClass(sid, r.id)}"${r.score == null ? "" : ` data-score="${r.score}"`}>
         <div class="rank">${i + 1}</div>
         <div>
           <span class="cid">${esc(r.id)}</span>
-          ${r.official ? `<span class="pill ok" style="margin-left:8px">official</span>` : ""}
+          ${r.official ? `<span class="pill ok" style="margin-left:8px">official</span>` : ""}${nrBadge()}
           ${r.title ? `<div class="ctitle">${esc(r.title)}</div>` : ""}
           <div class="ctext">${esc(r.text)}</div>
           ${whyChips(r)}
@@ -523,9 +570,11 @@
           <span style="font-size:13px;color:var(--muted)">Accept the correct mappings and set this control's status</span>
           ${revStatus(sid)}</div>
         <div id="rollup-map">${rollup(mapSids)}</div>
+        ${triageBar()}
         <div class="res-list">${rows}</div>
         ${revNote(sid)}
         ${revEvidence(sid)}</div>`;
+    wireTriage(out);
   }
 
   src.addEventListener("change", async () => { await onSource(); onPair(); });
@@ -833,8 +882,8 @@
     const rows = d.rows.map(r => {
       const items = r.results.map(x => {
         const pct = Math.max(0, Math.min(100, Math.round((x.score || 0) * 100)));
-        return `<div class="res ${markClass(r.id, x.id)}"><div class="rank"></div>
-          <div><span class="cid">${esc(x.id)}</span>${x.title ? `<div class="ctitle">${esc(x.title)}</div>` : ""}
+        return `<div class="res ${markClass(r.id, x.id)}" data-score="${x.score || 0}"><div class="rank"></div>
+          <div><span class="cid">${esc(x.id)}</span>${nrBadge()}${x.title ? `<div class="ctitle">${esc(x.title)}</div>` : ""}
             <div class="ctext">${esc(x.text)}</div>${whyChips(x)}${revActions(r.id, x.id)}</div>
           <div class="right"><div class="meter"><i style="width:${pct}%"></i></div>
             <span class="score">${(x.score || 0).toFixed(3)}</span></div></div>`;
@@ -857,7 +906,9 @@
         Accept or reject each suggestion, set a status, and add a note. Your review stays on this page for
         now; saving and export are coming next.</div>
       <div id="rollup-custom">${rollup(customSids)}</div>
+      ${triageBar()}
       ${rows}`;
+    wireTriage(cOut);
   }
 
   boot();
