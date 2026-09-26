@@ -394,3 +394,114 @@ window.REGMAP_POLICIES = [
       "AI use complies with all other policies, including Acceptable Use, Data Classification, Privacy, and intellectual property obligations.",
     ] },
 ];
+
+/* ---------------------------------------------------------------------------
+   Shared builder + customization API, used by policies.html (library) and
+   policy.html (single/multi document view with customization + download).
+   --------------------------------------------------------------------------- */
+window.RegMapPolicy = (function () {
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  const DEFAULT_SCOPE = "This policy applies to all employees, contractors, consultants, temporary staff, " +
+    "interns, and third parties (collectively, \u201cusers\u201d) who access [Organization]'s information, " +
+    "systems, networks, applications, cloud services, or facilities, and to all information assets owned, " +
+    "leased, or operated by [Organization], regardless of location, ownership, or format.";
+  const DEFAULT_ROLES = [
+    "Executive management: approves this policy, provides resources, and owns the residual risk.",
+    "[Policy Owner] (e.g. CISO or Head of IT): maintains this policy, approves exceptions, and reports on compliance.",
+    "IT and Security teams: implement, operate, and monitor the controls that enforce this policy.",
+    "Managers: ensure their teams understand and follow this policy.",
+    "All users: comply with this policy and report suspected violations or security events.",
+  ];
+  const ENFORCE = "Compliance with this policy is mandatory. [Organization] verifies compliance through " +
+    "reviews, audits, automated monitoring, and control testing. Suspected violations must be reported to " +
+    "[Policy Owner]. Violations may result in disciplinary action up to and including termination of " +
+    "employment or contract, removal of access, and, where applicable, civil or criminal liability.";
+  const EXC = "Any exception to this policy must be requested in writing, state a business justification and " +
+    "the compensating controls that will manage the added risk, be risk-assessed, and be approved by " +
+    "[Policy Owner]. Approved exceptions are documented in the exception register, are time-bound, and are " +
+    "reviewed at least annually or on expiry.";
+  const REV = "This policy is reviewed at least annually and after any significant change to the business, " +
+    "technology, threat landscape, or legal and regulatory obligations. [Policy Owner] maintains the policy " +
+    "and its revision history and communicates material changes to affected users.";
+
+  // Fields a user fills in to customize a document. Each maps to one or more exact placeholder tokens.
+  const FIELDS = [
+    { key: "org", label: "Organization name", placeholder: "Acme, Inc.", tokens: ["[Organization]"] },
+    { key: "owner", label: "Policy owner (role or name)", placeholder: "Chief Information Security Officer", tokens: ["[Policy Owner]"] },
+    { key: "date", label: "Effective date", placeholder: "2026-01-01", type: "date", tokens: ["[effective date]"] },
+    { key: "itsec", label: "IT / Security team name", placeholder: "the IT Security team", tokens: ["[IT/Security]"] },
+    { key: "report", label: "Incident reporting channel", placeholder: "security@acme.com", tokens: ["[reporting mechanism]", "[reporting channel]", "[IT/Security or the reporting channel]", "[reporting mechanism or the security team]"] },
+    { key: "framework", label: "Primary framework", placeholder: "NIST CSF 2.0", tokens: ["[chosen framework, e.g. NIST CSF / ISO 27001]", "[chosen framework]"] },
+  ];
+
+  function applyVars(text, vars) {
+    vars = vars || {};
+    FIELDS.forEach(f => {
+      const v = (vars[f.key] || "").trim();
+      if (!v) return;
+      f.tokens.forEach(tok => { text = text.split(tok).join(v); });
+    });
+    return text;
+  }
+
+  function sections(p, vars) {
+    const scope = applyVars(p.scope || DEFAULT_SCOPE, vars);
+    const roles = DEFAULT_ROLES.concat(p.roles || []).map(r => applyVars(r, vars));
+    return {
+      title: p.title,
+      purpose: applyVars(p.purpose, vars),
+      scope,
+      statements: p.statements.map(s => applyVars(s, vars)),
+      roles,
+      enforcement: applyVars(ENFORCE, vars),
+      exceptions: applyVars(EXC, vars),
+      review: applyVars(REV, vars),
+      maps: p.maps || "",
+      date: (vars.date || "").trim() || "[effective date]",
+      owner: (vars.owner || "").trim() || "[Policy Owner]",
+    };
+  }
+
+  function html(p, vars) {
+    const d = sections(p, vars);
+    const st = d.statements.map((s, i) => `<li><span class="clause">3.${i + 1}</span> ${esc(s)}</li>`).join("");
+    return `
+      <h1>${esc(d.title)}</h1>
+      <div class="meta">Document classification: Internal &nbsp;·&nbsp; Version: 1.0 &nbsp;·&nbsp;
+        Effective date: ${esc(d.date)} &nbsp;·&nbsp; Owner: ${esc(d.owner)} &nbsp;·&nbsp; Review cycle: Annual</div>
+      <h3>1. Purpose</h3><p>${esc(d.purpose)}</p>
+      <h3>2. Scope</h3><p>${esc(d.scope)}</p>
+      <h3>3. Policy</h3><ol style="list-style:none;padding-left:0">${st}</ol>
+      <h3>4. Roles and responsibilities</h3><ul>${d.roles.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
+      <h3>5. Compliance and enforcement</h3><p>${esc(d.enforcement)}</p>
+      <h3>6. Exceptions</h3><p>${esc(d.exceptions)}</p>
+      <h3>7. Review and maintenance</h3><p>${esc(d.review)}</p>
+      <h3>8. Related frameworks and controls</h3><p class="mono" style="font-size:13px">${esc(d.maps)}</p>
+      <h3>Revision history</h3>
+      <table><thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr></thead>
+        <tbody><tr><td>1.0</td><td>${esc(d.date)}</td><td>${esc(d.owner)}</td><td>Initial issue.</td></tr></tbody></table>`;
+  }
+
+  function markdown(p, vars) {
+    const d = sections(p, vars), L = [];
+    L.push(`# ${d.title}`, "");
+    L.push(`Document classification: Internal  |  Version: 1.0  |  Effective date: ${d.date}  |  Owner: ${d.owner}  |  Review cycle: Annual`, "");
+    L.push("## 1. Purpose", d.purpose, "");
+    L.push("## 2. Scope", d.scope, "");
+    L.push("## 3. Policy");
+    d.statements.forEach((s, i) => L.push(`3.${i + 1}  ${s}`));
+    L.push("", "## 4. Roles and responsibilities");
+    d.roles.forEach(r => L.push(`- ${r}`));
+    L.push("", "## 5. Compliance and enforcement", d.enforcement, "");
+    L.push("## 6. Exceptions", d.exceptions, "");
+    L.push("## 7. Review and maintenance", d.review, "");
+    L.push("## 8. Related frameworks and controls", d.maps, "");
+    L.push("## Revision history", "", "| Version | Date | Author | Summary of change |",
+      "| --- | --- | --- | --- |", `| 1.0 | ${d.date} | ${d.owner} | Initial issue. |`);
+    return L.join("\n");
+  }
+
+  return { esc, FIELDS, applyVars, sections, html, markdown, list: window.REGMAP_POLICIES };
+})();

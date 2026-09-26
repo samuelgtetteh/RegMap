@@ -101,7 +101,14 @@ controls and frameworks it satisfies.
       history) generated from `web/assets/policies-data.js` (real, specific statements per policy). Search,
       category filters, Copy, Download .md, and a `?p=<index>` deep-link. Placeholders ([Organization],
       [Policy Owner], etc.) make each ready to adopt after find/replace.
-- [ ] Edit/customize a policy in the browser and save it (reuse a persistence store).
+- [x] **Open in a tab + customize + download. DONE 2026-09-26.** Policies now open in a new browser tab
+      as their own page (`web/policy.html?p=<i>`, or `?p=1,5,9` for a set). That page has a customization
+      form (organization, policy owner, effective date, IT/Security team, incident reporting channel,
+      primary framework) that applies to the document(s) live, an "Edit full document text" mode
+      (contenteditable) so the entire document can be edited in the browser, and downloads as Word (.doc),
+      PDF (html2pdf), Markdown, and Text, plus Print. Multi-select on the library lets a user customize
+      several policies at once with one set of details. Shared builder in `assets/policies-data.js`.
+- [ ] Save a customized policy to the account (reuse a persistence store) and versioning/approvals.
 - [ ] Industry tailoring: pick an industry (healthcare, finance, SaaS, defense) and generate a tailored set.
 - [ ] Map each policy to the user's controls/frameworks (reuse the compliance engine) and show live coverage.
 - [ ] Versioning, approvals, and an export as a combined DOCX/PDF audit-ready policy pack.

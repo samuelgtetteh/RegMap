@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=34">
-<link rel="stylesheet" href="assets/app.css?v=34">
+<link rel="stylesheet" href="assets/site.css?v=35">
+<link rel="stylesheet" href="assets/app.css?v=35">
 <style>
   .pol-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
   .pol-search{flex:1;min-width:220px;padding:10px 13px;font-size:14px}
@@ -26,6 +26,13 @@
   .pol p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
   .pol .maps{font-family:var(--mono);font-size:11px;color:var(--faint)}
   .pol .open-tag{font-size:12px;color:var(--accent);font-weight:600}
+  .pol .pick{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);cursor:pointer}
+  .pol .pick input{width:15px;height:15px;accent-color:var(--accent)}
+  .pol.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+  .sel-bar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:50;display:flex;
+    align-items:center;gap:12px;padding:10px 16px;background:var(--surface);border:1px solid var(--accent);
+    border-radius:14px;box-shadow:var(--shadow);font-size:13.5px;font-weight:600}
+  .sel-bar[hidden]{display:none}
   .cat-h{font-size:15px;font-weight:800;margin:26px 0 4px;letter-spacing:-.01em}
   .cat-h:first-child{margin-top:0}
   .cat-sub{font-size:13px;color:var(--muted);margin:0 0 12px}
@@ -65,10 +72,10 @@
     Every policy opens as a full, ready-to-use document, purpose, scope, numbered policy statements, roles,
     enforcement, exceptions, review cadence, and the frameworks it helps satisfy. Copy or download any one,
     replace the bracketed placeholders, and adopt it.</p>
-  <div class="note" style="max-width:78ch"><b>How to use:</b> click any policy to read the full document, then
-    Copy or Download it. Replace <b>[Organization]</b>, <b>[Policy Owner]</b>, and other <b>[bracketed]</b>
-    fields with your details, review with legal, and approve. Industry tailoring and one-click generation are
-    on the roadmap.</div>
+  <div class="note" style="max-width:78ch"><b>How to use:</b> click a policy to open it in a new tab, where you
+    fill in your organization's details, edit the full text if you like, and download it as Word, PDF, or
+    Markdown. To build a set, tick the checkbox on several policies and choose <b>Customize selected</b> to
+    fill in your details once for all of them.</div>
 </section>
 
 <section class="section tight pad bleed">
@@ -80,131 +87,32 @@
   <div id="lib"></div>
 </section>
 
-<div class="doc-overlay" id="docOverlay" role="dialog" aria-modal="true" aria-label="Policy document" hidden>
-  <div class="doc">
-    <div class="doc-head">
-      <h2 id="docTitle">Policy</h2>
-      <div class="acts">
-        <button class="btn ghost sm" id="docCopy" type="button">Copy</button>
-        <button class="btn ghost sm" id="docDownload" type="button">Download .md</button>
-        <button class="doc-close" id="docClose" aria-label="Close">&times;</button>
-      </div>
-    </div>
-    <div class="doc-body" id="docBody"></div>
-  </div>
+<div class="sel-bar" id="selBar" hidden>
+  <span id="selCount">0 selected</span>
+  <button class="btn ghost sm" id="selClear" type="button">Clear</button>
+  <button class="btn primary sm" id="selGo" type="button">Customize selected →</button>
 </div>
 
-<script src="assets/shell.js?v=34"></script>
-<script src="assets/policies-data.js?v=34"></script>
+<script src="assets/shell.js?v=35"></script>
+<script src="assets/policies-data.js?v=35"></script>
 <script>
 (function () {
-  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const esc = window.RegMapPolicy.esc;
   const P = window.REGMAP_POLICIES || [];
+  const selected = new Set();
   const CATS = [...new Set(P.map(p => p.cat))];
   let activeCat = "All", query = "";
 
-  const DEFAULT_SCOPE = "This policy applies to all employees, contractors, consultants, temporary staff, " +
-    "interns, and third parties (collectively, “users”) who access [Organization]'s information, " +
-    "systems, networks, applications, cloud services, or facilities, and to all information assets owned, " +
-    "leased, or operated by [Organization], regardless of location, ownership, or format.";
-  const DEFAULT_ROLES = [
-    "Executive management: approves this policy, provides resources, and owns the residual risk.",
-    "[Policy Owner] (e.g. CISO or Head of IT): maintains this policy, approves exceptions, and reports on compliance.",
-    "IT and Security teams: implement, operate, and monitor the controls that enforce this policy.",
-    "Managers: ensure their teams understand and follow this policy.",
-    "All users: comply with this policy and report suspected violations or security events.",
-  ];
-  const enforcement = "Compliance with this policy is mandatory. [Organization] verifies compliance through " +
-    "reviews, audits, automated monitoring, and control testing. Suspected violations must be reported to " +
-    "[Policy Owner]. Violations may result in disciplinary action up to and including termination of " +
-    "employment or contract, removal of access, and, where applicable, civil or criminal liability.";
-  const exceptions = "Any exception to this policy must be requested in writing, state a business " +
-    "justification and the compensating controls that will manage the added risk, be risk-assessed, and be " +
-    "approved by [Policy Owner]. Approved exceptions are documented in the exception register, are " +
-    "time-bound, and are reviewed at least annually or on expiry.";
-  const review = "This policy is reviewed at least annually and after any significant change to the business, " +
-    "technology, threat landscape, or legal and regulatory obligations. [Policy Owner] maintains the policy " +
-    "and its revision history and communicates material changes to affected users.";
+  const openTab = list => window.open("/policy.html?p=" + list.join(","), "_blank");
 
-  function buildDoc(p) {
-    const scope = p.scope || DEFAULT_SCOPE;
-    const roles = DEFAULT_ROLES.concat(p.roles || []);
-    const statements = p.statements.map((s, i) =>
-      `<li><span class="clause">3.${i + 1}</span> ${esc(s)}</li>`).join("");
-    return `
-      <h1>${esc(p.title)}</h1>
-      <div class="meta">Document classification: Internal &nbsp;·&nbsp; Version: 1.0 &nbsp;·&nbsp;
-        Effective date: [effective date] &nbsp;·&nbsp; Owner: [Policy Owner] &nbsp;·&nbsp; Review cycle: Annual</div>
-      <div class="doc-note">Ready-to-use template. Replace every [bracketed] placeholder, review with legal
-        and management, then approve and publish. This is a starting point, not legal advice.</div>
-      <h3>1. Purpose</h3><p>${esc(p.purpose)}</p>
-      <h3>2. Scope</h3><p>${esc(scope)}</p>
-      <h3>3. Policy</h3><ol style="list-style:none;padding-left:0">${statements}</ol>
-      <h3>4. Roles and responsibilities</h3><ul>${roles.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
-      <h3>5. Compliance and enforcement</h3><p>${esc(enforcement)}</p>
-      <h3>6. Exceptions</h3><p>${esc(exceptions)}</p>
-      <h3>7. Review and maintenance</h3><p>${esc(review)}</p>
-      <h3>8. Related frameworks and controls</h3><p class="mono" style="font-size:13px">${esc(p.maps || "")}</p>
-      <h3>Revision history</h3>
-      <table><thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr></thead>
-        <tbody><tr><td>1.0</td><td>[effective date]</td><td>[Policy Owner]</td><td>Initial issue.</td></tr></tbody></table>`;
+  function updateSelBar() {
+    const bar = document.getElementById("selBar");
+    bar.hidden = selected.size === 0;
+    document.getElementById("selCount").textContent = selected.size + " selected";
   }
+  document.getElementById("selClear").addEventListener("click", () => { selected.clear(); updateSelBar(); render(); });
+  document.getElementById("selGo").addEventListener("click", () => { if (selected.size) openTab([...selected]); });
 
-  function buildMarkdown(p) {
-    const scope = p.scope || DEFAULT_SCOPE;
-    const roles = DEFAULT_ROLES.concat(p.roles || []);
-    const lines = [];
-    lines.push(`# ${p.title}`, "");
-    lines.push("Document classification: Internal  |  Version: 1.0  |  Effective date: [effective date]  |  Owner: [Policy Owner]  |  Review cycle: Annual", "");
-    lines.push("## 1. Purpose", p.purpose, "");
-    lines.push("## 2. Scope", scope, "");
-    lines.push("## 3. Policy");
-    p.statements.forEach((s, i) => lines.push(`3.${i + 1}  ${s}`));
-    lines.push("");
-    lines.push("## 4. Roles and responsibilities");
-    roles.forEach(r => lines.push(`- ${r}`));
-    lines.push("");
-    lines.push("## 5. Compliance and enforcement", enforcement, "");
-    lines.push("## 6. Exceptions", exceptions, "");
-    lines.push("## 7. Review and maintenance", review, "");
-    lines.push("## 8. Related frameworks and controls", p.maps || "", "");
-    lines.push("## Revision history", "", "| Version | Date | Author | Summary of change |",
-      "| --- | --- | --- | --- |", "| 1.0 | [effective date] | [Policy Owner] | Initial issue. |");
-    return lines.join("\n");
-  }
-
-  /* ---- reader ------------------------------------------------------------- */
-  const overlay = document.getElementById("docOverlay");
-  let currentPolicy = null;
-  function openDoc(p) {
-    currentPolicy = p;
-    document.getElementById("docTitle").textContent = p.title;
-    document.getElementById("docBody").innerHTML = buildDoc(p);
-    document.getElementById("docBody").scrollTop = 0;
-    overlay.hidden = false; document.body.style.overflow = "hidden";
-  }
-  const closeDoc = () => { overlay.hidden = true; document.body.style.overflow = ""; };
-  document.getElementById("docClose").addEventListener("click", closeDoc);
-  overlay.addEventListener("click", e => { if (e.target === overlay) closeDoc(); });
-  addEventListener("keydown", e => { if (e.key === "Escape" && !overlay.hidden) closeDoc(); });
-  document.getElementById("docCopy").addEventListener("click", async () => {
-    if (!currentPolicy) return;
-    try { await navigator.clipboard.writeText(buildMarkdown(currentPolicy));
-      const b = document.getElementById("docCopy"); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1400); }
-    catch (e) {}
-  });
-  document.getElementById("docDownload").addEventListener("click", () => {
-    if (!currentPolicy) return;
-    const blob = new Blob([buildMarkdown(currentPolicy)], { type: "text/markdown" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = currentPolicy.title.replace(/[^A-Za-z0-9]+/g, "_") + ".md";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  });
-
-  /* ---- library render ----------------------------------------------------- */
   function chips() {
     const box = document.getElementById("chips");
     box.innerHTML = ["All", ...CATS].map(c =>
@@ -228,25 +136,36 @@
       if (!items.length) return "";
       return `<div class="cat-h">${esc(cat)}</div>
         <div class="pol-grid">${items.map(p => {
-          const n = P.indexOf(p) + 1;
-          return `<div class="tile pol" data-i="${P.indexOf(p)}"><div class="body">
+          const i = P.indexOf(p);
+          return `<div class="tile pol ${selected.has(i) ? "selected" : ""}" data-i="${i}"><div class="body">
             <div style="display:flex;justify-content:space-between;align-items:center">
-              <span class="num">${String(n).padStart(2, "0")}</span>
+              <span class="num">${String(i + 1).padStart(2, "0")}</span>
               <span class="pill info" style="padding:2px 9px">${esc(p.cat)}</span></div>
             <h3>${esc(p.title)}</h3>
             <p>${esc(p.purpose)}</p>
             <div class="foot" style="margin-top:12px;justify-content:space-between">
-              <span class="maps">${esc(p.maps || "")}</span>
-              <span class="open-tag">Read &amp; download →</span></div>
+              <label class="pick" data-i="${i}"><input type="checkbox" ${selected.has(i) ? "checked" : ""}> select</label>
+              <span class="open-tag">Open &amp; customize →</span></div>
           </div></div>`; }).join("")}</div>`;
     }).join("") || `<div class="note">No policies match your search.</div>`;
-    lib.querySelectorAll(".pol").forEach(el => el.addEventListener("click", () => openDoc(P[+el.dataset.i])));
+    // checkbox toggles selection; clicking elsewhere on the card opens it in a new tab
+    lib.querySelectorAll(".pol").forEach(el => {
+      const i = +el.dataset.i;
+      el.addEventListener("click", e => {
+        if (e.target.closest(".pick")) return;   // let the checkbox handle its own click
+        openTab([i]);
+      });
+      const cb = el.querySelector(".pick input");
+      if (cb) cb.addEventListener("change", () => {
+        cb.checked ? selected.add(i) : selected.delete(i);
+        el.classList.toggle("selected", cb.checked);
+        updateSelBar();
+      });
+    });
   }
   document.getElementById("search").addEventListener("input", e => { query = e.target.value.trim().toLowerCase(); render(); });
   render();
-  // deep-link: /policies.html?p=<index> opens that policy directly (shareable)
-  const pi = parseInt(new URLSearchParams(location.search).get("p"), 10);
-  if (!isNaN(pi) && P[pi]) openDoc(P[pi]);
+  updateSelBar();
 })();
 </script>
 </body>

@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Policy document · RegMap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
+<link rel="stylesheet" href="assets/site.css?v=35">
+<style>
+  .pw{display:grid;grid-template-columns:320px 1fr;gap:26px;align-items:start}
+  @media(max-width:900px){.pw{grid-template-columns:1fr}}
+  .cust{position:sticky;top:84px;border:1px solid var(--line);border-radius:16px;background:var(--surface);
+    padding:18px;box-shadow:var(--shadow-sm)}
+  @media(max-width:900px){.cust{position:static}}
+  .cust h2{font-size:16px;margin:0 0 4px}
+  .cust .sub{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+  .fld2{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+  .fld2 label{font-size:12px;font-weight:700;font-family:var(--mono);letter-spacing:.03em;color:var(--muted)}
+  .fld2 input{padding:9px 11px;font-size:14px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--ink)}
+  .fld2 input:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .dl{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .cust .hint{font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.5}
+  .docs{display:flex;flex-direction:column;gap:22px}
+  .docwrap{border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:var(--shadow-sm);
+    padding:26px 30px}
+  .docwrap h1{font-size:22px;margin:0 0 4px}
+  .docwrap .meta{font-family:var(--mono);font-size:12px;color:var(--muted);margin:0 0 16px;line-height:1.7}
+  .docwrap h3{font-size:15px;margin:20px 0 8px;padding-top:6px;border-top:1px solid var(--line)}
+  .docwrap p{font-size:14px;line-height:1.65;margin:0 0 10px}
+  .docwrap ol,.docwrap ul{font-size:14px;line-height:1.7;margin:0 0 10px;padding-left:22px}
+  .docwrap li{margin-bottom:6px}
+  .docwrap table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  .docwrap th,.docwrap td{border:1px solid var(--line);padding:6px 9px;text-align:left}
+  .docwrap .clause{font-weight:700;color:var(--accent-2)}
+  .docwrap.editing{outline:2px dashed var(--accent);outline-offset:4px;background:color-mix(in srgb,var(--accent) 4%,var(--surface))}
+  .docwrap[contenteditable="true"]:focus{outline:2px solid var(--accent)}
+  .edit-note{font-size:12.5px;color:var(--accent);font-weight:600;margin-top:10px}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:var(--ink);color:var(--bg);font-weight:700;font-size:14px;padding:11px 18px;border-radius:12px;
+    box-shadow:var(--shadow);transition:.3s;z-index:80;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body data-page="policy">
+
+<section class="section pad bleed" style="padding-top:32px">
+  <div class="eyebrow">Policy library</div>
+  <h1 id="pageTitle" style="font-size:clamp(24px,3.2vw,34px);margin-top:6px">Customize your policy</h1>
+  <p class="lead" style="color:var(--muted);font-size:15px;margin:8px 0 0;max-width:74ch">
+    Fill in your organization's details on the left and they are applied to the document(s) live. Then
+    download in the format you need. Any remaining <b>[bracketed]</b> values are policy-specific defaults you
+    can adjust in the downloaded file.</p>
+</section>
+
+<section class="section tight pad bleed">
+  <div class="pw">
+    <aside class="cust">
+      <h2>Customize</h2>
+      <div class="sub" id="custSub">Your details are applied to every selected policy.</div>
+      <div id="fields"></div>
+      <button class="btn ghost sm" id="editToggle" type="button" style="width:100%;justify-content:center;margin-bottom:6px">Edit full document text</button>
+      <div class="edit-note" id="editNote" hidden>Editing the full text. Click anywhere in a document to change it. Field edits are paused while editing.</div>
+      <div class="dl">
+        <button class="btn primary sm" data-dl="word" type="button">Download Word</button>
+        <button class="btn primary sm" data-dl="pdf" type="button">Download PDF</button>
+      </div>
+      <div class="dl">
+        <button class="btn ghost sm" data-dl="md" type="button">Markdown</button>
+        <button class="btn ghost sm" data-dl="txt" type="button">Text</button>
+        <button class="btn ghost sm" data-dl="print" type="button">Print</button>
+      </div>
+      <div class="hint">Your details are saved in this browser for next time. Review with legal before adopting;
+        these are professional starting templates, not legal advice.</div>
+      <div class="hint"><a href="/policies.html" style="color:var(--accent);font-weight:600">← Back to the full library</a></div>
+    </aside>
+    <div class="docs" id="docs"></div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+<script src="assets/shell.js?v=35"></script>
+<script src="assets/policies-data.js?v=35"></script>
+<script>
+(function () {
+  const RP = window.RegMapPolicy, esc = RP.esc;
+  const params = new URLSearchParams(location.search);
+  const idx = (params.get("p") || "").split(",").map(x => parseInt(x, 10)).filter(n => !isNaN(n) && RP.list[n]);
+  const policies = idx.length ? idx.map(n => RP.list[n]) : [RP.list[0]];
+
+  const VKEY = "regmap.policyVars";
+  let vars = {};
+  try { vars = JSON.parse(localStorage.getItem(VKEY) || "{}"); } catch (e) { vars = {}; }
+
+  // title
+  document.getElementById("pageTitle").textContent = policies.length === 1
+    ? policies[0].title : `Customize ${policies.length} policies`;
+  document.getElementById("custSub").textContent = policies.length === 1
+    ? "Your details are applied to this policy." : `Your details are applied to all ${policies.length} selected policies at once.`;
+
+  // customization fields
+  document.getElementById("fields").innerHTML = RP.FIELDS.map(f => `
+    <div class="fld2"><label for="f-${f.key}">${esc(f.label)}</label>
+      <input id="f-${f.key}" ${f.type === "date" ? 'type="date"' : ""} placeholder="${esc(f.placeholder)}"
+        value="${esc(vars[f.key] || "")}"></div>`).join("");
+
+  function readVars() {
+    RP.FIELDS.forEach(f => { const el = document.getElementById("f-" + f.key); if (el) vars[f.key] = el.value; });
+    try { localStorage.setItem(VKEY, JSON.stringify(vars)); } catch (e) {}
+  }
+  function renderDocs() {
+    document.getElementById("docs").innerHTML = policies.map(p =>
+      `<div class="docwrap">${RP.html(p, vars)}</div>`).join("");
+  }
+  RP.FIELDS.forEach(f => {
+    const el = document.getElementById("f-" + f.key);
+    if (el) el.addEventListener("input", () => { if (!editMode) { readVars(); renderDocs(); } });
+  });
+
+  // ---- full-document edit mode ----
+  let editMode = false;
+  const docsEls = () => [...document.querySelectorAll("#docs .docwrap")];
+  function setEdit(on) {
+    editMode = on;
+    docsEls().forEach(el => { el.contentEditable = on ? "true" : "false"; el.classList.toggle("editing", on); });
+    document.getElementById("editNote").hidden = !on;
+    document.getElementById("editToggle").textContent = on ? "Done editing" : "Edit full document text";
+    RP.FIELDS.forEach(f => { const el = document.getElementById("f-" + f.key); if (el) el.disabled = on; });
+    if (on) { const first = docsEls()[0]; if (first) first.focus(); }
+  }
+  document.getElementById("editToggle").addEventListener("click", () => setEdit(!editMode));
+
+  renderDocs();
+
+  // ---- downloads ----
+  const toast = m => { const t = document.getElementById("toast"); t.textContent = m; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1600); };
+  const baseName = policies.length === 1
+    ? policies[0].title.replace(/[^A-Za-z0-9]+/g, "_") : "RegMap_policies";
+  function download(blob, name) {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  // Read from the live document DOM so that both field customization AND any full-text edits are captured.
+  function combinedHTMLBody() {
+    return docsEls().map((el, i) => {
+      const c = el.cloneNode(true); c.removeAttribute("contenteditable"); c.classList.remove("editing");
+      return `<div${i ? ' style="page-break-before:always"' : ""}>${c.innerHTML}</div>`;
+    }).join("");
+  }
+  function domToMarkdown(root) {
+    const txt = n => (n.textContent || "").replace(/\s+/g, " ").trim();
+    const out = [];
+    root.childNodes.forEach(node => {
+      if (node.nodeType !== 1) return;
+      const tag = node.tagName.toLowerCase();
+      if (tag === "h1") out.push("# " + txt(node), "");
+      else if (tag === "h3") out.push("## " + txt(node), "");
+      else if (tag === "p") out.push(txt(node), "");
+      else if (tag === "ol" || tag === "ul") {
+        node.querySelectorAll(":scope > li").forEach(li => {
+          const t = txt(li);
+          out.push(li.querySelector(".clause") ? t : "- " + t);
+        });
+        out.push("");
+      } else if (tag === "table") {
+        const rows = [...node.querySelectorAll("tr")];
+        rows.forEach((tr, i) => {
+          const cells = [...tr.children].map(c => txt(c));
+          out.push("| " + cells.join(" | ") + " |");
+          if (i === 0) out.push("| " + cells.map(() => "---").join(" | ") + " |");
+        });
+        out.push("");
+      }
+    });
+    return out.join("\n");
+  }
+  function combinedMarkdown() { return docsEls().map(el => domToMarkdown(el)).join("\n\n---\n\n"); }
+  function wordDoc() {
+    // HTML that Word opens natively (application/msword)
+    return `<!doctype html><html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head>
+      <meta charset="utf-8"><title>${esc(baseName)}</title>
+      <style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#111;line-height:1.5}
+      h1{font-size:18pt}h3{font-size:13pt;border-top:1px solid #ccc;padding-top:8px}
+      .meta{font-family:Consolas,monospace;font-size:9pt;color:#555}
+      table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:5px 8px;font-size:10pt}
+      .clause{font-weight:bold}</style></head><body>${combinedHTMLBody()}</body></html>`;
+  }
+
+  document.querySelectorAll("[data-dl]").forEach(btn => btn.addEventListener("click", () => {
+    readVars();
+    const kind = btn.dataset.dl;
+    if (kind === "md") download(new Blob([combinedMarkdown()], { type: "text/markdown" }), baseName + ".md");
+    else if (kind === "txt") download(new Blob([combinedMarkdown()], { type: "text/plain" }), baseName + ".txt");
+    else if (kind === "word") download(new Blob(["﻿" + wordDoc()], { type: "application/msword" }), baseName + ".doc");
+    else if (kind === "print") window.print();
+    else if (kind === "pdf") {
+      const holder = document.createElement("div");
+      holder.style.cssText = "padding:24px;color:#111;background:#fff;font-family:Inter,Arial,sans-serif";
+      holder.innerHTML = combinedHTMLBody();
+      if (window.html2pdf) {
+        toast("Building PDF…");
+        window.html2pdf().set({ margin: 12, filename: baseName + ".pdf",
+          pagebreak: { mode: ["css", "legacy"] }, html2canvas: { scale: 2 },
+          jsPDF: { unit: "pt", format: "a4" } }).from(holder).save().catch(() => window.print());
+      } else { window.print(); }
+    }
+  }));
+})();
+</script>
+</body>
+</html>
