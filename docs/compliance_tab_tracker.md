@@ -159,8 +159,15 @@ yet committed.
     and shows a "Framework update detected" banner with a "Re-map to refresh" action. Verified end to end
     (stale-mapping detection). Fully demonstrable version drift needs a second framework version in the
     catalog (e.g. 800-53 Rev.6) which is content work (#16). PAID.
-12. **Continuous re-mapping.** Schedule re-runs on a cadence or on framework updates; tie into the
-    console's Continuous monitoring. PAID.
+12. **Continuous re-mapping. DONE 2026-09-25.** Per-project monitoring config (`monitor: {enabled,
+    cadence, last_checked, last_status}`) saved in the project data, with a "Continuous monitoring" bar on
+    the project bar (toggle + cadence daily/weekly/on-update + "Check now" + status pill). `POST
+    /projects/{id}/recheck` re-runs the crosswalk drift now and records the result; `POST /monitor/run` is
+    the scheduler entry point that re-checks every due monitored project of the caller (meant to be called
+    on a cadence by an external cron or a k8s CronJob per account key, since the app has no in-process
+    scheduler). Shared `_compute_drift`/`_recheck_project`/`_monitor_due` helpers. Verified end to end
+    (recheck flags attention, monitor/run checks due projects). PAID. Later: wire a CronJob, per-user
+    notifications, and surface monitored projects in the console's Continuous monitoring section.
 13. **Collaboration.** Multiple users, assignments, comments, an approval trail. PAID (team plans).
 14. **API and bulk import.** A team can push their control set and pull mappings programmatically, and
     import from GRC tools (Vanta, Drata, spreadsheets). PAID.
@@ -224,5 +231,7 @@ extend it as features land. (Founder rule respected: no em/en-dashes in the copy
   Quick-starts grid on the gaps tab) + hash deep-links for tabs and help.
 - 2026-09-25: started Tier 3 in tracker order. Built #11 Versioned crosswalks + drift: version-baseline
   stamping on save (`_drift_baseline`/`_stamp_drift`), `GET /projects/{id}/drift`, and a "Framework update
-  detected" banner on project open (`checkDrift`). Verified (stale-mapping detection). Remaining Tier 3:
-  #12 continuous re-mapping, #13 collaboration, #14 API/GRC import, #16 framework library growth.
+  detected" banner on project open (`checkDrift`). Verified (stale-mapping detection).
+- 2026-09-25: built #12 Continuous re-mapping: per-project monitor config + "Continuous monitoring" bar,
+  `POST /projects/{id}/recheck` and the `POST /monitor/run` cron entry point. Verified end to end.
+  Remaining Tier 3: #13 collaboration, #14 API/GRC import, #16 framework library growth.

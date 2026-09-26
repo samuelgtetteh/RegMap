@@ -41,6 +41,7 @@ import random
 import re
 import secrets
 import struct
+import datetime as _dt
 import json as _json
 import time
 import urllib.parse
@@ -1106,21 +1107,13 @@ def projects_update(pid: str, req: ProjectUpdateReq, principal=Depends(auth.requ
     return {"id": pid, "updated": True}
 
 
-@app.get("/projects/{pid}/drift")
-def project_drift(pid: str, principal=Depends(auth.require_key)):
-    """Has the target framework changed since this project was saved? (Compliance tracker #11.)
-
-    Compares the version baseline stamped at save time with the framework's current state, and flags any
-    accepted mapping that now points at a control the framework no longer has, so coverage never goes
-    stale silently. A project saved before baselines existed still gets a stale-mapping check.
-    """
-    p = billing.get_project(principal["account_id"], pid)
-    if not p:
-        raise HTTPException(404, "project not found")
+def _compute_drift(p):
+    """Drift result for a project dict, or None if its target is not rankable. Shared by the drift
+    endpoint (#11) and continuous re-mapping (#12)."""
     data = p.get("data") or {}
     tgt = _resolve_fid(data.get("target") or p.get("target_fid") or "")
     if not tgt or tgt not in _controls:
-        return {"available": False, "reason": "target framework is not rankable"}
+        return None
     base = data.get("_drift") or None
     cur = _drift_baseline(tgt)
     universe = set(_controls[tgt].keys())
@@ -1139,6 +1132,81 @@ def project_drift(pid: str, principal=Depends(auth.require_key)):
         "control_count_delta": (cur["count"] - base["count"]) if base else 0,
         "stale_mappings": stale,
     }
+
+
+@app.get("/projects/{pid}/drift")
+def project_drift(pid: str, principal=Depends(auth.require_key)):
+    """Has the target framework changed since this project was saved? (Compliance tracker #11.)"""
+    p = billing.get_project(principal["account_id"], pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    r = _compute_drift(p)
+    return r if r else {"available": False, "reason": "target framework is not rankable"}
+
+
+# ---- continuous re-mapping (#12) -----------------------------------------------------------------
+_CADENCE_SECONDS = {"daily": 86400, "weekly": 604800, "on-update": 0}
+
+
+def _monitor_due(mon, now):
+    """Is a monitored project due for a re-check, given its cadence and last check time?"""
+    if not mon or not mon.get("enabled"):
+        return False
+    last = mon.get("last_checked")
+    if not last:
+        return True
+    try:
+        prev = _dt.datetime.fromisoformat(last.replace("Z", "+00:00")).timestamp()
+    except Exception:
+        return True
+    return (now - prev) >= _CADENCE_SECONDS.get(mon.get("cadence", "weekly"), 604800)
+
+
+def _recheck_project(account_id, p):
+    """Re-run drift for one project, record the result on its monitor block, and persist. Returns the
+    drift result plus the updated monitor status."""
+    drift = _compute_drift(p)
+    data = p.get("data") or {}
+    mon = dict(data.get("monitor") or {})
+    status = "unavailable" if not drift else ("attention" if (drift["changed"] or drift["stale_mappings"]) else "ok")
+    mon["last_checked"] = _dt.datetime.now(_dt.timezone.utc).isoformat()
+    mon["last_status"] = status
+    data["monitor"] = mon
+    billing.update_project(account_id, p["id"], None, None, data)
+    return {"status": status, "drift": drift, "monitor": mon}
+
+
+@app.post("/projects/{pid}/recheck")
+def project_recheck(pid: str, principal=Depends(auth.require_key)):
+    """Re-run a saved crosswalk against the current catalog now and record the result (#12). This is the
+    unit of continuous re-mapping: call it on demand from the UI, or on a cadence from /monitor/run."""
+    _require_account(principal, "re-check a project")
+    p = billing.get_project(principal["account_id"], pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    return _recheck_project(principal["account_id"], p)
+
+
+@app.post("/monitor/run")
+def monitor_run(principal=Depends(auth.require_key)):
+    """Re-check every monitored project of the caller that is due by its cadence. Designed to be called on
+    a schedule by an external cron or a k8s CronJob (each account's key), which is how the re-mapping runs
+    continuously without an in-process scheduler. Returns a summary of what was checked and what changed."""
+    _require_account(principal, "run monitoring")
+    now = _dt.datetime.now(_dt.timezone.utc).timestamp()
+    checked, attention = [], []
+    for row in billing.list_projects(principal["account_id"]):
+        p = billing.get_project(principal["account_id"], row["id"])  # list omits data; fetch it
+        if not p:
+            continue
+        mon = (p.get("data") or {}).get("monitor") or {}
+        if not _monitor_due(mon, now):
+            continue
+        r = _recheck_project(principal["account_id"], p)
+        checked.append({"id": p["id"], "name": p.get("name"), "status": r["status"]})
+        if r["status"] == "attention":
+            attention.append({"id": p["id"], "name": p.get("name")})
+    return {"checked": len(checked), "attention": attention, "results": checked}
 
 
 @app.delete("/projects/{pid}")

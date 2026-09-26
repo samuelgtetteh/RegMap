@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RegMap: map any control to any framework</title>
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=27">
-<link rel="stylesheet" href="assets/app.css?v=27">
+<link rel="stylesheet" href="assets/site.css?v=28">
+<link rel="stylesheet" href="assets/app.css?v=28">
 <style>
   /* page-local: the two-mode tab switch (uses the shell tokens) */
   .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
@@ -168,6 +168,16 @@
   .proj-bar .proj-name{width:210px;padding:7px 10px;font-size:13.5px}
   .proj-bar select{width:auto;padding:7px 10px;font-size:13px}
   .proj-bar .sp{flex:1}
+  /* continuous monitoring bar (#12) */
+  .mon-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:-6px 0 16px;padding:8px 12px;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:12px;font-size:13px}
+  .mon-toggle{display:inline-flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}
+  .mon-toggle input{width:16px;height:16px;accent-color:var(--accent)}
+  .mon-bar select{width:auto;padding:6px 9px;font-size:12.5px}
+  .mon-note{flex:1;min-width:180px;color:var(--faint);font-size:12px}
+  .mon-pill{font-family:var(--mono);font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px}
+  .mon-pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,transparent)}
+  .mon-pill.attention{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
 </style>
 </head>
 <body data-page="compliance">
@@ -277,6 +287,17 @@
     </select>
     <span class="sp"></span>
     <span id="pStatus" class="mono" style="font-size:12px;color:var(--faint)"></span>
+  </div>
+  <div class="mon-bar">
+    <label class="mon-toggle"><input type="checkbox" id="monOn"> Continuous monitoring</label>
+    <select id="monCadence" title="How often to re-check">
+      <option value="daily">daily</option>
+      <option value="weekly" selected>weekly</option>
+      <option value="on-update">on every run</option>
+    </select>
+    <button class="btn ghost sm" id="monCheck" type="button">Check now</button>
+    <span id="monStatus" class="mono" style="font-size:12px;color:var(--faint)"></span>
+    <span class="mon-note">Re-runs this crosswalk against the current catalog and flags drift. Save the project to enable.</span>
   </div>
   <p class="lead" style="font-size:14.5px;color:var(--muted);max-width:76ch;margin:0 0 14px">
     Load your own internal or self-built control framework and map it onto any framework in the catalog.
@@ -455,8 +476,8 @@
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=27"></script>
-<script src="assets/shell.js?v=27"></script>
+<script src="assets/api.js?v=28"></script>
+<script src="assets/shell.js?v=28"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -977,8 +998,12 @@
   let curProj = null;                       // {id, name} of the open project, or null for unsaved
   const pName = $("pName"), pSave = $("pSave"), pOpen = $("pOpen"), pNew = $("pNew"),
         pDel = $("pDel"), pStatus = $("pStatus"), pExport = $("pExport");
+  const monOn = $("monOn"), monCadence = $("monCadence"), monCheck = $("monCheck"), monStatus = $("monStatus");
+  let monLast = null;                         // {last_checked, last_status} from the server
+  const monConfig = () => ({ enabled: monOn.checked, cadence: monCadence.value,
+                             last_checked: monLast && monLast.last_checked, last_status: monLast && monLast.last_status });
   const projData = () => ({ kind: "custom", target: cTgt.value, top_k: Number(cTopk.value),
-                            controls: cText.value, decisions: DECISIONS });
+                            controls: cText.value, decisions: DECISIONS, monitor: monConfig() });
   const signInPrompt = action => `<div class="note err">Sign in to ${esc(action)}. ` +
     `<a href="/account.html" style="color:var(--accent);font-weight:600">Sign in or create an account</a>` +
     (action === "download files" ? ". Having it emailed instead is coming soon." : ".") + `</div>`;
@@ -1009,10 +1034,36 @@
     if (dat.target) cTgt.value = dat.target;
     if (dat.top_k) cTopk.value = String(dat.top_k);
     if (typeof dat.controls === "string") { cText.value = dat.controls; updCount(); }
+    const mon = dat.monitor || {};
+    monOn.checked = !!mon.enabled;
+    if (mon.cadence) monCadence.value = mon.cadence;
+    monLast = { last_checked: mon.last_checked, last_status: mon.last_status };
+    renderMonStatus();
     pStatus.textContent = "opened";
     if (cText.value.trim()) runCustom();     // re-map; renderCustom re-applies the restored decisions
     checkDrift(id);                          // #11: warn if the target framework changed since saving
   }
+
+  /* ---- continuous monitoring (#12) ---------------------------------------- */
+  function renderMonStatus() {
+    if (!monLast || !monLast.last_checked) { monStatus.textContent = monOn.checked ? "on, not checked yet" : ""; return; }
+    const when = new Date(monLast.last_checked).toLocaleDateString();
+    const s = monLast.last_status;
+    const pill = s === "attention" ? `<span class="mon-pill attention">needs attention</span>`
+              : s === "ok" ? `<span class="mon-pill ok">up to date</span>` : "";
+    monStatus.innerHTML = `${pill} last checked ${esc(when)}`;
+  }
+  monOn.addEventListener("change", () => { renderMonStatus(); if (curProj) saveProject(true); });
+  monCadence.addEventListener("change", () => { if (curProj) saveProject(true); });
+  monCheck.addEventListener("click", async () => {
+    if (!curProj) { cOut.innerHTML = signInPrompt("save your work"); return; }
+    monStatus.innerHTML = `<span class="spin"></span> checking…`;
+    let r; try { r = await RegMap.projectRecheck(curProj.id); }
+    catch (e) { monStatus.textContent = "check failed, try again"; return; }
+    monLast = { last_checked: r.monitor.last_checked, last_status: r.monitor.last_status };
+    renderMonStatus();
+    checkDrift(curProj.id);                   // surface any drift banner from the fresh check
+  });
 
   // Versioned crosswalks + drift (#11): show a banner if the target framework moved on since this
   // project was saved, or if any accepted mapping now points at a control that no longer exists.
@@ -1041,6 +1092,7 @@
     curProj = null; pName.value = ""; pOpen.value = ""; pStatus.textContent = "new project";
     for (const k in DECISIONS) delete DECISIONS[k];
     cOut.innerHTML = ""; cText.value = ""; updCount();
+    monOn.checked = false; monLast = null; renderMonStatus();
   }
   async function deleteProject() {
     if (!curProj) return;
