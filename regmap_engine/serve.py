@@ -2415,6 +2415,7 @@ def auth_reset_request(req: ResetRequestBody, request: Request):
         link = _auth_link(request, "reset", tok)
         # SECURITY: token travels only via server log in dev, email in production. Never in the response.
         print(f"[regmap] password reset link for {req.email.strip().lower()}: {link}", flush=True)
+        out.pop("reset_link", None)  # Defensive: ensure token doesn't leak
     return out
 
 
