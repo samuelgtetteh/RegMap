@@ -20,6 +20,9 @@
   /* brand: indigo to violet, cyan as the data accent (proven cyber-SaaS) */
   --accent:#6366F1; --accent-2:#8B5CF6; --cyan:#22D3EE;
   --accent-soft:rgba(99,102,241,.15);
+  /* ambient backlight glow, per theme so it stays visible on each background */
+  --amb-1:color-mix(in srgb,var(--accent) 13%,transparent);
+  --amb-2:color-mix(in srgb,var(--cyan) 10%,transparent);
   --grad:linear-gradient(135deg,var(--accent),var(--accent-2));
   /* status */
   --ok:#34D399; --warn:#FBBF24; --crit:#FB7185;
@@ -36,6 +39,9 @@
   --line:#E4E9F2; --line-2:#D2DAE9;
   --ink:#0D1424; --muted:#4E5C77; --faint:#8593AC;
   --accent:#5457E6; --accent-2:#7C4DED; --cyan:#0EA5C9; --accent-soft:rgba(84,87,230,.10);
+  /* on white, the glow needs real colour to be seen */
+  --amb-1:color-mix(in srgb,var(--accent) 55%,transparent);
+  --amb-2:color-mix(in srgb,var(--cyan) 48%,transparent);
   --shadow:0 1px 2px rgba(14,22,40,.05),0 16px 40px rgba(14,22,40,.10);
   --shadow-sm:0 1px 2px rgba(14,22,40,.05),0 6px 16px rgba(14,22,40,.07);
 }
@@ -44,6 +50,8 @@
   --line:#E4E9F2; --line-2:#D2DAE9;
   --ink:#0D1424; --muted:#4E5C77; --faint:#8593AC;
   --accent:#5457E6; --accent-2:#7C4DED; --cyan:#0EA5C9; --accent-soft:rgba(84,87,230,.10);
+  --amb-1:color-mix(in srgb,var(--accent) 55%,transparent);
+  --amb-2:color-mix(in srgb,var(--cyan) 48%,transparent);
   --shadow:0 1px 2px rgba(14,22,40,.05),0 16px 40px rgba(14,22,40,.10);
   --shadow-sm:0 1px 2px rgba(14,22,40,.05),0 6px 16px rgba(14,22,40,.07);
 }}
@@ -72,10 +80,10 @@ a{color:inherit;text-decoration:none}
 .rm-ambient{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;contain:strict}
 .rm-ambient::before,.rm-ambient::after{content:"";position:absolute;width:54vmax;height:54vmax;
   border-radius:50%;filter:blur(70px);will-change:transform}
-.rm-ambient::before{background:radial-gradient(circle,color-mix(in srgb,var(--accent) 26%,transparent),transparent 62%);
-  opacity:.34;top:-16vmax;left:-16vmax;animation:rm-drift-a 64s ease-in-out infinite}
-.rm-ambient::after{background:radial-gradient(circle,color-mix(in srgb,var(--cyan) 22%,transparent),transparent 62%);
-  opacity:.24;bottom:-16vmax;right:-16vmax;animation:rm-drift-b 88s ease-in-out infinite}
+.rm-ambient::before{background:radial-gradient(circle,var(--amb-1),transparent 62%);
+  top:-16vmax;left:-16vmax;animation:rm-drift-a 64s ease-in-out infinite}
+.rm-ambient::after{background:radial-gradient(circle,var(--amb-2),transparent 62%);
+  bottom:-16vmax;right:-16vmax;animation:rm-drift-b 88s ease-in-out infinite}
 @keyframes rm-drift-a{
   0%{transform:translate(0,0)}
   25%{transform:translate(118vw,6vh)}
@@ -88,14 +96,8 @@ a{color:inherit;text-decoration:none}
   50%{transform:translate(-108vw,-78vh)}
   75%{transform:translate(8vw,-70vh)}
   100%{transform:translate(0,0)}}
-/* On white, a faint light-purple wash disappears, so the light theme uses a more saturated glow and a
-   little more opacity. Still soft (heavy blur), but now actually visible drifting past the edges. */
-:root[data-theme="light"] .rm-ambient::before{
-  background:radial-gradient(circle,color-mix(in srgb,var(--accent) 52%,transparent),transparent 60%);
-  opacity:.5}
-:root[data-theme="light"] .rm-ambient::after{
-  background:radial-gradient(circle,color-mix(in srgb,var(--cyan) 42%,transparent),transparent 60%);
-  opacity:.4}
+/* Colour and intensity now come from the --amb-1/--amb-2 theme tokens (subtle on dark, colourful on
+   white), so the glow changes with the theme and stays visible on each background. */
 @media (prefers-reduced-motion: reduce){.rm-ambient::before,.rm-ambient::after{animation:none}}
 h1,h2,h3,h4{margin:0;text-wrap:balance;letter-spacing:-.028em;font-weight:680}
 ::selection{background:var(--accent-soft);color:var(--ink)}
