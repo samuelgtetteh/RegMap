@@ -40,8 +40,8 @@
   --ink:#0D1424; --muted:#4E5C77; --faint:#8593AC;
   --accent:#5457E6; --accent-2:#7C4DED; --cyan:#0EA5C9; --accent-soft:rgba(84,87,230,.10);
   /* on white, the glow needs real colour to be seen */
-  --amb-1:color-mix(in srgb,var(--accent) 55%,transparent);
-  --amb-2:color-mix(in srgb,var(--cyan) 48%,transparent);
+  --amb-1:color-mix(in srgb,var(--accent) 40%,transparent);
+  --amb-2:color-mix(in srgb,var(--cyan) 34%,transparent);
   --shadow:0 1px 2px rgba(14,22,40,.05),0 16px 40px rgba(14,22,40,.10);
   --shadow-sm:0 1px 2px rgba(14,22,40,.05),0 6px 16px rgba(14,22,40,.07);
 }
@@ -50,8 +50,8 @@
   --line:#E4E9F2; --line-2:#D2DAE9;
   --ink:#0D1424; --muted:#4E5C77; --faint:#8593AC;
   --accent:#5457E6; --accent-2:#7C4DED; --cyan:#0EA5C9; --accent-soft:rgba(84,87,230,.10);
-  --amb-1:color-mix(in srgb,var(--accent) 55%,transparent);
-  --amb-2:color-mix(in srgb,var(--cyan) 48%,transparent);
+  --amb-1:color-mix(in srgb,var(--accent) 40%,transparent);
+  --amb-2:color-mix(in srgb,var(--cyan) 34%,transparent);
   --shadow:0 1px 2px rgba(14,22,40,.05),0 16px 40px rgba(14,22,40,.10);
   --shadow-sm:0 1px 2px rgba(14,22,40,.05),0 6px 16px rgba(14,22,40,.07);
 }}
@@ -80,9 +80,9 @@ a{color:inherit;text-decoration:none}
 .rm-ambient{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;contain:strict}
 .rm-ambient::before,.rm-ambient::after{content:"";position:absolute;width:54vmax;height:54vmax;
   border-radius:50%;filter:blur(70px);will-change:transform}
-.rm-ambient::before{background:radial-gradient(circle,var(--amb-1),transparent 62%);
+.rm-ambient::before{background:radial-gradient(circle,var(--amb-1),transparent 52%);
   top:-16vmax;left:-16vmax;animation:rm-drift-a 64s ease-in-out infinite}
-.rm-ambient::after{background:radial-gradient(circle,var(--amb-2),transparent 62%);
+.rm-ambient::after{background:radial-gradient(circle,var(--amb-2),transparent 52%);
   bottom:-16vmax;right:-16vmax;animation:rm-drift-b 88s ease-in-out infinite}
 @keyframes rm-drift-a{
   0%{transform:translate(0,0)}
