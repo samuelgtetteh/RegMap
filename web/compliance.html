@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RegMap: map any control to any framework</title>
-<link rel="stylesheet" href="assets/site.css?v=10">
-<link rel="stylesheet" href="assets/app.css?v=10">
+<script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
+<link rel="stylesheet" href="assets/site.css?v=18">
+<link rel="stylesheet" href="assets/app.css?v=18">
 <style>
   /* page-local: the two-mode tab switch (uses the shell tokens) */
   .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
@@ -25,6 +26,68 @@
   .rev-btn.rej.on{background:color-mix(in srgb,var(--crit) 18%,transparent);border-color:var(--crit);color:var(--crit)}
   .rev-status{width:auto;padding:6px 9px;font-size:12.5px}
   .rev-note{width:100%;margin-top:10px;font-size:13px}
+  /* explainability: why a target matched (shared salient terms) */
+  .why{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .why .why-lbl{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--faint);font-family:var(--mono)}
+  .why .chip{font-size:12px;font-weight:600;color:var(--accent-2);background:var(--accent-soft);
+    border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:999px;padding:2px 9px}
+  /* evidence attachment (audit binder): link a document, scan, or ticket to each control */
+  .rev-ev{margin-top:10px}
+  .rev-ev .ev-lbl{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--faint);font-family:var(--mono);margin-bottom:6px;display:block}
+  .ev-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .ev-list:empty{display:none}
+  .ev-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+    background:var(--surface-2);border:1px solid var(--line-2);border-radius:999px;padding:3px 4px 3px 10px}
+  .ev-chip a{color:var(--accent);text-decoration:none;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ev-chip a:hover{text-decoration:underline}
+  .ev-chip .ev-rm{border:0;background:none;cursor:pointer;color:var(--faint);font-size:15px;line-height:1;padding:0 4px;border-radius:50%}
+  .ev-chip .ev-rm:hover{color:var(--crit)}
+  .ev-add{display:flex;gap:8px;flex-wrap:wrap}
+  .ev-add .ev-label{width:220px;padding:7px 10px;font-size:13px}
+  .ev-add .ev-url{flex:1;min-width:200px;padding:7px 10px;font-size:13px}
+  .ev-add .ev-btn{font:inherit;font-size:12px;font-weight:600;padding:6px 14px;border-radius:8px;
+    cursor:pointer;border:1px solid var(--line-2);background:var(--surface);color:var(--muted)}
+  .ev-add .ev-btn:hover{color:var(--ink);border-color:var(--accent)}
+  /* multi-target coverage (#7): pick frameworks, then a matrix of best matches per control */
+  .multi-tgts{display:flex;flex-wrap:wrap;gap:8px}
+  .multi-tgts label{display:inline-flex;align-items:center;gap:7px;font-size:13px;padding:6px 12px;
+    border:1px solid var(--line-2);border-radius:999px;cursor:pointer;background:var(--surface);color:var(--muted)}
+  .multi-tgts label:hover{color:var(--ink)}
+  .multi-tgts input:checked + span{color:var(--ink);font-weight:600}
+  .multi-tgts input{accent-color:var(--accent)}
+  .cov-wrap{overflow-x:auto;margin-top:10px}
+  table.cov{border-collapse:collapse;width:100%;font-size:13px;min-width:520px}
+  table.cov th,table.cov td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  table.cov thead th{background:var(--surface-2);position:sticky;top:0;font-size:12.5px}
+  table.cov td.ctrl{max-width:280px}
+  table.cov td.ctrl .cid{font-weight:700;color:var(--accent-2)}
+  table.cov td.ctrl .sub{color:var(--muted);font-size:12px;margin-top:2px;display:-webkit-box;
+    -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .cov-cell{display:flex;flex-direction:column;gap:2px}
+  .cov-cell .m-id{font-family:var(--mono);font-size:12px;font-weight:700}
+  .cov-cell .m-sc{font-size:11.5px;color:var(--muted)}
+  .cov-cell.hit .m-id{color:var(--ok)}
+  .cov-cell.weak{opacity:.55}
+  .cov-sum{display:flex;flex-direction:column;gap:2px;font-size:12px}
+  .cov-sum b{font-size:14px}
+  .cov-dot{width:100%;height:5px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:3px}
+  .cov-dot>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+  /* coverage dashboard (#6): summary tiles + a heatmap-colored matrix with drill-down */
+  .cov-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:6px 0 18px}
+  .cov-tile{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--surface);
+    cursor:pointer;transition:border-color .15s,transform .1s}
+  .cov-tile:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .cov-tile .tname{font-size:13px;font-weight:600;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;
+    -webkit-box-orient:vertical;overflow:hidden;min-height:34px}
+  .cov-tile .tpct{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-top:4px}
+  .cov-tile .tsub{font-size:12px;color:var(--muted);margin-top:2px}
+  .cov-tile .cov-dot{height:6px;margin-top:8px}
+  .cov-tile .drill{font-size:12px;color:var(--accent);font-weight:600;margin-top:8px}
+  table.cov th.fw{cursor:pointer}
+  table.cov th.fw:hover{color:var(--accent)}
+  table.cov th.fw .open{font-size:11px;color:var(--accent);font-weight:600;display:block}
   .ctl-card{padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:20px}
   .ctl-card:last-child{border-bottom:0}
   #cText.dropping{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--accent-soft)}
@@ -161,6 +224,17 @@
     <span id="cCount" class="mono" style="font-size:12.5px;color:var(--muted)"></span>
     <span id="cStatus" style="font-size:13px;color:var(--muted)"></span>
   </div>
+  <details id="cMultiBox" style="margin-top:16px">
+    <summary style="cursor:pointer;font-size:13.5px;font-weight:600;color:var(--accent)">Compare coverage across several frameworks</summary>
+    <div class="note" style="font-size:12.5px;margin:10px 0">Pick two or more targets to see, for each of your
+      controls, the best-matching control in every framework at once. A portfolio view, for example
+      SOC 2 + ISO 27001 + HIPAA together.</div>
+    <div id="cMultiTgts" class="multi-tgts"></div>
+    <div style="display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap">
+      <button class="btn primary sm" id="cMultiGo">Compare coverage →</button>
+      <span id="cMultiStatus" style="font-size:13px;color:var(--muted)"></span>
+    </div>
+  </details>
 </section>
 <hr class="divider">
 <section class="section pad bleed" id="cOut" style="padding-top:22px"></section>
@@ -170,8 +244,8 @@
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=10"></script>
-<script src="assets/shell.js?v=10"></script>
+<script src="assets/api.js?v=18"></script>
+<script src="assets/shell.js?v=18"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -193,6 +267,12 @@
       <button type="button" class="rev-btn rej${cur === "reject" ? " on" : ""}" data-act="reject" data-sid="${esc(sid)}" data-tid="${esc(tid)}">Reject</button>
     </div>`;
   };
+  // Explainability chips: the salient terms a result shares with the query. Auditors trust a visible
+  // reason over a bare score. Returns "" when the engine gave no overlap.
+  const whyChips = r => (r.why && r.why.length)
+    ? `<div class="why"><span class="why-lbl">why</span>${r.why.map(w => `<span class="chip">${esc(w)}</span>`).join("")}</div>`
+    : "";
+
   const markClass = (sid, tid) => {
     const c = (DECISIONS[sid] && DECISIONS[sid].targets[tid]) || "";
     return c === "accept" ? "mark-correct" : c === "reject" ? "mark-incorrect" : "";
@@ -203,7 +283,22 @@
       Object.entries(STATUS).map(([k, v]) => `<option value="${k}"${d.status === k ? " selected" : ""}>${v[0]}</option>`).join("") +
       `</select>`;
   };
-  const revNote = sid => `<input class="rev-note" data-sid="${esc(sid)}" placeholder="Note (justification, evidence reference)…" value="${esc(dec(sid).note)}">`;
+  const revNote = sid => `<input class="rev-note" data-sid="${esc(sid)}" placeholder="Note (justification)…" value="${esc(dec(sid).note)}">`;
+
+  // Evidence attachment: link a document, scan result, or ticket to a control so the crosswalk doubles
+  // as the audit binder. Stored per source control in DECISIONS[sid].evidence and saved with the project.
+  const evList = sid => (dec(sid).evidence || []).map((e, i) =>
+    `<span class="ev-chip">${e.url
+        ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.label || e.url)}</a>`
+        : `<span>${esc(e.label || "")}</span>`}<button type="button" class="ev-rm" data-sid="${esc(sid)}" data-i="${i}" title="Remove">×</button></span>`).join("");
+  const revEvidence = sid => `<div class="rev-ev" data-sid="${esc(sid)}">
+      <span class="ev-lbl">Evidence</span>
+      <div class="ev-list" data-sid="${esc(sid)}">${evList(sid)}</div>
+      <div class="ev-add">
+        <input class="ev-label" data-sid="${esc(sid)}" placeholder="Label (e.g. Vanta SOC 2 report)">
+        <input class="ev-url" data-sid="${esc(sid)}" placeholder="Link (https://…) or reference">
+        <button type="button" class="ev-btn" data-sid="${esc(sid)}">Attach</button>
+      </div></div>`;
 
   function rollup(sids) {
     const total = sids.length; let reviewed = 0; const by = { met: 0, partial: 0, gap: 0, na: 0 };
@@ -221,7 +316,29 @@
   // Bind once per output container; rows are re-rendered but the listener stays on the parent.
   function bindReview(container, rollupId, getSids, onChange) {
     const changed = () => { if (onChange) onChange(); };
+    // helper: re-render just one control's evidence chips without rebuilding the whole card
+    const refreshEv = sid => {
+      const box = [...container.querySelectorAll(".ev-list")].find(el => el.dataset.sid === sid);
+      if (box) box.innerHTML = evList(sid);
+    };
     container.addEventListener("click", e => {
+      const attach = e.target.closest(".ev-btn");
+      if (attach) {
+        const sid = attach.dataset.sid, d = dec(sid);
+        const lab = [...container.querySelectorAll(".ev-label")].find(el => el.dataset.sid === sid);
+        const url = [...container.querySelectorAll(".ev-url")].find(el => el.dataset.sid === sid);
+        const label = (lab && lab.value.trim()) || "", link = (url && url.value.trim()) || "";
+        if (!label && !link) return;
+        (d.evidence || (d.evidence = [])).push({ label, url: link });
+        if (lab) lab.value = ""; if (url) url.value = "";
+        refreshEv(sid); changed(); return;
+      }
+      const rm = e.target.closest(".ev-rm");
+      if (rm) {
+        const sid = rm.dataset.sid, d = dec(sid);
+        if (d.evidence) { d.evidence.splice(+rm.dataset.i, 1); refreshEv(sid); changed(); }
+        return;
+      }
       const b = e.target.closest(".rev-btn"); if (!b) return;
       const { sid, tid, act } = b.dataset, d = dec(sid);
       d.targets[tid] = d.targets[tid] === act ? "" : act;
@@ -381,6 +498,7 @@
           ${r.official ? `<span class="pill ok" style="margin-left:8px">official</span>` : ""}
           ${r.title ? `<div class="ctitle">${esc(r.title)}</div>` : ""}
           <div class="ctext">${esc(r.text)}</div>
+          ${whyChips(r)}
           ${revActions(sid, r.id)}
         </div>
         <div class="right">
@@ -406,7 +524,8 @@
           ${revStatus(sid)}</div>
         <div id="rollup-map">${rollup(mapSids)}</div>
         <div class="res-list">${rows}</div>
-        ${revNote(sid)}</div>`;
+        ${revNote(sid)}
+        ${revEvidence(sid)}</div>`;
   }
 
   src.addEventListener("change", async () => { await onSource(); onPair(); });
@@ -523,6 +642,9 @@
     cTgt.innerHTML = `<option value="">select</option>` + optsFor(f => !!f.controls);
     const best = FRAMEWORKS.filter(f => f.controls).sort((a, b) => b.controls - a.controls)[0];
     if (best) cTgt.value = best.id;
+    // multi-target checkboxes: every rankable framework
+    $("cMultiTgts").innerHTML = FRAMEWORKS.filter(f => f.controls).map(f =>
+      `<label><input type="checkbox" value="${esc(f.id)}"><span>${esc(f.name)}</span></label>`).join("");
     bindReview(cOut, "rollup-custom", () => customSids, scheduleAutosave);
     loadProjects();
   }
@@ -631,6 +753,81 @@
   }
   cGo.addEventListener("click", runCustom);
 
+  /* ---- multi-target coverage (#7) ----------------------------------------- */
+  async function runMulti() {
+    const controls = parseControls(cText.value);
+    const targets = [...document.querySelectorAll("#cMultiTgts input:checked")].map(i => i.value);
+    const st = $("cMultiStatus");
+    if (!controls.length) { st.innerHTML = ""; cOut.innerHTML = `<div class="note err">Add your controls above first.</div>`; return; }
+    if (targets.length < 2) { st.textContent = "Pick at least two frameworks to compare."; return; }
+    $("cMultiGo").disabled = true; st.innerHTML = `<span class="spin"></span> comparing ${controls.length} controls across ${targets.length} frameworks…`;
+    let d;
+    try { d = await RegMap.customMulti({ targets, controls }); }
+    catch (e) { $("cMultiGo").disabled = false; st.textContent = "";
+      cOut.innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+    $("cMultiGo").disabled = false; st.textContent = "";
+    renderMulti(d);
+  }
+  $("cMultiGo").addEventListener("click", runMulti);
+
+  // Heatmap cell background: intensity scales with the match score (green for a strong match, faint for
+  // weak). Works in both themes because it is a translucent overlay on the cell.
+  const covColor = s => `rgba(61,220,132,${(Math.max(0, Math.min(1, s)) * 0.72 + 0.05).toFixed(3)})`;
+
+  function renderMulti(d) {
+    const thr = d.threshold;
+    // top: a coverage tile per framework, click to drill into the single-target review
+    const tiles = d.targets.map(t => {
+      const cov = d.coverage[t.id], pct = Math.round((cov.matched / (cov.total || 1)) * 100);
+      return `<div class="cov-tile" data-fid="${esc(t.id)}" title="Open ${esc(t.name)} in the single-target view">
+        <div class="tname">${esc(t.name)}</div>
+        <div class="tpct">${pct}%</div>
+        <div class="tsub">${cov.matched}/${cov.total} covered · avg ${cov.avg_score.toFixed(2)}</div>
+        <div class="cov-dot"><i style="width:${pct}%"></i></div>
+        <div class="drill">Open in depth →</div></div>`;
+    }).join("");
+    const head = d.targets.map(t => `<th class="fw" data-fid="${esc(t.id)}">${esc(t.name)}<span class="open">open →</span></th>`).join("");
+    const body = d.controls.map(c => {
+      const cells = d.targets.map(t => {
+        const m = d.matrix[c.id] && d.matrix[c.id][t.id];
+        if (!m) return `<td><span class="cov-cell weak"><span class="m-id">-</span></span></td>`;
+        const hit = m.score >= thr;
+        return `<td style="background:${covColor(m.score)}"><span class="cov-cell ${hit ? "hit" : "weak"}">
+          <span class="m-id">${esc(m.id)}</span>
+          <span class="m-sc">${(m.score).toFixed(3)}${hit ? " · covered" : ""}</span></span></td>`;
+      }).join("");
+      return `<tr><td class="ctrl"><span class="cid">${esc(c.id)}</span>
+        <div class="sub">${esc(c.text)}</div></td>${cells}</tr>`;
+    }).join("");
+    const summary = d.targets.map(t => {
+      const cov = d.coverage[t.id], pct = Math.round((cov.matched / (cov.total || 1)) * 100);
+      return `<td><span class="cov-sum"><b>${cov.matched}/${cov.total}</b> covered
+        <span>avg ${cov.avg_score.toFixed(3)}</span>
+        <span class="cov-dot"><i style="width:${pct}%"></i></span></span></td>`;
+    }).join("");
+    cOut.innerHTML = `
+      <div class="row-head"><h2 style="font-size:20px">Coverage across ${d.targets.length} frameworks</h2>
+        <span style="font-size:13px;color:var(--muted)">${d.counts.controls_mapped} controls · method
+          ${esc(d.method)} · covered = best score ≥ ${thr}</span></div>
+      <div class="cov-tiles">${tiles}</div>
+      <div class="note" style="margin-bottom:14px">${esc(d.note)} Each cell is the best-matching control in that
+        framework, shaded by match strength. Click a framework to review and export it in depth.</div>
+      <div class="cov-wrap"><table class="cov">
+        <thead><tr><th>Your control</th>${head}</tr>
+          <tr><th style="font-weight:600;color:var(--muted)">Coverage</th>${summary}</tr></thead>
+        <tbody>${body}</tbody>
+      </table></div>`;
+    // drill-down: a tile or a column header opens that framework in the single-target mapping above
+    const drill = fid => {
+      cTgt.value = fid;
+      $("cMultiBox").open = false;
+      runCustom();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    cOut.querySelectorAll(".cov-tile[data-fid]").forEach(el => el.addEventListener("click", () => drill(el.dataset.fid)));
+    cOut.querySelectorAll("th.fw[data-fid]").forEach(el => el.addEventListener("click", () => drill(el.dataset.fid)));
+  }
+
   function renderCustom(d) {
     customSids = d.rows.map(r => r.id);
     const rows = d.rows.map(r => {
@@ -638,7 +835,7 @@
         const pct = Math.max(0, Math.min(100, Math.round((x.score || 0) * 100)));
         return `<div class="res ${markClass(r.id, x.id)}"><div class="rank"></div>
           <div><span class="cid">${esc(x.id)}</span>${x.title ? `<div class="ctitle">${esc(x.title)}</div>` : ""}
-            <div class="ctext">${esc(x.text)}</div>${revActions(r.id, x.id)}</div>
+            <div class="ctext">${esc(x.text)}</div>${whyChips(x)}${revActions(r.id, x.id)}</div>
           <div class="right"><div class="meter"><i style="width:${pct}%"></i></div>
             <span class="score">${(x.score || 0).toFixed(3)}</span></div></div>`;
       }).join("");
@@ -648,7 +845,8 @@
           ${revStatus(r.id)}</div>
         <div class="note" style="margin-bottom:8px">${esc(r.text)}</div>
         <div class="res-list">${items}</div>
-        ${revNote(r.id)}</div>`;
+        ${revNote(r.id)}
+        ${revEvidence(r.id)}</div>`;
     }).join("");
     cOut.innerHTML = `
       <div class="row-head">

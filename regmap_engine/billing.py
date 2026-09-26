@@ -146,6 +146,17 @@ projects = Table(
     Column("updated_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
 )
 
+oauth_identities = Table(
+    # A federated identity (Sign in with Google/Microsoft/Apple) linked to a local account. The
+    # (provider, subject) pair is the provider's stable user id; one account can link several providers.
+    "oauth_identities", metadata,
+    Column("provider", String(16), primary_key=True),      # google | microsoft | apple
+    Column("subject", String(255), primary_key=True),      # the provider's unique user id (sub)
+    Column("account_id", String(40), index=True, nullable=False),
+    Column("email", String(255)),
+    Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+)
+
 DEFAULT_PLANS = [
     # id, name, monthly CU, overage allowed, price per CU past the allowance
     ("free", "Free", 300.0, False, 0.0),
@@ -638,6 +649,35 @@ def is_email_verified(account_id):
     with engine().begin() as c:
         row = c.execute(select(accounts.c.email_verified).where(accounts.c.id == account_id)).first()
     return bool(row and row[0])
+
+
+# ---- federated identity (Sign in with Google / Microsoft / Apple) --------------------------------
+def oauth_get_or_create(provider, subject, email, name=None):
+    """Resolve a provider identity to a local account, creating and linking as needed.
+
+    Precedence: (1) an existing (provider, subject) link wins; (2) else an account with the same
+    verified provider email is adopted and linked; (3) else a fresh account is created. A federated
+    email is treated as verified, since the provider asserts it. Returns the account_id.
+    """
+    provider = (provider or "").strip().lower()
+    email = (email or "").strip().lower() or None
+    now = datetime.now(timezone.utc)
+    with engine().begin() as c:
+        row = c.execute(select(oauth_identities.c.account_id).where(
+            oauth_identities.c.provider == provider,
+            oauth_identities.c.subject == subject)).first()
+        if row:
+            return row[0]
+    # No link yet. Adopt an existing account by email, or make a new one.
+    aid = account_by_email(email) if email else None
+    if not aid:
+        aid = create_account(email or f"{provider}_{subject[:16]}@users.regmap", name=name)
+    if email:
+        set_email_verified(aid)
+    with engine().begin() as c:
+        c.execute(insert(oauth_identities).values(
+            provider=provider, subject=str(subject), account_id=aid, email=email, created_at=now))
+    return aid
 
 
 # ---- two-factor (TOTP) ---------------------------------------------------------------------------

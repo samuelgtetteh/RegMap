@@ -79,6 +79,31 @@ Guests can use every feature; login is not required to work. The single differen
 - [x] Gate download (export) on a real account. DONE, verified (guest 401). Email-it option pending email infra.
 - [ ] Frontend: prompt to sign in at the save/download moment; guest export offers "email it instead".
 
+### D. Federated sign-in (Google / Microsoft / Apple) DONE (flow) 2026-09-25, needs provider credentials
+
+- [x] Backend OAuth 2.0 / OIDC (authorization code + PKCE) in `serve.py`: `/auth/oauth/providers`,
+      `/auth/oauth/{provider}/start`, and `/auth/oauth/{provider}/callback` (GET for Google/Microsoft,
+      POST for Apple's `form_post`). Shared finish logic validates `state`, exchanges the code (stdlib
+      `urllib`), reads the `id_token` claims, and calls `billing.oauth_get_or_create`.
+- [x] `billing.oauth_identities` table + `oauth_get_or_create(provider, subject, email, name)`: links a
+      provider identity to a local account, adopting an existing account by email or creating one; a
+      federated email is marked verified. One account can link several providers.
+- [x] Front end: Google, Microsoft, Apple buttons + "Continue as a guest" on the sign-in card. Buttons
+      read `/auth/oauth/providers`; a configured provider navigates to `/start`, an unconfigured one
+      shows a friendly "coming soon" note. `?sso=...` returns are turned into neutral messages.
+- [ ] **Go-live (external setup, not code):** register an OAuth app with each provider and set env vars:
+      `REGMAP_GOOGLE_CLIENT_ID/SECRET`; `REGMAP_MICROSOFT_CLIENT_ID/SECRET` (+ `REGMAP_MICROSOFT_TENANT`);
+      Apple `REGMAP_APPLE_CLIENT_ID/TEAM_ID/KEY_ID/PRIVATE_KEY` (Apple also needs PyJWT + cryptography for
+      the ES256 client secret). Register redirect URIs `<origin>/auth/oauth/{provider}/callback`. No code
+      change needed once set; buttons activate automatically.
+
+### E. Error voice + validation DONE 2026-09-25
+
+- [x] The sign-in pages never show a raw or technical error. Client-side validation (email format,
+      password length) prevents bad submissions; all backend failures are caught and shown as friendly,
+      escalating guidance ("Oops, please try again", then "this one's on us" after repeated failures).
+      Added show/hide password, "Stay signed in", and "Continue as a guest".
+
 ## Notes / decisions
 - **Login is NOT required to use features.** Everything works for guests; the only differences are the
   two gates above (save progress, and download vs email). `REGMAP_REQUIRE_AUTH` stays false; the gates are

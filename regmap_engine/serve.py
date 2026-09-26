@@ -43,13 +43,15 @@ import secrets
 import struct
 import json as _json
 import time
+import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import List, Optional
 
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -316,6 +318,57 @@ def _tfidf_scored(query, corpus, top_k):
     return [(cids[i], float(sims[i])) for i in order]
 
 
+# A small English stopword set for explainability. Kept local (no import) so the "why" terms are cheap
+# to compute on every result. It only needs to strip the obvious noise; the rank already did the work.
+_STOP = frozenset((
+    "the a an and or of to in for on at by with from into over under as is are was were be been being "
+    "this that these those it its their our your his her they them we you i he she which who whom whose "
+    "not no nor so if then than but also may can must shall should will would could each any all some "
+    "such per via within without across between among about above below more most other another use "
+    "used using ensure ensures include includes including provide provides provided requirement "
+    "requirements control controls system systems organization organizational information data").split())
+_WORD = re.compile(r"[A-Za-z][A-Za-z0-9\-]{2,}")
+
+
+_SUFFIXES = ("ization", "isation", "ations", "ation", "ingly", "ing", "edly", "ed", "ies", "ied",
+             "ment", "ness", "ity", "ally", "al", "ers", "er", "es", "s")
+
+
+def _stem(w):
+    """A tiny suffix stripper so related word forms overlap: encrypt/encryption/encrypted -> encrypt,
+    cryptography/cryptographic -> cryptograph. Not linguistically perfect, just enough to match forms."""
+    w = w.lower()
+    for suf in _SUFFIXES:                       # longest suffixes first
+        if w.endswith(suf) and len(w) - len(suf) >= 4:
+            return w[:-len(suf)]
+    return w
+
+
+def _why_terms(query, text, k=6):
+    """The salient words shared by the query and a matched control, as a short 'why this matched' list.
+
+    Explainability the tracker asks for (#10): auditors trust a visible reason over a black-box score.
+    A lightweight, stemmed overlap of meaningful terms, ordered by how often they recur in the target,
+    showing the query's own wording. Not a claim about the model's internals."""
+    q = {}                                       # stem -> the query's original word (first seen)
+    for w in _WORD.findall(query or ""):
+        lw = w.lower()
+        if lw in _STOP:
+            continue
+        q.setdefault(_stem(lw), lw)
+    if not q:
+        return []
+    counts = {}
+    for w in _WORD.findall(text or ""):
+        lw = w.lower()
+        if lw in _STOP:
+            continue
+        st = _stem(lw)
+        if st in q:
+            counts[st] = counts.get(st, 0) + 1
+    return [q[st] for st, _ in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:k]]
+
+
 @app.get("/health")
 def health():
     """Liveness only, deliberately minimal and unauthenticated.
@@ -541,13 +594,15 @@ def map_control(req: MapReq, request: Request,
         sims = mat @ np.asarray(q)
         order = sorted(range(len(cids)), key=lambda i: -sims[i])[:req.top_k]
         results = [{"id": cids[i], "title": ctl[cids[i]]["title"], "text": ctl[cids[i]]["text"],
-                    "score": round(float(sims[i]), 4), "official": cids[i] in official_ids}
+                    "score": round(float(sims[i]), 4), "official": cids[i] in official_ids,
+                    "why": _why_terms(query, ctl[cids[i]]["text"])}
                    for i in order]
         method = "embed"
     else:  # TF-IDF fallback — scored, so the UI behaves the same with or without the embedder
         ranked = _tfidf_scored(query, {c: v["text"] for c, v in ctl.items()}, req.top_k)
         results = [{"id": c, "title": ctl[c]["title"], "text": ctl[c]["text"],
-                    "score": round(s, 4), "official": c in official_ids} for c, s in ranked]
+                    "score": round(s, 4), "official": c in official_ids,
+                    "why": _why_terms(query, ctl[c]["text"])} for c, s in ranked]
         method = "tfidf"
 
     return {"source": src, "target": tgt,
@@ -780,7 +835,8 @@ def map_custom(req: CustomMapReq, request: Request, principal=Depends(auth.requi
                 "id": (c.id or f"C{i+1}").strip(), "title": (c.title or "").strip(),
                 "text": c.text.strip()[:400],
                 "results": [{"id": cids[j], "title": tgt_ctl[cids[j]]["title"],
-                             "text": tgt_ctl[cids[j]]["text"], "score": round(float(sims[j]), 4)}
+                             "text": tgt_ctl[cids[j]]["text"], "score": round(float(sims[j]), 4),
+                             "why": _why_terms(c.text, tgt_ctl[cids[j]]["text"])}
                             for j in order]})
         method = "embed"
     else:  # TF-IDF fallback so the tool works even without the embedder
@@ -791,7 +847,8 @@ def map_custom(req: CustomMapReq, request: Request, principal=Depends(auth.requi
                 "id": (c.id or f"C{i+1}").strip(), "title": (c.title or "").strip(),
                 "text": c.text.strip()[:400],
                 "results": [{"id": k, "title": tgt_ctl[k]["title"], "text": tgt_ctl[k]["text"],
-                             "score": round(s, 4)} for k, s in ranked]})
+                             "score": round(s, 4), "why": _why_terms(c.text, tgt_ctl[k]["text"])}
+                            for k, s in ranked]})
         method = "tfidf"
 
     return {
@@ -804,6 +861,102 @@ def map_custom(req: CustomMapReq, request: Request, principal=Depends(auth.requi
         "cap_note": (f"The free tier maps up to {CUSTOM_FREE_MAX} controls per run. The paid version "
                      f"removes the cap." if truncated else None),
         "rows": rows,
+    }
+
+
+class CustomMultiReq(BaseModel):
+    targets: List[str] = Field(..., min_items=1, max_items=8,
+                               description="framework ids to compare coverage against, at once")
+    controls: List[CustomControl] = Field(..., description="the user's own controls")
+    threshold: float = Field(0.35, ge=0.0, le=1.0,
+                             description="a control counts as covered by a target when its best score >= this")
+
+
+def _best_per_control(tgt, controls):
+    """For one target framework, the single best-matching target control per source control.
+
+    Shared by the multi-target coverage view (#7). Returns a list aligned to `controls`, each item
+    {id, title, score, why} for the top hit, or None if the target has no rankable controls."""
+    tgt_ctl = _controls.get(tgt, {})
+    if not tgt_ctl:
+        return [None] * len(controls)
+    out = []
+    if _model is not None and tgt in _emb:
+        import numpy as np
+        cids, mat = _emb[tgt]
+        for c in controls:
+            q = _model.encode([c.text.strip()], normalize_embeddings=True, show_progress_bar=False)[0]
+            sims = mat @ np.asarray(q)
+            j = int(max(range(len(cids)), key=lambda k: sims[k]))
+            out.append({"id": cids[j], "title": tgt_ctl[cids[j]]["title"],
+                        "score": round(float(sims[j]), 4),
+                        "why": _why_terms(c.text, tgt_ctl[cids[j]]["text"])})
+    else:
+        corpus = {k: v["text"] for k, v in tgt_ctl.items()}
+        for c in controls:
+            ranked = _tfidf_scored(c.text.strip(), corpus, 1)
+            if ranked:
+                k, s = ranked[0]
+                out.append({"id": k, "title": tgt_ctl[k]["title"], "score": round(s, 4),
+                            "why": _why_terms(c.text, tgt_ctl[k]["text"])})
+            else:
+                out.append(None)
+    return out
+
+
+@app.post("/map/custom/multi")
+def map_custom_multi(req: CustomMultiReq, request: Request, principal=Depends(auth.require_key)):
+    """Map one control set onto SEVERAL frameworks in a single run (Compliance tracker #7).
+
+    Returns, per source control, the best-matching control in each chosen framework, plus a coverage
+    summary per framework (how many controls clear the threshold). This is the portfolio view: SOC 2 +
+    ISO 27001 + HIPAA at once, so a team sees where one program already satisfies many obligations.
+    """
+    targets = [_require(t, "target") for t in dict.fromkeys(req.targets)]   # de-dup, keep order
+    controls = [c for c in req.controls if (c.text or "").strip()]
+    if not controls:
+        raise HTTPException(400, "provide at least one control with text")
+
+    capped = auth.ENFORCE_QUOTA
+    free_max = CUSTOM_FREE_MAX if capped else max(len(controls), 1)
+    truncated = len(controls) > free_max
+    controls = controls[:free_max]
+
+    # Charge for the whole comparison up front: one encode per control per target.
+    total_tgt = sum(len(_controls.get(t, {})) or 1 for t in targets)
+    units = cu.bulk_units(len(controls), total_tgt, 1)
+    auth.enforce_quota(principal, cu.quantise(units, _on_gpu()))
+    request.state.work_units = units
+    request.state.billed_detail = f"custom-multi->{len(targets)} targets controls={len(controls)}"
+
+    best = {t: _best_per_control(t, controls) for t in targets}
+    matrix, coverage = {}, {}
+    for t in targets:
+        coverage[t] = {"matched": 0, "total": len(controls), "avg_score": 0.0}
+    for i, c in enumerate(controls):
+        cid = (c.id or f"C{i+1}").strip()
+        matrix[cid] = {}
+        for t in targets:
+            hit = best[t][i]
+            matrix[cid][t] = hit
+            if hit:
+                coverage[t]["avg_score"] += hit["score"]
+                if hit["score"] >= req.threshold:
+                    coverage[t]["matched"] += 1
+    for t in targets:
+        n = len(controls) or 1
+        coverage[t]["avg_score"] = round(coverage[t]["avg_score"] / n, 4)
+
+    method = "embed" if (_model is not None and any(t in _emb for t in targets)) else "tfidf"
+    return {
+        "targets": [{"id": t, "name": _registry.get(t, {}).get("name", t)} for t in targets],
+        "controls": [{"id": (c.id or f"C{i+1}").strip(), "title": (c.title or "").strip(),
+                      "text": c.text.strip()[:400]} for i, c in enumerate(controls)],
+        "matrix": matrix, "coverage": coverage, "threshold": req.threshold,
+        "method": method, "version": VERSION, "authoritative": False,
+        "note": "Model suggestions across frameworks for expert review, not authoritative mappings.",
+        "counts": {"controls_mapped": len(controls), "frameworks": len(targets)},
+        "free_limit": CUSTOM_FREE_MAX, "capped": capped, "truncated": truncated,
     }
 
 
@@ -873,7 +1026,8 @@ def projects_delete(pid: str, principal=Depends(auth.require_key)):
 # --- audit-ready export (Compliance workflow, step C) ---------------------------------------------
 _STATUS_LABEL = {"met": "Met", "partial": "Partial", "gap": "Gap", "na": "Not applicable"}
 _EXPORT_COLS = [("source_id", "Source ID"), ("source", "Source control"), ("status", "Status"),
-                ("mapped_to", "Mapped to"), ("rejected", "Rejected"), ("note", "Note")]
+                ("mapped_to", "Mapped to"), ("rejected", "Rejected"), ("evidence", "Evidence"),
+                ("note", "Note")]
 
 
 def _parse_controls_text(raw):
@@ -907,11 +1061,16 @@ def _export_rows(data, tgt_ctl):
         d = decisions.get(s["id"], {}) or {}
         tmap = d.get("targets", {}) or {}
         lab = lambda ids: "; ".join((f"{t} {tgt_ctl.get(t, {}).get('title', '')}").strip() for t in ids)
+        ev = d.get("evidence", []) or []
+        ev_txt = "; ".join(
+            (f"{(e.get('label') or '').strip()} ({e.get('url')})" if e.get("url") else (e.get("label") or "").strip())
+            for e in ev if (e.get("label") or e.get("url")))
         rows.append({
             "source_id": s["id"], "source": s["text"],
             "status": _STATUS_LABEL.get(d.get("status", ""), d.get("status", "") or ""),
             "mapped_to": lab([t for t, v in tmap.items() if v == "accept"]),
             "rejected": lab([t for t, v in tmap.items() if v == "reject"]),
+            "evidence": ev_txt,
             "note": d.get("note", "") or "",
         })
     return rows
@@ -937,8 +1096,6 @@ def project_export(pid: str, fmt: str = "xlsx", principal=Depends(auth.require_k
     name = p.get("name") or "project"
     safe = re.sub(r"[^A-Za-z0-9._-]+", "_", name)[:60] or "project"
     stamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
-    headers = {"source_id": "Source ID", "source": "Source control", "status": "Status",
-               "mapped_to": "Mapped to", "rejected": "Rejected", "note": "Note"}
 
     if fmt == "json":
         return JSONResponse({"project": name, "target_framework": tgt_name, "exported_at": stamp,
@@ -973,7 +1130,7 @@ def project_export(pid: str, fmt: str = "xlsx", principal=Depends(auth.require_k
             cell.fill = PatternFill("solid", fgColor="6366F1")
         for r in rows:
             ws.append([r[c[0]] for c in _EXPORT_COLS])
-        for i, wd in enumerate([14, 60, 14, 34, 34, 40], 1):
+        for i, wd in enumerate([14, 60, 14, 34, 34, 40, 40], 1):
             ws.column_dimensions[chr(64 + i)].width = wd
         for row in ws.iter_rows(min_row=5):
             for cell in row:
@@ -1305,6 +1462,161 @@ def _set_session_cookie(resp, token):
         samesite="lax",         # sent on top-level navigation, not on cross-site POSTs
         secure=SECURE_COOKIES,
         path="/")
+
+
+# ==================================================================================================
+# Federated sign-in: Google, Microsoft, Apple (OAuth 2.0 / OpenID Connect, authorization code + PKCE)
+# --------------------------------------------------------------------------------------------------
+# The full flow is implemented here; it activates per provider as soon as that provider's client
+# credentials are supplied as environment variables. Nothing here can authenticate until you register
+# an OAuth app with the provider and set the values below, because only the provider can vouch for a
+# user. Register these redirect URIs with each provider (replace the host with your public origin):
+#     <origin>/auth/oauth/google/callback
+#     <origin>/auth/oauth/microsoft/callback
+#     <origin>/auth/oauth/apple/callback
+# Env:
+#   REGMAP_GOOGLE_CLIENT_ID / REGMAP_GOOGLE_CLIENT_SECRET
+#   REGMAP_MICROSOFT_CLIENT_ID / REGMAP_MICROSOFT_CLIENT_SECRET / REGMAP_MICROSOFT_TENANT (default "common")
+#   REGMAP_APPLE_CLIENT_ID / REGMAP_APPLE_TEAM_ID / REGMAP_APPLE_KEY_ID / REGMAP_APPLE_PRIVATE_KEY (PEM)
+# ==================================================================================================
+def _oauth_providers():
+    """Return the per-provider config, each flagged 'configured' only when its credentials are present."""
+    env = os.environ.get
+    tenant = env("REGMAP_MICROSOFT_TENANT", "common")
+    google = {
+        "id": env("REGMAP_GOOGLE_CLIENT_ID", ""), "secret": env("REGMAP_GOOGLE_CLIENT_SECRET", ""),
+        "authorize": "https://accounts.google.com/o/oauth2/v2/auth",
+        "token": "https://oauth2.googleapis.com/token",
+        "scope": "openid email profile", "extra": {"access_type": "online", "prompt": "select_account"},
+    }
+    microsoft = {
+        "id": env("REGMAP_MICROSOFT_CLIENT_ID", ""), "secret": env("REGMAP_MICROSOFT_CLIENT_SECRET", ""),
+        "authorize": f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize",
+        "token": f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token",
+        "scope": "openid email profile", "extra": {"prompt": "select_account"},
+    }
+    apple = {
+        "id": env("REGMAP_APPLE_CLIENT_ID", ""), "secret": _apple_client_secret(),
+        "authorize": "https://appleid.apple.com/auth/authorize",
+        "token": "https://appleid.apple.com/auth/token",
+        "scope": "openid email name", "extra": {"response_mode": "form_post"},
+    }
+    for p in (google, microsoft, apple):
+        p["configured"] = bool(p["id"] and p["secret"])
+    return {"google": google, "microsoft": microsoft, "apple": apple}
+
+
+def _apple_client_secret():
+    """Apple's client secret is a short-lived ES256 JWT signed with your private key. Built only when
+    the Apple env vars and a signing library are present; otherwise Apple stays unconfigured."""
+    cid = os.environ.get("REGMAP_APPLE_CLIENT_ID"); team = os.environ.get("REGMAP_APPLE_TEAM_ID")
+    kid = os.environ.get("REGMAP_APPLE_KEY_ID"); key = os.environ.get("REGMAP_APPLE_PRIVATE_KEY")
+    if not (cid and team and kid and key):
+        return ""
+    try:
+        import jwt  # PyJWT (+ cryptography) needed for ES256; optional
+        now = int(time.time())
+        return jwt.encode({"iss": team, "iat": now, "exp": now + 3600,
+                           "aud": "https://appleid.apple.com", "sub": cid},
+                          key, algorithm="ES256", headers={"kid": kid})
+    except Exception:
+        return ""
+
+
+def _oauth_redirect_uri(request, provider):
+    return f"{str(request.base_url).rstrip('/')}/auth/oauth/{provider}/callback"
+
+
+def _jwt_payload(token):
+    """Decode a JWT payload without verifying the signature. Safe here because the token was just
+    received directly from the provider's token endpoint over TLS (channel-authenticated)."""
+    try:
+        part = token.split(".")[1]
+        part += "=" * (-len(part) % 4)
+        return _json.loads(base64.urlsafe_b64decode(part).decode())
+    except Exception:
+        return {}
+
+
+def _post_form(url, data):
+    body = urllib.parse.urlencode(data).encode()
+    req = urllib.request.Request(url, data=body, method="POST", headers={
+        "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return _json.loads(r.read().decode())
+
+
+@app.get("/auth/oauth/providers")
+def oauth_providers():
+    """Which federated providers are ready to use. The sign-in page reads this to enable the buttons."""
+    p = _oauth_providers()
+    return {k: {"configured": v["configured"]} for k, v in p.items()}
+
+
+@app.get("/auth/oauth/{provider}/start")
+def oauth_start(provider: str, request: Request):
+    """Begin a federated sign-in: set PKCE + state cookies and redirect to the provider's consent page.
+    If the provider is not configured, bounce back with a flag the UI turns into a friendly message."""
+    cfg = _oauth_providers().get(provider)
+    if not cfg or not cfg["configured"]:
+        return RedirectResponse(f"/account.html?sso={provider}_unavailable", status_code=303)
+    verifier = secrets.token_urlsafe(48)
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+    state = secrets.token_urlsafe(24)
+    params = {
+        "client_id": cfg["id"], "redirect_uri": _oauth_redirect_uri(request, provider),
+        "response_type": "code", "scope": cfg["scope"], "state": state,
+        "code_challenge": challenge, "code_challenge_method": "S256",
+    }
+    params.update(cfg.get("extra", {}))
+    resp = RedirectResponse(cfg["authorize"] + "?" + urllib.parse.urlencode(params), status_code=303)
+    for k, v in (("oauth_state", state), ("oauth_verifier", verifier), ("oauth_provider", provider)):
+        resp.set_cookie(k, v, max_age=600, httponly=True, samesite="lax", secure=SECURE_COOKIES, path="/")
+    return resp
+
+
+async def _oauth_finish(provider, code, state, request):
+    """Shared callback logic: validate state, exchange the code, resolve the account, open a session."""
+    ck = request.cookies
+    if not code or not state or state != ck.get("oauth_state") or provider != ck.get("oauth_provider"):
+        return RedirectResponse("/account.html?sso=failed", status_code=303)
+    cfg = _oauth_providers().get(provider)
+    if not cfg or not cfg["configured"]:
+        return RedirectResponse("/account.html?sso=failed", status_code=303)
+    try:
+        tok = _post_form(cfg["token"], {
+            "grant_type": "authorization_code", "code": code,
+            "redirect_uri": _oauth_redirect_uri(request, provider),
+            "client_id": cfg["id"], "client_secret": cfg["secret"],
+            "code_verifier": ck.get("oauth_verifier", ""),
+        })
+        claims = _jwt_payload(tok.get("id_token", ""))
+        sub = claims.get("sub")
+        if not sub:
+            return RedirectResponse("/account.html?sso=failed", status_code=303)
+        email = claims.get("email")
+        name = claims.get("name") or (claims.get("given_name"))
+        aid = billing.oauth_get_or_create(provider, sub, email, name)
+        token = billing.open_session(aid, request.headers.get("user-agent"))
+    except Exception:
+        return RedirectResponse("/account.html?sso=failed", status_code=303)
+    resp = RedirectResponse("/account.html", status_code=303)
+    _set_session_cookie(resp, token)
+    for k in ("oauth_state", "oauth_verifier", "oauth_provider"):
+        resp.delete_cookie(k, path="/")
+    return resp
+
+
+@app.get("/auth/oauth/{provider}/callback")
+async def oauth_callback_get(provider: str, request: Request, code: str = "", state: str = ""):
+    return await _oauth_finish(provider, code, state, request)
+
+
+@app.post("/auth/oauth/{provider}/callback")
+async def oauth_callback_post(provider: str, request: Request):
+    """Apple returns the code by form POST (response_mode=form_post); handle that here."""
+    form = await request.form()
+    return await _oauth_finish(provider, form.get("code", ""), form.get("state", ""), request)
 
 
 class RegisterReq(BaseModel):

@@ -102,6 +102,20 @@ controls and frameworks it satisfies.
 
 ## Queued requests (raised mid-task; do after the current work)
 
+- [ ] **Multi-page site: real independent pages for every placeholder link (raised 2026-09-25).** Build
+      out the site like Google / Apple / Microsoft do: every link that currently points at `#` gets its
+      own real, standalone page (its own URL, on the locked shell with nav + footer). For links with no
+      content yet, ship a clean **"Page under construction"** page now, and finish the content later.
+      Links needing pages (from `shell.js` footer + account bottom bar): Product (Coverage and gaps,
+      Bring your own framework, Graded labs), Solutions (Automate compliance, Prove you can do the job,
+      For GRC teams, For consultancies, For practitioners), Resources (Documentation, API reference,
+      Benchmarks, Changelog, Status), Company (About, Careers, Contact, Security, Responsible disclosure),
+      Legal (Privacy, Terms, Cookies, Licensing), Account bottom bar (Help, Privacy, Terms), and social
+      (LinkedIn, GitHub, X). Approach: a reusable `web/page.html`-style "under construction" template (or
+      one small page per route) that shows the title, a short line, and a link back home; then point the
+      footer/nav hrefs at the real routes. Prioritise Legal (Privacy, Terms) and Contact first, since
+      those are expected by users and auth flows. Do not gate anything on it.
+
 - [ ] **Authentication for the project.** The founder wants auth. RegMap ALREADY has a purpose-built auth
       system (`regmap_engine/auth.py` + `billing.py` accounts/api_keys/sessions; `/auth/register`, `/login`,
       `/logout`, `/session`, `/keys`; scrypt passwords; guest browsing; `regmap_engine/web/account.html`).

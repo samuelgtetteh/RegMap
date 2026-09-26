@@ -23,10 +23,10 @@
        <a class="brand" href="/"><span class="logo"></span>RegMap</a>
        <nav class="nav-links">${links}</nav>
        <span class="nav-sp"></span>
-       <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
        <a class="nav-desk" id="acctLink" href="/account.html" style="color:var(--muted);font-size:14px;font-weight:600;padding:0 4px">Sign in</a>
        <a class="btn ghost sm nav-desk" href="/labs.html">Learning Hub</a>
        <a class="btn primary sm nav-desk" href="/compliance.html">Start free</a>
+       <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
        <button class="icon-btn nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">≡</button>
      </div>
      <div class="mobile-menu pad" id="mobileMenu" hidden>
@@ -108,13 +108,26 @@
   menu.addEventListener("click", e => { if (e.target.closest("a")) setMenu(false); });
   addEventListener("resize", () => { if (innerWidth > 860) setMenu(false); });
 
-  // theme toggle (mirror the OS default, then let the user override)
+  // theme toggle: remember the user's choice across pages and tabs (localStorage), falling back to the
+  // OS preference until they pick one. Applied on every page load so the choice survives navigation.
   const root = document.documentElement;
+  const THEME_KEY = "regmap.theme";
+  const osTheme = () => (matchMedia("(prefers-color-scheme:light)").matches ? "light" : "dark");
+  const storedTheme = () => { try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; } };
+  const applyTheme = t => root.setAttribute("data-theme", t === "light" ? "light" : "dark");
+  applyTheme(storedTheme() || osTheme());
   document.getElementById("themeToggle").addEventListener("click", () => {
-    const cur = root.getAttribute("data-theme") ||
-      (matchMedia("(prefers-color-scheme:light)").matches ? "light" : "dark");
-    root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+    const cur = root.getAttribute("data-theme") || osTheme();
+    const next = cur === "dark" ? "light" : "dark";
+    applyTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
   });
+  // keep other open tabs in sync when the choice changes
+  addEventListener("storage", e => { if (e.key === THEME_KEY && e.newValue) applyTheme(e.newValue); });
+  // follow the OS/browser theme live, but only until the user makes an explicit choice
+  const mq = matchMedia("(prefers-color-scheme:light)");
+  const onOS = () => { if (!storedTheme()) applyTheme(osTheme()); };
+  mq.addEventListener ? mq.addEventListener("change", onOS) : mq.addListener(onOS);
 
   // scroll-reveal for anything with .reveal
   const io = new IntersectionObserver(es => es.forEach(e => {

@@ -112,20 +112,36 @@ yet committed.
 4. **Audit-ready export.** One click to a shareable compliance package (DOCX, XLSX, JSON) with, per
    obligation: suggested control, score, provenance, status, note, evidence link. The `/advisor` layer
    already builds DOCX/XLSX; wire it here. FREE watermarked / limited, PAID full.
-5. **Evidence attachment.** Attach or link evidence (a document, a scan result, a ticket) to each control,
-   so the crosswalk doubles as the audit binder. PAID.
+5. **Evidence attachment. DONE 2026-09-25.** Each source control has an Evidence section (label + link)
+   to attach a document, scan result, or ticket, so the crosswalk doubles as the audit binder. Stored in
+   `DECISIONS[sid].evidence` (saved with the project) and rendered on both the "Map a control" and "Your
+   framework" tabs. Flows into export as an **Evidence** column (`_EXPORT_COLS` + `_export_rows` in
+   `serve.py`) across JSON/CSV/XLSX/DOCX. Verified end to end. Later: file upload/storage (links only for
+   now), and the paid gate. PAID (planned).
 
 ### Tier 2: depth and trust
-6. **Coverage dashboard and heatmap.** A matrix of your program against many target frameworks at once,
-   colored by coverage, with drill-down. Turns one mapping into a portfolio view. PAID.
-7. **Map to many frameworks at once.** Submit your control set and get coverage against N targets in one
-   run (SOC 2 + ISO 27001 + HIPAA together). PAID.
+6. **Coverage dashboard and heatmap. DONE 2026-09-25.** The multi-target result now renders as a
+   dashboard: a coverage tile per framework (big % covered, matched/total, avg score, bar) above a
+   heatmap matrix whose cells are shaded by match strength (`covColor`). Drill-down: clicking a tile or a
+   column header loads that framework into the single-target review above (re-maps the same controls) so
+   you can review and export it in depth. Built on `/map/custom/multi` (#7); no new endpoint. PAID
+   (planned). Later: per-cell drill-down to the exact suggestion, and add coverage to export.
+7. **Map to many frameworks at once. DONE 2026-09-25.** `POST /map/custom/multi {targets:[...],controls,
+   threshold}` maps one control set onto up to 8 frameworks in a single run, returning per control the
+   best-matching target control in each framework (id, score, why) plus a per-framework coverage summary
+   (matched/total at a score threshold, avg score). Front end: a "Compare coverage across several
+   frameworks" panel on the "Your framework" tab (checkbox picker + a coverage matrix table with a
+   sticky coverage row). Backend helper `_best_per_control`. Verified end to end. This is the data spine
+   for the coverage heatmap (#6). PAID (planned). Later: drill-down from a cell into the single-target review. 
 8. **Gap remediation guidance.** For each gap, suggest the control to implement and a starter policy
    statement (reuses the advisor's drafting). PAID.
 9. **Confidence thresholds and triage.** Let the user set a confidence cutoff; auto-flag low-confidence
    matches as "needs review" so effort goes where it matters. FREE basic, PAID tunable.
-10. **Explainability.** Show why a mapping was suggested (the matched phrases, the route, the provenance),
-    which auditors trust over a black box. FREE.
+10. **Explainability. DONE 2026-09-25.** Every suggested mapping now shows *why* it matched: the salient
+    terms shared by the query and the target control, as chips under each result. Backend `_why_terms`
+    in `serve.py` (stemmed overlap, stopword-filtered) adds a `why: [...]` array to each result on `/map`
+    and `/map/custom`; the front end renders `whyChips` on both the "Map a control" and "Your framework"
+    tabs. The route/provenance (official / derived / no-route) was already shown via the route badge. FREE.
 
 ### Tier 3: scale, integration, stickiness
 11. **Versioned crosswalks and drift.** Track framework versions (800-53 Rev5 to Rev6) and re-run to show
@@ -162,3 +178,15 @@ yet committed.
   free cap 25 controls/run). Recommendations recorded for review.
 - 2026-09-25: green-lit the audit-grade workflow (review + status, saved projects, export) as the next
   build; recorded the A/B/C plan, data model and endpoints under "Next up".
+- 2026-09-25: built Explainability (#10, Tier 2, FREE): `_why_terms` on the backend adds stemmed,
+  stopword-filtered shared terms as `why` on `/map` and `/map/custom` results; `whyChips` renders them
+  under each result on both tabs.
+- 2026-09-25: built Evidence attachment (#5, last Tier-1 item): per-control label+link evidence stored in
+  DECISIONS[sid].evidence, saved with the project, rendered on both tabs, and exported as an Evidence
+  column across all four formats. Verified end to end. Tier 1 is now complete.
+- 2026-09-25: built Multi-target mapping (#7, Tier 2): `POST /map/custom/multi` + `_best_per_control`;
+  "Compare coverage across several frameworks" panel with a checkbox picker and a coverage matrix on the
+  "Your framework" tab. Verified end to end (2 controls x 3 frameworks).
+- 2026-09-25: built Coverage dashboard/heatmap (#6, Tier 2): coverage tiles per framework + heatmap-shaded
+  matrix (`covColor`) + drill-down from a tile/column into the single-target review. No new endpoint.
+  Tier 2 items #6, #7, #10 done; remaining Tier 2: remediation guidance (#8), confidence triage (#9).

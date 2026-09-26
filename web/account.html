@@ -7,10 +7,95 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/site.css?v=10">
-<link rel="stylesheet" href="assets/app.css?v=10">
+<script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
+<link rel="stylesheet" href="assets/site.css?v=18">
+<link rel="stylesheet" href="assets/app.css?v=18">
 <style>
   .auth-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;max-width:860px}
+  /* ---- Google-faithful sign-in card ---------------------------------------
+     Modeled property-for-property on accounts.google.com: a white two-column
+     card, heading left, identifier-first form right, floating labels, text
+     links, and a pill Next button. Kept light in both themes to match Google. */
+  /* Center the card in the viewport, Google-style. The shared footer is hidden
+     on this view (see body.auth-plain below) so the page is just the card plus
+     a slim Google-like bottom bar (language + Help/Privacy/Terms). */
+  .g-page{min-height:calc(100vh - 62px);display:flex;flex-direction:column;color-scheme:light}
+  .g-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+  .g-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    padding:16px 32px 24px}
+  .g-lang{appearance:auto;width:auto;max-width:260px;font-size:13px;color:var(--muted);
+    background:transparent;border:0;font-family:var(--sans);cursor:pointer;padding:6px 2px;border-radius:6px}
+  .g-foot-links{display:flex;gap:28px}
+  .g-foot-links a{font-size:13px;color:var(--muted);text-decoration:none;font-weight:500}
+  .g-foot-links a:hover{color:var(--ink);text-decoration:underline}
+  /* min-height keeps the card the same size on every step (sign in, create,
+     recovery); the right column is a flex column so the bottom row pins low. */
+  .g-card{width:100%;max-width:920px;min-height:440px;background:#fff;color:#202124;
+    border:1px solid #dadce0;border-radius:28px;padding:48px 44px;display:grid;
+    grid-template-columns:1fr 1fr;gap:56px;font-family:var(--sans)}
+  .g-right{display:flex;flex-direction:column}
+  .g-left{padding-top:4px}
+  /* the real RegMap mark: gradient tile with the white arc glyph */
+  .g-mark{width:46px;height:46px;border-radius:14px;background:var(--grad);position:relative;display:block;
+    box-shadow:0 6px 18px rgba(99,102,241,.5)}
+  .g-mark::after{content:"";position:absolute;inset:14px 13px auto 13px;height:12px;
+    border:3px solid #fff;border-bottom:0;border-radius:12px 12px 0 0;opacity:.95}
+  .g-left h2{font-size:34px;line-height:1.2;font-weight:400;color:#202124;margin:18px 0 8px;
+    letter-spacing:-.4px}
+  .g-left .g-sub{font-size:16px;color:#202124}
+  .g-left .g-acct{margin-top:14px;font-size:14px;color:#5f6368}
+  .g-left .g-acct b{color:#202124;font-weight:500}
+  .g-right{padding-top:6px}
+  .g-field{position:relative;margin-bottom:6px}
+  .g-card .g-field input{width:100%;height:56px;padding:14px 15px 0;font-size:16px;line-height:1.3;
+    color:#202124;background:#fff;border:1px solid #5f6368;border-radius:8px;outline:none;
+    box-shadow:none;transition:border-color .12s}
+  .g-card .g-field input:focus{border:2px solid var(--accent);padding:13px 14px 0}
+  .g-field label{position:absolute;left:12px;top:17px;color:#5f6368;font-size:16px;pointer-events:none;
+    background:#fff;padding:0 5px;transition:all .12s ease}
+  .g-card .g-field input:focus + label,
+  .g-card .g-field input:not(:placeholder-shown) + label{top:-9px;font-size:12px;color:var(--accent)}
+  .g-card .g-field input:not(:focus):not(:placeholder-shown) + label{color:#5f6368}
+  .g-link{color:var(--accent);font-weight:600;font-size:14px;text-decoration:none;cursor:pointer;
+    background:none;border:0;padding:0;font-family:var(--sans)}
+  .g-link:hover{text-decoration:underline}
+  .g-note{margin-top:26px;font-size:14px;color:#5f6368;line-height:1.5}
+  .g-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:auto;
+    padding-top:32px;gap:16px}
+  .g-next{background:var(--accent);color:#fff;border:0;border-radius:24px;padding:11px 26px;
+    font-weight:600;font-size:14px;cursor:pointer;font-family:var(--sans);transition:filter .12s}
+  .g-next:hover{filter:brightness(1.06)}
+  /* Feedback is always neutral guidance, never a red error or a raw message. */
+  .g-out{margin-top:14px}
+  .g-out .note{background:#eef1fb;border:1px solid #d6ddf6;color:#3b3f6b;border-radius:8px;
+    padding:10px 12px;font-size:13px}
+  /* a field needing attention gets a soft accent ring and a quiet hint, not an error */
+  .g-card .g-field.err input{border:2px solid var(--accent);padding:13px 14px 0}
+  .g-err{color:#5f6368;font-size:12px;margin:6px 4px 0;display:block}
+  /* show-password + stay-signed-in checkboxes */
+  .g-check{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:14px;color:#3c4043;cursor:pointer}
+  .g-check input{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
+  /* alternative sign-in (SSO, passkey, guest) */
+  .g-div{display:flex;align-items:center;gap:14px;margin:22px 0 2px;color:#5f6368;font-size:12px;
+    text-transform:uppercase;letter-spacing:.06em}
+  .g-div::before,.g-div::after{content:"";flex:1;height:1px;background:#e0e0e0}
+  .g-alt{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .g-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:44px;
+    border:1px solid #dadce0;border-radius:22px;background:#fff;color:#3c4043;font-weight:600;
+    font-size:14px;cursor:pointer;font-family:var(--sans);transition:background .12s,box-shadow .12s}
+  .g-btn:hover{background:#f7f8fa;box-shadow:0 1px 3px rgba(60,64,67,.15)}
+  .g-btn svg{width:18px;height:18px;flex:none}
+  .g-guest{text-align:center;margin-top:14px}
+  /* On the signed-out sign-in view, hide the shared footer and page heading so
+     the card stands alone and centers, exactly like Google's page. */
+  body.auth-plain .site-footer{display:none}
+  body.auth-plain #head{display:none}
+  body.auth-plain #app{padding:0}
+  @media(max-width:760px){
+    .g-card{grid-template-columns:1fr;gap:20px;padding:36px 26px;border-radius:20px}
+    .g-left h2{font-size:28px;margin-top:10px}
+    .g-wrap{min-height:auto;padding:16px 0 40px}
+  }
   .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:22px}
   .card h3{font-size:17px;margin-bottom:4px}
   .card .sub{color:var(--muted);font-size:13px;margin-bottom:14px}
@@ -28,7 +113,7 @@
 </head>
 <body data-page="account">
 
-<section class="section pad bleed" style="padding-top:34px">
+<section class="section pad bleed" id="head" style="padding-top:34px">
   <div class="eyebrow">Account</div>
   <h1 id="title" style="font-size:clamp(26px,3.6vw,34px);margin-top:6px">Your account</h1>
   <p class="lead" id="lead" style="color:var(--muted);font-size:15px;margin:8px 0 0;max-width:70ch">
@@ -39,8 +124,8 @@
 <section class="section tight pad bleed" id="app"></section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="assets/api.js?v=10"></script>
-<script src="assets/shell.js?v=10"></script>
+<script src="assets/api.js?v=18"></script>
+<script src="assets/shell.js?v=18"></script>
 <script>
 (function () {
   const app = document.getElementById("app");
@@ -49,11 +134,23 @@
   const el = h => { const d = document.createElement("div"); d.innerHTML = h.trim(); return d.firstChild; };
   const msg = (m, ok) => `<div class="note${ok ? "" : " err"}" style="margin-top:10px">${esc(m)}</div>`;
 
+  // A federated sign-in that bounced back (provider not configured yet, or failed) carries ?sso=...
+  const SSO_MSG = {
+    failed: "We could not complete that sign-in. Please try again, or use your email and password.",
+  };
+  const ssoParam = q.get("sso");
+  const ssoNote = ssoParam
+    ? (SSO_MSG[ssoParam] || (ssoParam.endsWith("_unavailable")
+        ? "Sign in with " + ssoParam.replace("_unavailable", "").replace(/^\w/, c => c.toUpperCase())
+          + " is coming soon. For now, use your email and password."
+        : null))
+    : null;
+
   async function boot() {
     // Handle a verification link: /account.html?verify=<token>
     if (q.get("verify")) {
       try { await RegMap.verify(q.get("verify")); app.innerHTML = `<div class="card">${msg("Email verified. Thanks.", true)}</div>`; }
-      catch (e) { app.innerHTML = `<div class="card">${msg(e.message)}</div>`; }
+      catch (e) { app.innerHTML = `<div class="card">${msg("Oops, that verification link is invalid or has expired. Sign in and resend it from your account.", true)}</div>`; }
       setTimeout(render, 1200); return;
     }
     // Handle a reset link: /account.html?reset=<token>
@@ -69,91 +166,269 @@
     renderSignedOut();
   }
 
-  /* ---------------- signed out: sign in + register ---------------- */
-  function renderSignedOut() {
-    document.getElementById("title").textContent = "Sign in or create an account";
+  /* ---------------- signed out: Google-style identifier-first flow ----------
+     A white two-column card: heading on the left, form on the right. Step 1
+     collects the email, Next reveals the password step, and a code step covers
+     two-factor. "Create account" and the reset flows reuse the same card. */
+  const $ = id => document.getElementById(id);
+  const field = (id, label, type, ac) =>
+    `<div class="g-field"><input id="${id}" type="${type}" placeholder=" "${ac ? ` autocomplete="${ac}"` : ""}><label for="${id}">${label}</label></div>`;
+
+  // Render the shell: left heading block + right form block. Hides the page heading so the card stands alone.
+  function gcard(title, sub, acct, right) {
+    document.body.classList.add("auth-plain");
+    const head = document.getElementById("head"); if (head) head.hidden = true;
+    document.getElementById("title").textContent = "Sign in";
     app.innerHTML = `
-      <div class="auth-grid">
-        <div class="card"><h3>Sign in</h3><div class="sub">Welcome back.</div>
-          <div class="stack">
-            <label class="fld">Email<input id="li-email" type="email" autocomplete="email"></label>
-            <label class="fld">Password<input id="li-pw" type="password" autocomplete="current-password"></label>
-            <div id="li-totp" hidden><label class="fld">Authenticator code<input id="li-code" inputmode="numeric" placeholder="6-digit code or recovery code"></label></div>
-            <div class="row"><button class="btn primary" id="li-go">Sign in</button>
-              <button class="link" id="li-forgot" type="button">Forgot password?</button></div>
-            <div id="li-out"></div>
+      <div class="g-page">
+        <div class="g-wrap"><div class="g-card">
+          <div class="g-left">
+            <span class="g-mark"></span>
+            <h2>${esc(title)}</h2>
+            <div class="g-sub">${esc(sub)}</div>
+            ${acct ? `<div class="g-acct">${acct}</div>` : ""}
           </div>
-        </div>
-        <div class="card"><h3>Create account</h3><div class="sub">Free plan, no card. Metered fairly.</div>
-          <div class="stack">
-            <label class="fld">Name (optional)<input id="rg-name" autocomplete="name"></label>
-            <label class="fld">Email<input id="rg-email" type="email" autocomplete="email"></label>
-            <label class="fld">Password<input id="rg-pw" type="password" autocomplete="new-password" placeholder="at least 10 characters"></label>
-            <div class="row"><button class="btn primary" id="rg-go">Create account</button></div>
-            <div id="rg-out"></div>
+          <div class="g-right">${right}</div>
+        </div></div>
+        <div class="g-foot">
+          <select class="g-lang" aria-label="Language">
+            <option>English (United States)</option>
+            <option>English (United Kingdom)</option>
+            <option>Español</option>
+            <option>Français</option>
+            <option>Deutsch</option>
+            <option>Português (Brasil)</option>
+            <option>中文 (简体)</option>
+          </select>
+          <div class="g-foot-links">
+            <a href="#">Help</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
           </div>
         </div>
       </div>`;
-    const $ = id => document.getElementById(id);
+  }
+
+  let signinEmail = "";
+
+  /* ---- helpers: validate on the client, and never show a raw or red error ----
+     Feedback is only ever neutral guidance. Backend rejections are caught and
+     translated to a friendly line; the raw message is never rendered. */
+  const validEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const PW_MIN = 10;
+  const note = (id, m) => { const o = $(id); if (o) o.innerHTML = m ? `<div class="note">${esc(m)}</div>` : ""; };
+  const flag = fid => {                     // quietly draw attention to a field, no error text
+    const f = $(fid); if (!f) return; const g = f.closest(".g-field"); if (!g) return;
+    g.classList.add("err"); f.focus();
+    f.addEventListener("input", () => g.classList.remove("err"), { once: true });
+  };
+  /* Corporate-standard error voice: a friendly "please try again" on the first
+     couple of failures, then "this one's on us" once it keeps failing. The raw
+     reason is never shown. Call ok(key) after a success to reset the counter. */
+  const attempts = {};
+  const escalate = (key, firstMsg) => {
+    attempts[key] = (attempts[key] || 0) + 1;
+    return attempts[key] >= 3
+      ? "This one's on us. We're working on a fix, so please try again shortly."
+      : (firstMsg || "Oops, something went wrong. Please try again.");
+  };
+  const ok = key => { attempts[key] = 0; };
+  // Bind Enter-to-submit on the current card (recreated each render, so no listener leak).
+  const onEnter = fn => { const c = app.querySelector(".g-card"); if (c) c.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); fn(); } }); };
+  // A show/hide toggle wired to a password field.
+  const wireShow = (cbId, pwId) => { const cb = $(cbId), pw = $(pwId); if (cb && pw) cb.addEventListener("change", () => { pw.type = cb.checked ? "text" : "password"; }); };
+  /* Federated sign-in buttons. They navigate to the backend OAuth start route, which redirects to the
+     provider. A provider whose credentials are not configured yet shows a friendly setup note instead
+     of a dead click; the /auth/oauth/providers call tells us which are live. */
+  const GG = `<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.28-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.46-9.9l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
+  const MS = `<svg viewBox="0 0 24 24"><path fill="#F25022" d="M1 1h10v10H1z"/><path fill="#7FBA00" d="M13 1h10v10H13z"/><path fill="#00A4EF" d="M1 13h10v10H1z"/><path fill="#FFB900" d="M13 13h10v10H13z"/></svg>`;
+  const AP = `<svg viewBox="0 0 24 24" fill="#111"><path d="M16.365 1.43c0 1.14-.42 2.2-1.12 3-.77.88-2.03 1.56-3.06 1.48-.13-1.1.45-2.27 1.12-3.02.76-.86 2.1-1.5 3.06-1.46zM20.5 17.2c-.55 1.27-.81 1.84-1.52 2.96-.99 1.57-2.39 3.53-4.12 3.54-1.54.02-1.94-1-4.03-.99-2.09.01-2.53 1.01-4.07.99-1.73-.02-3.06-1.79-4.05-3.36C.06 16.5-.26 12.3 1.44 9.85c.9-1.29 2.31-2.05 3.64-2.05 1.35 0 2.2.74 3.32.74 1.08 0 1.74-.74 3.3-.74 1.18 0 2.43.64 3.32 1.75-2.92 1.6-2.44 5.77.48 6.9z"/></svg>`;
+  const PROVIDERS = [["google", "Google", GG], ["microsoft", "Microsoft", MS], ["apple", "Apple", AP]];
+  const altBtns = () =>
+    `<div class="g-div">or</div>
+     <div class="g-alt">
+       ${PROVIDERS.map(([id, label, svg]) =>
+         `<button class="g-btn" data-prov="${id}" type="button">${svg}Continue with ${label}</button>`).join("")}
+     </div>
+     <div class="g-guest"><button class="g-link" id="alt-guest" type="button">Continue as a guest</button></div>`;
+  let providerState = null;                    // cached { google:{configured}, ... }
+  async function loadProviders() {
+    if (providerState) return providerState;
+    try { providerState = await RegMap.oauthProviders(); } catch (e) { providerState = {}; }
+    return providerState;
+  }
+  const wireAlt = outId => {
+    $("alt-guest")?.addEventListener("click", () => { location.href = "/compliance.html"; });
+    loadProviders().then(st => {
+      app.querySelectorAll(".g-btn[data-prov]").forEach(b => {
+        const id = b.dataset.prov, label = b.textContent.trim().replace(/^Continue with /, "");
+        b.addEventListener("click", () => {
+          if (st[id] && st[id].configured) location.href = "/auth/oauth/" + id + "/start";
+          else note(outId, "Sign in with " + label + " is coming soon. For now, use your email and password.");
+        });
+      });
+    });
+  };
+
+  function renderSignedOut() { stepEmail(); }
+
+  // Step 1: email (identifier-first, like Google)
+  function stepEmail() {
+    gcard("Sign in", "Use your RegMap account", "",
+      `${field("li-email", "Email", "email", "email")}
+       <div style="margin-top:6px"><button class="g-link" id="li-forgot" type="button">Forgot email?</button></div>
+       <div class="g-note">You can browse RegMap as a guest; an account just saves your work and lets you download.</div>
+       ${altBtns()}
+       <div id="li-out" class="g-out"></div>
+       <div class="g-bottom">
+         <button class="g-link" id="li-create" type="button">Create account</button>
+         <button class="g-next" id="li-next">Next</button>
+       </div>`);
+    if (signinEmail) $("li-email").value = signinEmail;
+    $("li-email").focus();
+    const go = () => {
+      const v = $("li-email").value.trim();
+      if (!validEmail(v)) { note("li-out", "Enter a valid email to continue."); flag("li-email"); return; }
+      signinEmail = v; stepPassword();
+    };
+    $("li-next").addEventListener("click", go);
+    onEnter(go);
+    $("li-create").addEventListener("click", stepRegister);
+    $("li-forgot").addEventListener("click", renderRecover);
+    wireAlt("li-out");
+    if (ssoNote) note("li-out", ssoNote);
+  }
+
+  // Step 2: password (with the two-factor sub-step)
+  function stepPassword() {
     let pending = null;
-    $("li-go").addEventListener("click", async () => {
-      const out = $("li-out");
+    gcard("Welcome", "", `<b>${esc(signinEmail)}</b> &nbsp;<button class="g-link" id="pw-change" type="button">Change</button>`,
+      `${field("pw-pw", "Enter your password", "password", "current-password")}
+       <label class="g-check"><input type="checkbox" id="pw-show">Show password</label>
+       <div id="pw-totp" hidden>${field("pw-code", "2-step verification code", "text", "one-time-code")}</div>
+       <label class="g-check"><input type="checkbox" id="pw-stay" checked>Stay signed in</label>
+       <div style="margin-top:12px"><button class="g-link" id="pw-forgot" type="button">Forgot password?</button></div>
+       <div id="pw-out" class="g-out"></div>
+       <div class="g-bottom"><span></span><button class="g-next" id="pw-next">Next</button></div>`);
+    $("pw-pw").focus();
+    wireShow("pw-show", "pw-pw");
+    $("pw-change").addEventListener("click", stepEmail);
+    $("pw-forgot").addEventListener("click", renderRecover);
+    const go = async () => {
+      if (!pending && !$("pw-pw").value) { note("pw-out", "Enter your password to continue."); flag("pw-pw"); return; }
+      if (pending && !$("pw-code").value.trim()) { note("pw-out", "Enter the code from your authenticator app."); flag("pw-code"); return; }
       try {
         if (pending) {
-          await RegMap.loginTotp(pending, $("li-code").value.trim());
+          await RegMap.loginTotp(pending, $("pw-code").value.trim());
         } else {
-          const r = await RegMap.login($("li-email").value.trim(), $("li-pw").value);
-          if (r.totp_required) { pending = r.pending; $("li-totp").hidden = false; out.innerHTML = msg("Enter the code from your authenticator app.", true); $("li-code").focus(); return; }
+          try { localStorage.setItem("regmap.staySignedIn", $("pw-stay").checked ? "1" : "0"); } catch (e) {}
+          const r = await RegMap.login(signinEmail, $("pw-pw").value);
+          if (r.totp_required) {
+            pending = r.pending; $("pw-totp").hidden = false; $("pw-code").focus();
+            note("pw-out", "Enter the code from your authenticator app."); return;
+          }
         }
         location.href = "/account.html";
-      } catch (e) { out.innerHTML = msg(e.message); }
-    });
-    $("li-forgot").addEventListener("click", () => renderForgot());
-    $("rg-go").addEventListener("click", async () => {
-      const out = $("rg-out");
-      try {
-        const r = await RegMap.register($("rg-email").value.trim(), $("rg-pw").value, $("rg-name").value.trim() || null);
-        out.innerHTML = msg("Account created. " + (r.verify_link ? "Verify your email from the account page." : "Check your email to verify."), true);
-        setTimeout(() => location.href = "/account.html", 900);
-      } catch (e) { out.innerHTML = msg(e.message); }
-    });
+      } catch (e) {
+        // Never show the raw reason. Friendly, escalating guidance only.
+        note("pw-out", escalate("login", pending
+          ? "Oops, that code did not match. Please try again, or use a recovery code."
+          : "Oops, we could not sign you in. Check your email and password, then try again."));
+      }
+    };
+    $("pw-next").addEventListener("click", go);
+    onEnter(go);
   }
 
-  function renderForgot() {
-    document.getElementById("title").textContent = "Reset your password";
-    app.innerHTML = `<div class="card" style="max-width:420px"><h3>Reset password</h3>
-      <div class="sub">We will send a reset link to your email.</div>
-      <div class="stack">
-        <label class="fld">Email<input id="fp-email" type="email"></label>
-        <div class="row"><button class="btn primary" id="fp-go">Send reset link</button>
-          <button class="link" id="fp-back" type="button">Back to sign in</button></div>
-        <div id="fp-out"></div></div></div>`;
-    document.getElementById("fp-back").addEventListener("click", renderSignedOut);
-    document.getElementById("fp-go").addEventListener("click", async () => {
-      const out = document.getElementById("fp-out");
+  // Create account, in the same card
+  function stepRegister() {
+    gcard("Create your RegMap Account", "Free plan, no card. Metered fairly.", "",
+      `${field("rg-name", "First name (optional)", "text", "name")}
+       ${field("rg-email", "Email", "email", "email")}
+       ${field("rg-pw", "Password", "password", "new-password")}
+       <label class="g-check"><input type="checkbox" id="rg-show">Show password</label>
+       <div class="g-note">Use ${PW_MIN} or more characters with a mix of letters, numbers and symbols.</div>
+       <div id="rg-out" class="g-out"></div>
+       <div class="g-bottom">
+         <button class="g-link" id="rg-signin" type="button">Sign in instead</button>
+         <button class="g-next" id="rg-next">Next</button>
+       </div>`);
+    if (signinEmail) $("rg-email").value = signinEmail;
+    wireShow("rg-show", "rg-pw");
+    $("rg-signin").addEventListener("click", stepEmail);
+    const go = async () => {
+      const email = $("rg-email").value.trim(), pw = $("rg-pw").value;
+      if (!validEmail(email)) { note("rg-out", "Enter a valid email to create your account."); flag("rg-email"); return; }
+      if (pw.length < PW_MIN) { note("rg-out", `Use a password of at least ${PW_MIN} characters.`); flag("rg-pw"); return; }
       try {
-        const r = await RegMap.resetRequest(document.getElementById("fp-email").value.trim());
-        out.innerHTML = msg(r.reset_link ? ("Dev link (no email sender yet): " + r.reset_link) : "If that email has an account, a reset link is on its way.", true);
-      } catch (e) { out.innerHTML = msg(e.message); }
-    });
+        await RegMap.register(email, pw, $("rg-name").value.trim() || null);
+        signinEmail = email;
+        note("rg-out", "Account created. Signing you in.");
+        setTimeout(() => location.href = "/account.html", 800);
+      } catch (e) {
+        note("rg-out", escalate("register",
+          "Oops, we could not create that account. If you already have one, try signing in instead."));
+      }
+    };
+    $("rg-next").addEventListener("click", go);
+    onEnter(go);
   }
 
+  // Account recovery (send a reset link)
+  function renderRecover() {
+    gcard("Account recovery", "Enter your email and we will send a reset link.", "",
+      `${field("fp-email", "Email", "email", "email")}
+       <div id="fp-out" class="g-out"></div>
+       <div class="g-bottom">
+         <button class="g-link" id="fp-back" type="button">Back to sign in</button>
+         <button class="g-next" id="fp-go">Send link</button>
+       </div>`);
+    if (signinEmail) $("fp-email").value = signinEmail;
+    $("fp-back").addEventListener("click", stepEmail);
+    const go = async () => {
+      const email = $("fp-email").value.trim();
+      if (!validEmail(email)) { note("fp-out", "Enter a valid email so we can send the link."); flag("fp-email"); return; }
+      try {
+        const r = await RegMap.resetRequest(email);
+        // Same reassuring line whether or not the account exists (no enumeration, no error).
+        note("fp-out", r && r.reset_link ? ("Reset link (dev): " + r.reset_link)
+                                         : "If that email has an account, a reset link is on its way.");
+      } catch (e) {
+        note("fp-out", "If that email has an account, a reset link is on its way.");
+      }
+    };
+    $("fp-go").addEventListener("click", go);
+    onEnter(go);
+  }
+
+  // Set a new password from a reset link
   function renderReset(token) {
-    document.getElementById("title").textContent = "Set a new password";
-    app.innerHTML = `<div class="card" style="max-width:420px"><h3>New password</h3>
-      <div class="stack">
-        <label class="fld">New password<input id="np" type="password" placeholder="at least 10 characters"></label>
-        <div class="row"><button class="btn primary" id="np-go">Update password</button></div>
-        <div id="np-out"></div></div></div>`;
-    document.getElementById("np-go").addEventListener("click", async () => {
-      const out = document.getElementById("np-out");
-      try { await RegMap.reset(token, document.getElementById("np").value); out.innerHTML = msg("Password updated. You can sign in now.", true); setTimeout(() => location.href = "/account.html", 1000); }
-      catch (e) { out.innerHTML = msg(e.message); }
-    });
+    gcard("Change password", "Choose a new password for your account.", "",
+      `${field("np", "New password", "password", "new-password")}
+       <label class="g-check"><input type="checkbox" id="np-show">Show password</label>
+       <div class="g-note">Use ${PW_MIN} or more characters.</div>
+       <div id="np-out" class="g-out"></div>
+       <div class="g-bottom"><span></span><button class="g-next" id="np-go">Update password</button></div>`);
+    wireShow("np-show", "np");
+    const go = async () => {
+      if ($("np").value.length < PW_MIN) { note("np-out", `Use a password of at least ${PW_MIN} characters.`); flag("np"); return; }
+      try {
+        await RegMap.reset(token, $("np").value);
+        note("np-out", "Password updated. Signing you in.");
+        setTimeout(() => location.href = "/account.html", 1000);
+      } catch (e) {
+        note("np-out", escalate("reset",
+          "Oops, that reset link may have expired. Request a new one from Account recovery."));
+      }
+    };
+    $("np-go").addEventListener("click", go);
+    onEnter(go);
   }
 
   /* ---------------- signed in: account + security ---------------- */
   async function renderAccount(s) {
+    document.body.classList.remove("auth-plain");
+    const head = document.getElementById("head"); if (head) head.hidden = false;
     document.getElementById("title").textContent = "Your account";
     let me = {}; try { me = await RegMap.me(); } catch (e) { }
     const plan = s.plan || {};
@@ -197,12 +472,12 @@
     const vspan = $("verified");
     if (s.email_verified) vspan.innerHTML = `<span class="pill ok">verified</span>`;
     else { vspan.innerHTML = `<span class="pill warn">unverified</span> <button class="link" id="resend">Resend</button>`;
-      $("resend").addEventListener("click", async () => { try { const r = await RegMap.verifyResend(); vspan.insertAdjacentHTML("beforeend", msg(r.verify_link ? ("Dev link: " + r.verify_link) : "Verification email sent.", true)); } catch (e) { vspan.insertAdjacentHTML("beforeend", msg(e.message)); } }); }
+      $("resend").addEventListener("click", async () => { try { const r = await RegMap.verifyResend(); vspan.insertAdjacentHTML("beforeend", msg(r.verify_link ? ("Dev link: " + r.verify_link) : "Verification email sent.", true)); } catch (e) { vspan.insertAdjacentHTML("beforeend", msg(escalate("resend", "Oops, could not send right now. Please try again in a moment."), true)); } }); }
     // 2FA
     renderTotp(s.totp_enabled);
     $("signout").addEventListener("click", async () => { try { await RegMap.logout(); } catch (e) { } location.href = "/account.html"; });
-    $("cp-go").addEventListener("click", async () => { const o = $("cp-out"); try { await RegMap.passwordChange($("cp-cur").value, $("cp-new").value); o.innerHTML = msg("Password changed.", true); $("cp-cur").value = $("cp-new").value = ""; } catch (e) { o.innerHTML = msg(e.message); } });
-    $("k-go").addEventListener("click", async () => { const o = $("k-out"); try { const r = await RegMap.createKey($("k-label").value.trim() || null); o.innerHTML = `<div class="note" style="margin-top:10px">Copy this now, it will not be shown again:<br><span class="mono">${esc(r.api_key)}</span></div>`; } catch (e) { o.innerHTML = msg(e.message); } });
+    $("cp-go").addEventListener("click", async () => { const o = $("cp-out"); if ($("cp-new").value.length < 10) { o.innerHTML = msg("Use a new password of at least 10 characters.", true); return; } try { await RegMap.passwordChange($("cp-cur").value, $("cp-new").value); ok("cp"); o.innerHTML = msg("Password changed.", true); $("cp-cur").value = $("cp-new").value = ""; } catch (e) { o.innerHTML = msg(escalate("cp", "Oops, we could not change your password. Check your current password and try again."), true); } });
+    $("k-go").addEventListener("click", async () => { const o = $("k-out"); try { const r = await RegMap.createKey($("k-label").value.trim() || null); o.innerHTML = `<div class="note" style="margin-top:10px">Copy this now, it will not be shown again:<br><span class="mono">${esc(r.api_key)}</span></div>`; } catch (e) { o.innerHTML = msg(escalate("key", "Oops, could not create a key right now. Please try again."), true); } });
   }
 
   function renderTotp(enabled) {
@@ -212,14 +487,14 @@
         <div class="stack" style="margin-top:12px">
           <label class="fld">Password to disable<input id="td-pw" type="password"></label>
           <div class="row"><button class="btn ghost sm" id="td-go">Disable two-factor</button></div><div id="td-out"></div></div>`;
-      document.getElementById("td-go").addEventListener("click", async () => { const o = document.getElementById("td-out"); try { await RegMap.totpDisable(document.getElementById("td-pw").value); o.innerHTML = msg("Two-factor disabled.", true); setTimeout(render, 800); } catch (e) { o.innerHTML = msg(e.message); } });
+      document.getElementById("td-go").addEventListener("click", async () => { const o = document.getElementById("td-out"); try { await RegMap.totpDisable(document.getElementById("td-pw").value); o.innerHTML = msg("Two-factor disabled.", true); setTimeout(render, 800); } catch (e) { o.innerHTML = msg(escalate("td", "Oops, that password did not match. Please try again."), true); } });
       return;
     }
     box.innerHTML = `<div class="row"><span class="pill warn">off</span>
       <button class="btn primary sm" id="ts-start">Set up two-factor</button></div><div id="ts-body" style="margin-top:14px"></div>`;
     document.getElementById("ts-start").addEventListener("click", async () => {
       const body = document.getElementById("ts-body");
-      let d; try { d = await RegMap.totpSetup(); } catch (e) { body.innerHTML = msg(e.message); return; }
+      let d; try { d = await RegMap.totpSetup(); } catch (e) { body.innerHTML = msg(escalate("ts", "Oops, could not start two-factor setup. Please try again."), true); return; }
       body.innerHTML = `<p class="mut">Scan this with your authenticator app, or enter the key manually, then type the 6-digit code to confirm.</p>
         <div id="qr" class="qr"></div>
         <p class="mut" style="margin-top:8px">Key: <span class="mono">${esc(d.secret)}</span></p>
@@ -231,7 +506,7 @@
         const o = document.getElementById("ts-out");
         try { const r = await RegMap.totpEnable(document.getElementById("ts-code").value.trim());
           o.innerHTML = `<div class="note" style="margin-top:10px">Two-factor is on. Save these one-time recovery codes:</div><div class="codes">${r.recovery_codes.map(c => `<span>${esc(c)}</span>`).join("")}</div>`;
-        } catch (e) { o.innerHTML = msg(e.message); }
+        } catch (e) { o.innerHTML = msg(escalate("tsc", "Oops, that code did not match. Please try again."), true); }
       });
     });
   }
