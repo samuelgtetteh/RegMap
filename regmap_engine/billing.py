@@ -146,6 +146,21 @@ projects = Table(
     Column("updated_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
 )
 
+analytics_events = Table(
+    # Append-only product analytics (admin-only to read). Anonymous visitor id, no names or full IPs.
+    "analytics_events", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("ts", DateTime(timezone=True), index=True, default=lambda: datetime.now(timezone.utc)),
+    Column("visitor_id", String(40), index=True),          # first-party random id
+    Column("account_id", String(40), index=True),          # set only when signed in
+    Column("name", String(48), index=True),                # pageview | map_run | lab_pass | ...
+    Column("path", String(255)),
+    Column("referrer", String(255)),
+    Column("props", Text),                                  # JSON
+    Column("ua_class", String(24)),                         # mobile | desktop | bot
+    Column("ip_hash", String(64)),                          # salted hash, not the raw IP
+)
+
 saved_policies = Table(
     # A user's customized policy documents (field values and any full-text edits), so they can return to
     # and update them. One row per saved policy (or policy set).
@@ -543,6 +558,27 @@ def put_learning(account_id, key, data):
             c.execute(insert(learning_progress).values(
                 account_id=account_id, pkey=key, data=payload, updated_at=now))
     return True
+
+
+# ---- analytics -----------------------------------------------------------------------------------
+def record_events(rows):
+    """Insert a batch of analytics event dicts. Each: ts, visitor_id, account_id, name, path, referrer,
+    props (JSON string), ua_class, ip_hash. Best-effort; never raises to the caller."""
+    if not rows:
+        return 0
+    try:
+        with engine().begin() as c:
+            c.execute(insert(analytics_events), rows)
+        return len(rows)
+    except Exception:
+        return 0
+
+
+def analytics_query(sql, params=None):
+    """Run a read-only aggregation and return a list of dict rows. Admin-gated at the API layer."""
+    with engine().begin() as c:
+        res = c.execute(text(sql), params or {})
+        return [dict(r) for r in res.mappings().all()]
 
 
 # ---- saved (customized) policies -----------------------------------------------------------------

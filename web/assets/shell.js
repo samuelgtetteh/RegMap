@@ -146,6 +146,7 @@
   observe();
 
   // Reflect sign-in state in the header: "Sign in" for guests, "Account" when signed in.
+  // Also show an Admin link to a site administrator only.
   fetch("/auth/session", { credentials: "same-origin" })
     .then(r => (r.ok ? r.json() : null))
     .then(s => {
@@ -153,6 +154,34 @@
       const a = document.getElementById("acctLink"), am = document.getElementById("acctLinkM");
       if (a) a.textContent = "Account";
       if (am) am.textContent = "Account";
+      if (s.admin) {
+        const nav = document.querySelector(".nav-links");
+        if (nav && !document.getElementById("adminNav")) {
+          const link = document.createElement("a");
+          link.id = "adminNav"; link.href = "/admin.html"; link.textContent = "Admin";
+          if (page === "admin") link.className = "active";
+          nav.appendChild(link);
+        }
+      }
     })
     .catch(() => {});
+
+  // Product analytics beacon (admin-only reporting; see docs/analytics_tracker.md). Anonymous first-party
+  // visitor id; sends a pageview on load and exposes window.rmTrack(name, props) for feature events.
+  (function analytics() {
+    let vid = "";
+    try {
+      vid = localStorage.getItem("regmap.vid") || "";
+      if (!vid) { vid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2)); localStorage.setItem("regmap.vid", vid); }
+    } catch (e) {}
+    function send(events) {
+      try {
+        const body = JSON.stringify({ visitor_id: vid, events: events });
+        if (navigator.sendBeacon) navigator.sendBeacon("/analytics/collect", new Blob([body], { type: "application/json" }));
+        else fetch("/analytics/collect", { method: "POST", headers: { "content-type": "application/json" }, body: body, keepalive: true, credentials: "same-origin" });
+      } catch (e) {}
+    }
+    window.rmTrack = (name, props) => send([{ name: name, path: location.pathname, referrer: document.referrer || "", props: props || {} }]);
+    window.rmTrack("pageview", { title: document.title });
+  })();
 })();

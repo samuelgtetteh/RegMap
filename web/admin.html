@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Admin analytics · RegMap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
+<link rel="stylesheet" href="assets/site.css?v=40">
+<style>
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:18px 0}
+  .kpi{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 18px;box-shadow:var(--shadow-sm)}
+  .kpi b{font-size:28px;letter-spacing:-.02em;display:block}
+  .kpi span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono)}
+  .panel2{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:18px 20px;margin-bottom:18px}
+  .panel2 h3{font-size:15px;margin:0 0 12px}
+  .ts{display:flex;align-items:flex-end;gap:4px;height:160px;border-bottom:1px solid var(--line);padding-bottom:2px}
+  .ts .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;min-width:0}
+  .ts .bar i{width:70%;background:var(--grad);border-radius:3px 3px 0 0;display:block}
+  .ts .bar em{width:70%;background:var(--cyan);opacity:.7;border-radius:3px 3px 0 0;display:block}
+  .ts-x{display:flex;gap:4px;margin-top:4px}
+  .ts-x span{flex:1;text-align:center;font-size:9px;color:var(--faint);font-family:var(--mono);overflow:hidden;white-space:nowrap}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-bottom:10px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  table.a{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.a th,table.a td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line)}
+  table.a th{font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+  table.a td.n{text-align:right;font-family:var(--mono)}
+  .rowbar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin-top:4px}
+  .rowbar>i{display:block;height:100%;background:var(--grad)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:800px){.cols{grid-template-columns:1fr}}
+  .range{display:flex;gap:6px}
+  .range button{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--surface);
+    color:var(--muted);border-radius:9px;padding:6px 12px;cursor:pointer}
+  .range button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+  .deny{max-width:560px;margin:48px auto;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body data-page="admin">
+
+<section class="section pad bleed" style="padding-top:34px">
+  <div class="eyebrow">Administrator</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <h1 style="font-size:clamp(24px,3.2vw,34px);margin:6px 0 0">Product analytics</h1>
+    <div class="range" id="range">
+      <button data-d="7">7 days</button>
+      <button data-d="30" class="on">30 days</button>
+      <button data-d="90">90 days</button>
+    </div>
+  </div>
+  <p class="lead" style="color:var(--muted);font-size:14.5px;margin:8px 0 0;max-width:74ch">
+    How people are using RegMap. Visible to site administrators only. Anonymous, first-party analytics.</p>
+</section>
+
+<section class="section tight pad bleed" id="app"></section>
+
+<script src="assets/api.js?v=40"></script>
+<script src="assets/shell.js?v=40"></script>
+<script>
+(function () {
+  const app = document.getElementById("app"), esc = RegMap.esc;
+  let days = 30;
+
+  function deny() {
+    app.innerHTML = `<div class="deny"><h2>Administrator access only</h2>
+      <p>This dashboard is restricted to a site administrator.
+      <a href="/" style="color:var(--accent);font-weight:600">Back to home</a>.</p></div>`;
+  }
+  const num = n => (n == null ? 0 : Number(n)).toLocaleString();
+
+  function timeseries(daily) {
+    if (!daily.length) return `<p style="color:var(--muted);font-size:13px">No data yet for this range.</p>`;
+    const max = Math.max(1, ...daily.map(d => Number(d.pageviews) || 0), ...daily.map(d => Number(d.visitors) || 0));
+    const bars = daily.map(d => {
+      const pv = Math.round((Number(d.pageviews) || 0) / max * 150);
+      const vi = Math.round((Number(d.visitors) || 0) / max * 150);
+      return `<div class="bar" title="${esc(d.day)}: ${num(d.pageviews)} views, ${num(d.visitors)} visitors">
+        <i style="height:${pv}px"></i><em style="height:${vi}px"></em></div>`;
+    }).join("");
+    const labels = daily.map((d, i) => `<span>${daily.length > 20 ? (i % 5 === 0 ? esc(d.day.slice(5)) : "") : esc(d.day.slice(5))}</span>`).join("");
+    return `<div class="legend"><span><i style="background:var(--accent)"></i>Pageviews</span>
+      <span><i style="background:var(--cyan)"></i>Unique visitors</span></div>
+      <div class="ts">${bars}</div><div class="ts-x">${labels}</div>`;
+  }
+  function rankTable(rows, key, label) {
+    if (!rows.length) return `<p style="color:var(--muted);font-size:13px">No data.</p>`;
+    const max = Math.max(1, ...rows.map(r => Number(r[key]) || 0));
+    return `<table class="a"><tbody>${rows.map(r => `<tr>
+      <td>${esc(r.label)}<div class="rowbar"><i style="width:${Math.round((Number(r[key]) || 0) / max * 100)}%"></i></div></td>
+      <td class="n">${num(r[key])}</td></tr>`).join("")}</tbody></table>`;
+  }
+
+  async function load() {
+    let d;
+    try { d = await fetch("/analytics/summary?days=" + days, { credentials: "same-origin" }).then(r => { if (r.status === 403 || r.status === 401) throw "denied"; return r.json(); }); }
+    catch (e) { deny(); return; }
+    const t = d.totals || {};
+    const seg = {}; (d.segments || []).forEach(s => seg[s.seg] = s);
+    app.innerHTML = `
+      <div class="kpis">
+        <div class="kpi"><b>${num(t.visitors)}</b><span>Unique visitors</span></div>
+        <div class="kpi"><b>${num(t.pageviews)}</b><span>Pageviews</span></div>
+        <div class="kpi"><b>${num(t.events)}</b><span>Events</span></div>
+        <div class="kpi"><b>${num(t.signups)}</b><span>Signups</span></div>
+        <div class="kpi"><b>${num((seg.signed_in || {}).visitors)}</b><span>Signed-in visitors</span></div>
+        <div class="kpi"><b>${num((seg.guest || {}).visitors)}</b><span>Guest visitors</span></div>
+      </div>
+      <div class="panel2"><h3>Traffic over the last ${d.days} days</h3>${timeseries(d.daily || [])}</div>
+      <div class="cols">
+        <div class="panel2"><h3>Top pages</h3>${rankTable((d.top_pages || []).map(r => ({ label: r.path || "(none)", views: r.views })), "views")}</div>
+        <div class="panel2"><h3>Events by type</h3>${rankTable((d.by_name || []).map(r => ({ label: r.name, n: r.n })), "n")}</div>
+      </div>
+      <div class="cols">
+        <div class="panel2"><h3>Devices (visitors)</h3>${rankTable((d.devices || []).map(r => ({ label: r.ua_class || "unknown", visitors: r.visitors })), "visitors")}</div>
+        <div class="panel2"><h3>Guest vs signed-in (events)</h3>${rankTable((d.segments || []).map(r => ({ label: r.seg, events: r.events })), "events")}</div>
+      </div>`;
+  }
+
+  document.getElementById("range").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    document.getElementById("range").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    days = Number(b.dataset.d); load();
+  }));
+  load();
+})();
+</script>
+</body>
+</html>

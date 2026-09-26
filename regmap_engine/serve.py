@@ -1310,6 +1310,81 @@ def saved_policies_update(pid: str, req: SavedPolicyReq, principal=Depends(auth.
     return {"id": pid, "updated": True}
 
 
+# =====================================================================================================
+# ANALYTICS (Phase 1): lightweight event capture (open) + admin-only reporting
+# =====================================================================================================
+class AnalyticsEvent(BaseModel):
+    name: str = Field(..., max_length=48)
+    path: Optional[str] = ""
+    referrer: Optional[str] = ""
+    props: Optional[dict] = None
+
+
+class CollectReq(BaseModel):
+    visitor_id: Optional[str] = ""
+    events: List[AnalyticsEvent] = Field(default_factory=list)
+
+
+@app.post("/analytics/collect")
+def analytics_collect(req: CollectReq, request: Request,
+                      authorization: str = Header(None), x_api_key: str = Header(None)):
+    """Ingest a batch of product-analytics events. Open to guests (that is the point); the account is
+    attached from the session when signed in. Privacy: anonymous visitor id, hashed IP, truncated UA."""
+    p = auth.resolve(authorization, x_api_key, request.cookies.get(SESSION_COOKIE))
+    aid = p.get("account_id") if p and p.get("account_id") not in (None, "anonymous") else None
+    vid = (req.visitor_id or "")[:40]
+    ua = request.headers.get("user-agent") or ""
+    ua_class = ("bot" if re.search(r"bot|crawl|spider|slurp|bing|preview", ua, re.I)
+                else "mobile" if re.search(r"Mobile|Android|iPhone|iPad|iPod", ua) else "desktop")
+    ipsrc = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+             or (request.client.host if request.client else ""))
+    ip_hash = hashlib.sha256((ANALYTICS_SALT + ipsrc).encode()).hexdigest()[:64] if ipsrc else ""
+    now = _dt.datetime.now(_dt.timezone.utc)
+    rows = []
+    for e in req.events[:50]:
+        rows.append({"ts": now, "visitor_id": vid, "account_id": aid, "name": (e.name or "")[:48],
+                     "path": (e.path or "")[:255], "referrer": (e.referrer or "")[:255],
+                     "props": _json.dumps(e.props or {})[:2000], "ua_class": ua_class, "ip_hash": ip_hash})
+    n = billing.record_events(rows)
+    return {"ok": True, "n": n}
+
+
+@app.get("/analytics/whoami")
+def analytics_whoami(principal=Depends(auth.require_key)):
+    """Lets the UI show admin surfaces only to an administrator. Never 403s."""
+    return {"admin": _is_admin(principal)}
+
+
+@app.get("/analytics/summary")
+def analytics_summary(days: int = 30, principal=Depends(auth.require_key)):
+    """Admin-only product-analytics summary over the last N days."""
+    _require_admin(principal)
+    days = max(1, min(int(days or 30), 365))
+    cutoff = _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=days)
+    P = {"cutoff": cutoff}
+    q = billing.analytics_query
+    totals = q("SELECT COUNT(*) AS events, COUNT(DISTINCT visitor_id) AS visitors, "
+               "SUM(CASE WHEN name='pageview' THEN 1 ELSE 0 END) AS pageviews, "
+               "SUM(CASE WHEN account_id IS NOT NULL THEN 1 ELSE 0 END) AS signed_in_events, "
+               "SUM(CASE WHEN name='signup' THEN 1 ELSE 0 END) AS signups "
+               "FROM analytics_events WHERE ts >= :cutoff", P)
+    daily = q("SELECT substr(CAST(ts AS TEXT),1,10) AS day, COUNT(*) AS events, "
+              "SUM(CASE WHEN name='pageview' THEN 1 ELSE 0 END) AS pageviews, "
+              "COUNT(DISTINCT visitor_id) AS visitors "
+              "FROM analytics_events WHERE ts >= :cutoff GROUP BY day ORDER BY day", P)
+    top_pages = q("SELECT path, COUNT(*) AS views FROM analytics_events "
+                  "WHERE ts >= :cutoff AND name='pageview' GROUP BY path ORDER BY views DESC LIMIT 12", P)
+    by_name = q("SELECT name, COUNT(*) AS n FROM analytics_events WHERE ts >= :cutoff "
+                "GROUP BY name ORDER BY n DESC LIMIT 20", P)
+    devices = q("SELECT ua_class, COUNT(DISTINCT visitor_id) AS visitors FROM analytics_events "
+                "WHERE ts >= :cutoff GROUP BY ua_class", P)
+    segments = q("SELECT CASE WHEN account_id IS NULL THEN 'guest' ELSE 'signed_in' END AS seg, "
+                 "COUNT(*) AS events, COUNT(DISTINCT visitor_id) AS visitors FROM analytics_events "
+                 "WHERE ts >= :cutoff GROUP BY seg", P)
+    return {"days": days, "totals": (totals[0] if totals else {}), "daily": daily,
+            "top_pages": top_pages, "by_name": by_name, "devices": devices, "segments": segments}
+
+
 @app.delete("/policies/saved/{pid}")
 def saved_policies_delete(pid: str, principal=Depends(auth.require_key)):
     _require_account(principal, "manage saved policies")
@@ -1857,6 +1932,28 @@ def _require_account(principal, action):
     return principal
 
 
+# Site administrator: analytics and other admin surfaces are restricted to these accounts. An account is
+# admin if it holds the 'admin' API-key scope, or its email is in REGMAP_ADMIN_EMAILS (comma-separated).
+ADMIN_EMAILS = {e.strip().lower() for e in os.environ.get("REGMAP_ADMIN_EMAILS", "").split(",") if e.strip()}
+ANALYTICS_SALT = os.environ.get("REGMAP_ANALYTICS_SALT", "regmap-analytics-salt")
+
+
+def _is_admin(principal):
+    if not principal:
+        return False
+    scopes = {s.strip() for s in (principal.get("scopes") or "").split(",") if s.strip()}
+    if "admin" in scopes:
+        return True
+    email = (principal.get("email") or "").strip().lower()
+    return bool(email and email in ADMIN_EMAILS)
+
+
+def _require_admin(principal):
+    if not _is_admin(principal):
+        raise HTTPException(403, detail="administrator access only")
+    return principal
+
+
 def _set_session_cookie(resp, token):
     resp.set_cookie(
         SESSION_COOKIE, token,
@@ -2115,7 +2212,7 @@ def auth_session(request: Request,
         "email_verified": billing.is_email_verified(p["account_id"]),
         "totp_enabled": billing.get_totp(p["account_id"])[1],
         "via": p.get("auth", "session"),
-        "admin": "admin" in {s.strip() for s in (p.get("scopes") or "").split(",") if s.strip()},
+        "admin": _is_admin(p),
         "plan": {"id": p.get("plan_id"), "name": p.get("name"),
                  "monthly_cu": (None if allowance == float("inf") else allowance),
                  "allow_overage": bool(p.get("allow_overage"))},
