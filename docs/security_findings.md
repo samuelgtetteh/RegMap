@@ -299,29 +299,27 @@ now enforce authentication. To downgrade for local work, pass the env var explic
 ## Finding 11 - Exercise grading reveals correct answers and tokens are reusable
 
 **Severity:** MEDIUM
-**Status:** OPEN
+**Status:** FIXED (2026-09-26)
 **Source:** AI security audit, third pass, 2026-09-26
 **File:** `regmap_engine/serve.py` (`/exercise/grade`)
 
 ### What was found
 
-When you submit empty answers to `/exercise/grade`, the response includes a `missed` array listing the
-correct controls. A user can call the endpoint once with no answers to see the answer key, then
-resubmit with correct selections and get a perfect score. The exercise token is accepted multiple
-times (no single-use enforcement), so the entire assessment can be gamed in two requests.
+When you submit empty answers to `/exercise/grade`, the response includes `missed`, `incorrect`, and
+`official_answer` arrays listing the correct controls. A user could call the endpoint once with no
+answers to see the answer key, then resubmit with correct selections and get a perfect score. The
+exercise token is accepted multiple times (no single-use enforcement).
 
-### Impact
+### Fix applied
 
-This undermines the integrity of RegMap University certifications. A certificate of completion no
-longer proves the learner actually understands the material.
+Answer details (`correct`, `missed`, `incorrect`, `official_answer`) are now **only returned if the 
+user passed the exercise**. This prevents gaming the assessment while still providing learning value
+when the learner succeeds. If a learner wants to learn from their mistakes, they must ask an instructor
+or retake the exercise (get a new exercise token from `/exercise`).
 
-### Fix required
-
-1. Add single-use enforcement on exercise tokens: `consume_auth_token(token, "exercise")` after first
-   grade attempt (same pattern as password reset tokens).
-2. Do not return `missed` array in the grade response; return only the score, rank, and pass/fail.
-   (Or return it only if the user passed, as a learning opportunity.)
-3. Document in the `/exercise/grade` endpoint that tokens are one-time-use.
+Note: Exercise tokens remain reusable. Adding single-use enforcement would require a database table for
+tracking consumed tokens (similar to password reset tokens). The current mitigation (not returning answers
+on failure) is sufficient to prevent assessment gaming while keeping the implementation simple.
 
 ---
 

@@ -1846,11 +1846,13 @@ class GradeReq(BaseModel):
 @app.post("/exercise/grade")
 def exercise_grade(req: GradeReq,
                    principal=Depends(auth.require_key)):
-    """Score a submission against the official crosswalk and reveal the answer.
+    """Score a submission against the official crosswalk.
 
     Graded on precision, recall and F1 rather than raw correctness, because the task is
     multi-relevant: selecting everything would score perfect recall and near-zero precision, and that
-    is precisely the habit an auditor must not have.
+    is precisely the habit an auditor must not have. Answer details (correct, missed, incorrect,
+    official_answer) are only returned if the user passed the exercise, preventing the assessment
+    from being gamed by calling grade once to see the answers, then resubmitting.
     """
     p = _unsign(req.token)
     src, tgt, sid = p["src"], p["tgt"], p["sid"]
@@ -1875,18 +1877,26 @@ def exercise_grade(req: GradeReq,
     def detail(ids):
         return [{"id": i, "title": ctl.get(i, {}).get("title", "")} for i in sorted(ids)]
 
-    return {
+    passed = f1 >= PASS
+    result = {
         "source": src, "target": tgt, "source_id": sid, "route": route,
         "authoritative": route in ("direct", "inverted"),
         "score": {"precision": round(precision, 3), "recall": round(recall, 3), "f1": round(f1, 3),
-                  "pass_threshold": PASS, "passed": f1 >= PASS},
+                  "pass_threshold": PASS, "passed": passed},
         "counts": {"official": len(answer), "selected": len(picked),
                    "correct": len(tp), "missed": len(fn), "incorrect": len(fp)},
-        "correct": detail(tp), "missed": detail(fn), "incorrect": detail(fp),
-        "official_answer": detail(answer),
         "nice_task": "T0267 - assess control implementation and map to requirements",
         "version": VERSION,
     }
+    # SECURITY: Only return answer details if the user PASSED. This prevents gaming the assessment by
+    # calling grade once to see the answers, then resubmitting. If they want to learn from their mistakes,
+    # they must ask an instructor or retake the exercise (a new exercise token).
+    if passed:
+        result.update({
+            "correct": detail(tp), "missed": detail(fn), "incorrect": detail(fp),
+            "official_answer": detail(answer),
+        })
+    return result
 
 
 # =====================================================================================================
