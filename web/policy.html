@@ -87,6 +87,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 <script src="assets/api.js?v=40"></script>
 <script src="assets/shell.js?v=40"></script>
 <script src="assets/policies-data.js?v=40"></script>
@@ -233,7 +234,16 @@
   }
   function applyEdits(edits) {
     if (!edits) return;
-    docsEls().forEach(el => { if (edits[el.dataset.idx]) el.innerHTML = edits[el.dataset.idx]; });
+    // SECURITY: sanitize HTML edits before applying to prevent stored XSS. DOMPurify allows safe HTML
+    // tags (p, h1, h3, ol, ul, li, table, etc.) while stripping script, img onerror, and other payloads.
+    docsEls().forEach(el => {
+      if (edits[el.dataset.idx]) {
+        el.innerHTML = DOMPurify.sanitize(edits[el.dataset.idx], {
+          ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a'],
+          ALLOWED_ATTR: ['href']
+        });
+      }
+    });
   }
   async function doSave() {
     readVars();
