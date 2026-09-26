@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RegMap: map any control to any framework</title>
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=22">
-<link rel="stylesheet" href="assets/app.css?v=22">
+<link rel="stylesheet" href="assets/site.css?v=23">
+<link rel="stylesheet" href="assets/app.css?v=23">
 <style>
   /* page-local: the two-mode tab switch (uses the shell tokens) */
   .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
@@ -455,8 +455,8 @@
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=22"></script>
-<script src="assets/shell.js?v=22"></script>
+<script src="assets/api.js?v=23"></script>
+<script src="assets/shell.js?v=23"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -1011,6 +1011,31 @@
     if (typeof dat.controls === "string") { cText.value = dat.controls; updCount(); }
     pStatus.textContent = "opened";
     if (cText.value.trim()) runCustom();     // re-map; renderCustom re-applies the restored decisions
+    checkDrift(id);                          // #11: warn if the target framework changed since saving
+  }
+
+  // Versioned crosswalks + drift (#11): show a banner if the target framework moved on since this
+  // project was saved, or if any accepted mapping now points at a control that no longer exists.
+  async function checkDrift(id) {
+    let d; try { d = await RegMap.projectDrift(id); } catch (e) { return; }
+    if (!d || !d.available) return;
+    const stale = (d.stale_mappings || []).length;
+    if (!d.changed && !stale) return;
+    const bits = [];
+    if (d.version_changed && d.baseline)
+      bits.push(`This crosswalk was built against ${esc(d.framework)} version ${esc(d.baseline.version || "?")}, but the current version is ${esc(d.current.version || "?")}.`);
+    else if (d.changed)
+      bits.push(`${esc(d.framework)} has changed since you saved this crosswalk${d.control_count_delta ? ` (${d.control_count_delta > 0 ? "+" : ""}${d.control_count_delta} controls)` : ""}.`);
+    if (stale)
+      bits.push(`${stale} accepted mapping${stale > 1 ? "s" : ""} now point${stale > 1 ? "" : "s"} at a control the framework no longer has.`);
+    const banner = document.createElement("div");
+    banner.className = "note";
+    banner.style.cssText = "margin-bottom:14px;border-color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent)";
+    banner.innerHTML = `<b>Framework update detected.</b> ${bits.join(" ")}
+      <button type="button" class="btn ghost sm" id="driftRerun" style="margin-left:10px">Re-map to refresh</button>`;
+    cOut.prepend(banner);
+    const btn = document.getElementById("driftRerun");
+    if (btn) btn.addEventListener("click", () => runCustom());
   }
   function newProject() {
     curProj = null; pName.value = ""; pOpen.value = ""; pStatus.textContent = "new project";

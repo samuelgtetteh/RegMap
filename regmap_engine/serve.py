@@ -1058,9 +1058,31 @@ def projects_list(principal=Depends(auth.require_key)):
     return {"projects": [_iso(p) for p in billing.list_projects(principal["account_id"])]}
 
 
+def _drift_baseline(tgt):
+    """A compact fingerprint of a target framework's control universe: its version, control count, and a
+    short hash of the (id, title) set. Stamped onto a project when it is saved so we can later tell that
+    the framework changed underneath it (Compliance tracker #11, versioned crosswalks + drift)."""
+    ctl = _controls.get(tgt, {})
+    ids = sorted(ctl.keys())
+    h = hashlib.sha256("\n".join(f"{i}\x01{ctl[i].get('title', '')}" for i in ids).encode()).hexdigest()[:16]
+    return {"framework": tgt, "version": _registry.get(tgt, {}).get("version", ""),
+            "count": len(ids), "hash": h}
+
+
+def _stamp_drift(data, target_fid):
+    """Record the target framework's baseline on the project data, if the target is rankable."""
+    if not isinstance(data, dict):
+        return data
+    tgt = _resolve_fid(target_fid or data.get("target") or "")
+    if tgt and tgt in _controls:
+        data["_drift"] = _drift_baseline(tgt)
+    return data
+
+
 @app.post("/projects")
 def projects_create(req: ProjectReq, principal=Depends(auth.require_key)):
     _require_account(principal, "save your work")
+    _stamp_drift(req.data, req.target_fid)
     pid = billing.create_project(principal["account_id"], req.name, req.target_fid, req.source_kind, req.data)
     return {"id": pid, "name": req.name}
 
@@ -1076,10 +1098,47 @@ def projects_get(pid: str, principal=Depends(auth.require_key)):
 @app.put("/projects/{pid}")
 def projects_update(pid: str, req: ProjectUpdateReq, principal=Depends(auth.require_key)):
     _require_account(principal, "save your work")
+    if req.data is not None:
+        _stamp_drift(req.data, req.target_fid)
     n = billing.update_project(principal["account_id"], pid, req.name, req.target_fid, req.data)
     if not n:
         raise HTTPException(404, "project not found")
     return {"id": pid, "updated": True}
+
+
+@app.get("/projects/{pid}/drift")
+def project_drift(pid: str, principal=Depends(auth.require_key)):
+    """Has the target framework changed since this project was saved? (Compliance tracker #11.)
+
+    Compares the version baseline stamped at save time with the framework's current state, and flags any
+    accepted mapping that now points at a control the framework no longer has, so coverage never goes
+    stale silently. A project saved before baselines existed still gets a stale-mapping check.
+    """
+    p = billing.get_project(principal["account_id"], pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    data = p.get("data") or {}
+    tgt = _resolve_fid(data.get("target") or p.get("target_fid") or "")
+    if not tgt or tgt not in _controls:
+        return {"available": False, "reason": "target framework is not rankable"}
+    base = data.get("_drift") or None
+    cur = _drift_baseline(tgt)
+    universe = set(_controls[tgt].keys())
+    stale = []
+    for sid, d in (data.get("decisions") or {}).items():
+        for t, v in ((d or {}).get("targets") or {}).items():
+            if v == "accept" and t not in universe:
+                stale.append({"source": sid, "target": t})
+    version_changed = bool(base) and base.get("version") != cur["version"]
+    changed = bool(base) and (base.get("hash") != cur["hash"] or version_changed)
+    return {
+        "available": True,
+        "framework": _registry.get(tgt, {}).get("name", tgt),
+        "baseline": base, "current": cur,
+        "changed": changed, "version_changed": version_changed,
+        "control_count_delta": (cur["count"] - base["count"]) if base else 0,
+        "stale_mappings": stale,
+    }
 
 
 @app.delete("/projects/{pid}")

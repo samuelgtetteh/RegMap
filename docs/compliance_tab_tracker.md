@@ -151,8 +151,14 @@ yet committed.
     tabs. The route/provenance (official / derived / no-route) was already shown via the route badge. FREE.
 
 ### Tier 3: scale, integration, stickiness
-11. **Versioned crosswalks and drift.** Track framework versions (800-53 Rev5 to Rev6) and re-run to show
-    what changed, so coverage never goes stale silently. PAID.
+11. **Versioned crosswalks and drift. DONE (mechanism) 2026-09-25.** Saving a project stamps a version
+    baseline of the target framework (`_drift_baseline`: version, control count, and a hash of the id/title
+    set) into its data. `GET /projects/{id}/drift` compares that baseline with the framework's current
+    state and flags (a) a version or content change and (b) any accepted mapping that now points at a
+    control the framework no longer has ("stale mapping"). On opening a project the UI runs `checkDrift`
+    and shows a "Framework update detected" banner with a "Re-map to refresh" action. Verified end to end
+    (stale-mapping detection). Fully demonstrable version drift needs a second framework version in the
+    catalog (e.g. 800-53 Rev.6) which is content work (#16). PAID.
 12. **Continuous re-mapping.** Schedule re-runs on a cadence or on framework updates; tie into the
     console's Continuous monitoring. PAID.
 13. **Collaboration.** Multiple users, assignments, comments, an approval trail. PAID (team plans).
@@ -215,6 +221,8 @@ extend it as features land. (Founder rule respected: no em/en-dashes in the copy
   statement + implementation checklist per gap (deterministic templating), shown inline on the gaps tab
   with copy + disclaimer. **Tier 2 is now complete (#6-#10).**
 - 2026-09-25: built the in-tab Help document ("How to use this" modal) and Templates/journeys (#15,
-  Quick-starts grid on the gaps tab) + hash deep-links for tabs and help. Remaining: Tier 3 (#11 versioning,
-  #12 continuous re-mapping, #13 collaboration, #14 API/GRC import, #16 framework library growth) and the
-  paid-gating pass once billing is on. Next per founder: start Tier 3.
+  Quick-starts grid on the gaps tab) + hash deep-links for tabs and help.
+- 2026-09-25: started Tier 3 in tracker order. Built #11 Versioned crosswalks + drift: version-baseline
+  stamping on save (`_drift_baseline`/`_stamp_drift`), `GET /projects/{id}/drift`, and a "Framework update
+  detected" banner on project open (`checkDrift`). Verified (stale-mapping detection). Remaining Tier 3:
+  #12 continuous re-mapping, #13 collaboration, #14 API/GRC import, #16 framework library growth.

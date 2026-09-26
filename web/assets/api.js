@@ -98,6 +98,7 @@
     projectUpdate: (id, payload) => call("/projects/" + encodeURIComponent(id),
                                     { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }),
     projectDelete: (id)          => call("/projects/" + encodeURIComponent(id), { method: "DELETE" }),
+    projectDrift:  (id)          => call("/projects/" + encodeURIComponent(id) + "/drift"),
     exercise:   (payload)      => post("/exercise", payload),
     grade:      (payload)      => post("/exercise/grade", payload),
     evaluate:   (payload)      => post("/eval", payload),
