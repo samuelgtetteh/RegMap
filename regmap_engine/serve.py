@@ -97,12 +97,18 @@ if (WEB / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=str(WEB / "assets")), name="assets")
 
 
+# HTML pages must always revalidate so UI changes appear without a hard refresh; their assets are
+# separately cache-busted with ?v=N, so this does not defeat asset caching.
+_HTML_NOCACHE = {"Cache-Control": "no-cache, must-revalidate", "Pragma": "no-cache"}
+
+
 @app.get("/", include_in_schema=False)
 def home():
     """RegMap product home. The interactive API is at /docs."""
     f = WEB / "index.html"
-    return HTMLResponse(f.read_text(encoding="utf-8")) if f.is_file() else HTMLResponse(
-        "<h1>RegMap crosswalk engine</h1><p>API at <a href='/docs'>/docs</a></p>")
+    if f.is_file():
+        return HTMLResponse(f.read_text(encoding="utf-8"), headers=_HTML_NOCACHE)
+    return HTMLResponse("<h1>RegMap crosswalk engine</h1><p>API at <a href='/docs'>/docs</a></p>")
 
 
 @app.get("/{page}.html", include_in_schema=False)
@@ -113,7 +119,7 @@ def web_page(page: str):
     f = WEB / f"{page}.html"
     if not f.is_file():
         raise HTTPException(status_code=404, detail="page not found")
-    return HTMLResponse(f.read_text(encoding="utf-8"))
+    return HTMLResponse(f.read_text(encoding="utf-8"), headers=_HTML_NOCACHE)
 
 
 def _on_gpu():
