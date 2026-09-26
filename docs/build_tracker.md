@@ -70,11 +70,14 @@ gamification, and saved-progress/resume backed by a new `learning_progress` stor
 - [ ] Tie monitor findings back to the mapped controls and the evidence/report layer.
 
 ### Pre-launch checklist (do before publishing a live site)
-- [ ] **Re-enable enforcement.** During pre-launch, quota (402) and rate limits (429) default OFF so
-      nothing is blocked while we build (`REGMAP_ENFORCE_QUOTA` / `REGMAP_ENFORCE_RATE_LIMIT`, in
-      `regmap_engine/auth.py`). The k8s deployment already sets both to `true`; make sure any other live
-      deploy path (docker run, another host) sets them true too, or flip the defaults back to `true`.
-- [ ] Turn on `REGMAP_REQUIRE_AUTH` and `REGMAP_SECURE_COOKIES` (behind TLS) for the live site.
+- [ ] **Re-enable enforcement.** Quota (402) and rate limits (429) default OFF during development so nothing
+      is blocked while we build (`REGMAP_ENFORCE_QUOTA` / `REGMAP_ENFORCE_RATE_LIMIT` in
+      `regmap_engine/auth.py`). The k8s deployment sets both to `true`; make sure any other live deploy
+      path does too.
+- [ ] **Authentication is now ON by default.** `REGMAP_REQUIRE_AUTH` now defaults to `true` to block
+      anonymous access to the paid endpoints (`/map`, `/remediate`, `/exercise`). To disable it for local
+      dev, set `REGMAP_REQUIRE_AUTH=false` in your startup command.
+- [ ] **Enable `REGMAP_SECURE_COOKIES=true`** (behind TLS) for the live site.
 - [ ] **Fix security findings from AI audit (2026-09-26).** Full details in `docs/security_findings.md`.
       Five findings: (1) HIGH - stored XSS via unauthenticated analytics injection (allowlist event names
       server-side); (2) MEDIUM - `/admin.html` served without server-side auth check; (3) MEDIUM - all

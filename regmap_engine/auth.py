@@ -27,7 +27,7 @@ from fastapi import Cookie, Depends, Header, HTTPException, Request
 
 import billing
 
-REQUIRE_AUTH = os.environ.get("REGMAP_REQUIRE_AUTH", "false").lower() in ("1", "true", "yes")
+REQUIRE_AUTH = os.environ.get("REGMAP_REQUIRE_AUTH", "true").lower() in ("1", "true", "yes")
 
 # Enforcement switches for quota (402) and rate limiting (429).
 # PRE-LAUNCH: these default to OFF so nothing is blocked while we build. The live deployment turns them

@@ -268,6 +268,83 @@ This is in the pre-launch checklist and `docs/hosting_options.md`.
 
 ---
 
+---
+
+## Finding 10 - CRITICAL: Paid endpoints accessible without authentication
+
+**Severity:** CRITICAL
+**Status:** FIXED (2026-09-26)
+**Source:** AI security audit, third pass, 2026-09-26
+**File:** `regmap_engine/auth.py` (`REQUIRE_AUTH`)
+
+### What was found
+
+`/map`, `/remediate`, `/exercise`, `/exercise/grade`, `/map/bulk`, `/map/custom`, and `/map/custom/multi`
+are your core paid features. All were accessible without any authentication when `REQUIRE_AUTH=false`
+(the dev default). An unauthenticated request was assigned to a shared anonymous account, which had
+consumed 451 CU (150% of its 300 CU/month free quota) and was still serving requests (quota enforcement
+was broken). Anyone could hammer these endpoints indefinitely at your cost.
+
+### Fix applied
+
+Flipped the default: `REQUIRE_AUTH` now defaults to `true`. All billable endpoints now require a valid
+session or API key. To disable auth for local development, set `REGMAP_REQUIRE_AUTH=false` in the
+startup command.
+
+**This closes the immediate free-tier abuse immediately.** All existing dev deployments with the default
+now enforce authentication. To downgrade for local work, pass the env var explicitly.
+
+---
+
+## Finding 11 - Exercise grading reveals correct answers and tokens are reusable
+
+**Severity:** MEDIUM
+**Status:** OPEN
+**Source:** AI security audit, third pass, 2026-09-26
+**File:** `regmap_engine/serve.py` (`/exercise/grade`)
+
+### What was found
+
+When you submit empty answers to `/exercise/grade`, the response includes a `missed` array listing the
+correct controls. A user can call the endpoint once with no answers to see the answer key, then
+resubmit with correct selections and get a perfect score. The exercise token is accepted multiple
+times (no single-use enforcement), so the entire assessment can be gamed in two requests.
+
+### Impact
+
+This undermines the integrity of RegMap University certifications. A certificate of completion no
+longer proves the learner actually understands the material.
+
+### Fix required
+
+1. Add single-use enforcement on exercise tokens: `consume_auth_token(token, "exercise")` after first
+   grade attempt (same pattern as password reset tokens).
+2. Do not return `missed` array in the grade response; return only the score, rank, and pass/fail.
+   (Or return it only if the user passed, as a learning opportunity.)
+3. Document in the `/exercise/grade` endpoint that tokens are one-time-use.
+
+---
+
+## Finding 12 - Anonymous account quota exceeded but requests still served
+
+**Severity:** LOW
+**Status:** REQUIRES INVESTIGATION
+**Source:** AI security audit, third pass, 2026-09-26
+**File:** `regmap_engine/serve.py` and `regmap_engine/auth.py` (quota enforcement)
+
+### What was found
+
+The shared anonymous account had consumed 451 CU against a 300 CU/month limit and was still serving
+requests. Quota enforcement appears broken or disabled for the anonymous principal.
+
+### Next steps
+
+Once `REQUIRE_AUTH=true` is live, this becomes moot — anonymous accounts no longer exist. If you later
+add a true free tier with an allowance, ensure quota is enforced consistently and requests are
+rejected with 402 once the limit is hit.
+
+---
+
 ## Pre-launch security checklist
 
 These must all be done before the site is public:
