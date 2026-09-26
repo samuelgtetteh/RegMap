@@ -179,8 +179,15 @@ yet committed.
     "Approve crosswalk" sign-off); the Open dropdown lists shared projects. Verified end to end (invite,
     open-as-member, comment, approve, trail, shared list). PAID (team plans). Later: per-control comment
     anchors in the UI, assignments, and notifications.
-14. **API and bulk import.** A team can push their control set and pull mappings programmatically, and
-    import from GRC tools (Vanta, Drata, spreadsheets). PAID.
+14. **API and bulk import. DONE 2026-09-26.** (a) A real **API reference** page (`web/api-reference.html`,
+    replacing its under-construction placeholder): a sticky grouped nav and documented endpoints for auth
+    (Bearer keys), crosswalks (map / bulk / custom / multi / remediate), catalog, projects + export, drift
+    & monitoring, collaboration, and meta, each with a curl example. (b) **Bulk import** on the "Your
+    framework" tab: dropping or loading a CSV export from a GRC tool or spreadsheet (Vanta, Drata, etc.)
+    now parses it (RFC-4180-ish, quoted commas handled) and shows a **column-mapping** picker (which column
+    is the control id, which is the description), with smart header guesses; it converts the chosen columns
+    into the control set. Verified (parser handles quoted commas; mapping produces clean id, text lines).
+    PAID (planned for the import cap). Later: a formal OpenAPI doc + SDKs, and direct GRC connectors.
 15. **Templates and journeys. DONE 2026-09-25.** A "Quick starts" grid on the "Coverage & gaps" tab:
     curated crosswalk cards (HIPAA to 800-53, CSF 2.0 to 800-53, 800-171 to 800-53, 800-53 to CSF 2.0)
     that fill the source/target pickers and run coverage in one click. Cards referencing frameworks not
@@ -246,5 +253,8 @@ extend it as features land. (Founder rule respected: no em/en-dashes in the copy
   `POST /projects/{id}/recheck` and the `POST /monitor/run` cron entry point. Verified end to end.
 - 2026-09-25: built #13 Collaboration: shared projects with roles, comments, and an approval trail
   (project_members/comments/activity tables, `_resolve_project` access control, members/comments/activity/
-  approve endpoints, a Share modal, shared-project list). Verified end to end. Remaining Tier 3: #14
-  API/GRC import, #16 framework library growth.
+  approve endpoints, a Share modal, shared-project list). Verified end to end.
+- 2026-09-26: built #14 API + bulk import: a real API reference page (web/api-reference.html) and a CSV
+  column-mapping importer for GRC/spreadsheet exports on the custom tab. Verified. NOTE: api-reference.html
+  is now a real page; the scratchpad genpages.py construction list still names it, so do not regenerate that
+  page from the template. Remaining Tier 3: #16 framework library growth (control-data sourcing).

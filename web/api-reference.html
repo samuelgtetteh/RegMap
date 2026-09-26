@@ -8,13 +8,251 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=29">
-<link rel="stylesheet" href="assets/construction.css?v=29">
+<link rel="stylesheet" href="assets/site.css?v=30">
+<style>
+  .api-wrap{display:grid;grid-template-columns:220px 1fr;gap:34px;align-items:start}
+  @media(max-width:900px){.api-wrap{grid-template-columns:1fr}.api-nav{display:none}}
+  .api-nav{position:sticky;top:84px;font-size:13.5px;display:flex;flex-direction:column;gap:2px}
+  .api-nav a{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:8px}
+  .api-nav a:hover{color:var(--ink);background:var(--surface-2)}
+  .api-nav .grp{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);margin:12px 0 4px;padding:0 10px}
+  .api-sec{margin-bottom:34px;scroll-margin-top:82px}
+  .api-sec h2{font-size:20px;margin:0 0 6px}
+  .api-sec .lead{color:var(--muted);font-size:14.5px;margin:0 0 14px;max-width:70ch;line-height:1.6}
+  .ep{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 18px;margin-bottom:14px}
+  .ep-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .m{font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;color:#fff}
+  .m.get{background:#22a06b}.m.post{background:var(--accent)}.m.put{background:#d9822b}.m.del{background:#e5484d}
+  .ep-path{font-family:var(--mono);font-size:13.5px;font-weight:600}
+  .ep-desc{color:var(--muted);font-size:13.5px;margin:8px 0 0;line-height:1.55}
+  .ep table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px}
+  .ep th,.ep td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  .ep th{color:var(--faint);font-weight:600;font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+  .ep code{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:5px}
+  pre{margin:12px 0 0;background:#0b0f1e;color:#d6def5;border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.6}
+  pre .c{color:#6b7aa8}.pre .s{color:#7ee787}
+  .api-note{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+    font-size:13.5px;margin:10px 0}
+</style>
 </head>
-<body data-page="api-reference" data-eyebrow="Resources" data-title="API reference" data-scene="api"
-      data-blurb="Push your control set and pull mappings programmatically. Full endpoint reference, authentication, and examples are on the way." data-bullets="Map, bulk, and custom endpoints|API keys with scopes|Examples in curl and Python" data-caption="live request and response" data-more="Documentation::/documentation.html::Guides and concepts|Console::/dashboard::See the engine">
-<main id="uc"></main>
-<script src="assets/shell.js?v=29"></script>
-<script src="assets/construction.js?v=29"></script>
+<body data-page="api-reference">
+
+<section class="section pad bleed" style="padding-top:36px">
+  <div class="eyebrow">Resources</div>
+  <h1 style="font-size:clamp(28px,4vw,42px);margin-top:6px">API reference</h1>
+  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 0;max-width:72ch">
+    Everything the RegMap web app does is available over a JSON HTTP API on the same origin. Push a control
+    set, pull ranked mappings, save projects, and export audit-ready packages, all programmatically.
+  </p>
+</section>
+
+<section class="section tight pad bleed">
+  <div class="api-wrap">
+    <nav class="api-nav">
+      <div class="grp">Start</div>
+      <a href="#auth">Authentication</a>
+      <a href="#base">Base URL & format</a>
+      <div class="grp">Crosswalks</div>
+      <a href="#map">Map a control</a>
+      <a href="#bulk">Coverage & gaps</a>
+      <a href="#custom">Your framework</a>
+      <a href="#multi">Multi-target</a>
+      <a href="#remediate">Remediation</a>
+      <div class="grp">Catalog</div>
+      <a href="#frameworks">Frameworks</a>
+      <a href="#pairs">Pairs</a>
+      <div class="grp">Projects</div>
+      <a href="#projects">Projects CRUD</a>
+      <a href="#export">Export</a>
+      <a href="#drift">Drift & monitoring</a>
+      <div class="grp">Collaboration</div>
+      <a href="#collab">Members, comments, approval</a>
+      <div class="grp">Meta</div>
+      <a href="#meta">Health, me, pricing</a>
+    </nav>
+
+    <div class="api-content">
+      <div class="api-sec" id="auth">
+        <h2>Authentication</h2>
+        <p class="lead">Create an account, then mint an API key and send it as a Bearer token. Browser
+          sessions use an HttpOnly cookie instead; both resolve to the same account.</p>
+        <div class="ep">
+          <div class="ep-head"><span class="m post">POST</span><span class="ep-path">/auth/keys</span></div>
+          <div class="ep-desc">Create an API key (shown once). Requires an authenticated session.</div>
+          <pre><span class="c"># create a key, then use it as a Bearer token</span>
+curl -X POST https://YOUR_HOST/auth/keys \
+  -H "content-type: application/json" -b cookies.txt \
+  -d '{"label":"ci"}'
+
+curl https://YOUR_HOST/me -H "Authorization: Bearer rk_live_..."</pre>
+        </div>
+        <div class="api-note">Keys carry scopes. Keep them server-side; anything in a browser is readable by
+          any script on the origin, so the app uses the session cookie there, not a key.</div>
+      </div>
+
+      <div class="api-sec" id="base">
+        <h2>Base URL & format</h2>
+        <p class="lead">All endpoints are JSON over the same origin that serves the app. Errors return an
+          HTTP status and a <code>{"detail": "..."}</code> body. Amounts of model work are metered in
+          Compute Units and reported in <code>x-regmap-compute-units</code> response headers.</p>
+      </div>
+
+      <div class="api-sec" id="map">
+        <h2>Map a control</h2>
+        <div class="ep">
+          <div class="ep-head"><span class="m post">POST</span><span class="ep-path">/map</span></div>
+          <div class="ep-desc">Rank the controls in a target framework that best match one control or a free-text query.</div>
+          <table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody>
+            <tr><td>target</td><td>string</td><td>target framework id (see <code>/frameworks</code>)</td></tr>
+            <tr><td>source</td><td>string?</td><td>source framework id (for an official comparison)</td></tr>
+            <tr><td>source_id</td><td>string?</td><td>a control id in the source, or omit and use text</td></tr>
+            <tr><td>text</td><td>string?</td><td>free-text control description</td></tr>
+            <tr><td>top_k</td><td>int</td><td>1 to 25, default 5</td></tr>
+          </tbody></table>
+          <pre>curl -X POST https://YOUR_HOST/map \
+  -H "content-type: application/json" -H "Authorization: Bearer rk_..." \
+  -d '{"target":"nist_80053","text":"encrypt data at rest","top_k":3}'</pre>
+          <div class="ep-desc">Each result has <code>id</code>, <code>title</code>, <code>score</code>,
+            <code>official</code>, and <code>why</code> (the shared salient terms).</div>
+        </div>
+      </div>
+
+      <div class="api-sec" id="bulk">
+        <h2>Coverage & gaps</h2>
+        <div class="ep">
+          <div class="ep-head"><span class="m post">POST</span><span class="ep-path">/map/bulk</span></div>
+          <div class="ep-desc">Map a whole source framework onto a target and get coverage plus the official gap list.</div>
+          <pre>curl -X POST https://YOUR_HOST/map/bulk \
+  -H "content-type: application/json" -H "Authorization: Bearer rk_..." \
+  -d '{"source":"hipaa_security","target":"nist_80053","top_k":5}'</pre>
+        </div>
+      </div>
+
+      <div class="api-sec" id="custom">
+        <h2>Your framework</h2>
+        <div class="ep">
+          <div class="ep-head"><span class="m post">POST</span><span class="ep-path">/map/custom</span></div>
+          <div class="ep-desc">Map your own control set onto a catalog framework. Results are model suggestions for review.</div>
+          <pre>curl -X POST https://YOUR_HOST/map/custom \
+  -H "content-type: application/json" -H "Authorization: Bearer rk_..." \
+  -d '{"target":"nist_80053","top_k":5,
+       "controls":[{"id":"AC-1","text":"Access control policy and procedures"}]}'</pre>
+        </div>
+      </div>
+
+      <div class="api-sec" id="multi">
+        <h2>Multi-target coverage</h2>
+        <div class="ep">
+          <div class="ep-head"><span class="m post">POST</span><span class="ep-path">/map/custom/multi</span></div>
+          <div class="ep-desc">Map one control set onto several frameworks at once; returns the best match per framework and a coverage summary.</div>
+          <pre>curl -X POST https://YOUR_HOST/map/custom/multi \
+  -H "content-type: application/json" -H "Authorization: Bearer rk_..." \
+  -d '{"targets":["nist_80053","hipaa_security"],
+       "controls":[{"id":"P-1","text":"MFA is required for all access"}]}'</pre>
+        </div>
+      </div>
+
+      <div class="api-sec" id="remediate">
+        <h2>Remediation guidance</h2>
+        <div class="ep">
+          <div class="ep-head"><span class="m post">POST</span><span class="ep-path">/remediate</span></div>
+          <div class="ep-desc">A starter policy statement and implementation checklist for a target control (a gap). A draft to adapt, not legal advice.</div>
+          <pre>curl -X POST https://YOUR_HOST/remediate \
+  -H "content-type: application/json" -H "Authorization: Bearer rk_..." \
+  -d '{"target":"nist_80053","control_id":"AC-2"}'</pre>
+        </div>
+      </div>
+
+      <div class="api-sec" id="frameworks">
+        <h2>Frameworks</h2>
+        <div class="ep">
+          <div class="ep-head"><span class="m get">GET</span><span class="ep-path">/frameworks</span></div>
+          <div class="ep-desc">Every framework, with control counts, availability, and planned (coming-soon) counts.</div>
+        </div>
+        <div class="ep">
+          <div class="ep-head"><span class="m get">GET</span><span class="ep-path">/frameworks/{id}/controls</span></div>
+          <div class="ep-desc">The controls in a framework. Add <code>?include_text=true</code> for full text.</div>
+        </div>
+      </div>
+
+      <div class="api-sec" id="pairs">
+        <h2>Pairs</h2>
+        <div class="ep">
+          <div class="ep-head"><span class="m get">GET</span><span class="ep-path">/pairs</span></div>
+          <div class="ep-desc">Every framework pair this instance can answer, and by what route (official, inverted, derived).</div>
+        </div>
+      </div>
+
+      <div class="api-sec" id="projects">
+        <h2>Projects</h2>
+        <p class="lead">A project is a saved crosswalk: the control set, target, and every decision, status,
+          note, and evidence link. All project endpoints require an account.</p>
+        <div class="ep"><div class="ep-head"><span class="m get">GET</span><span class="ep-path">/projects</span></div>
+          <div class="ep-desc">Your projects plus those shared with you (<code>{projects, shared}</code>).</div></div>
+        <div class="ep"><div class="ep-head"><span class="m post">POST</span><span class="ep-path">/projects</span></div>
+          <div class="ep-desc">Create a project. Body: <code>{name, target_fid, source_kind, data}</code>.</div></div>
+        <div class="ep"><div class="ep-head"><span class="m get">GET</span><span class="ep-path">/projects/{id}</span></div>
+          <div class="ep-desc">Fetch a project (owner or a member); includes your <code>role</code>.</div></div>
+        <div class="ep"><div class="ep-head"><span class="m put">PUT</span><span class="ep-path">/projects/{id}</span></div>
+          <div class="ep-desc">Update (owner or editor). Rename with <code>{name}</code>.</div></div>
+        <div class="ep"><div class="ep-head"><span class="m del">DELETE</span><span class="ep-path">/projects/{id}</span></div>
+          <div class="ep-desc">Delete a project (owner only).</div></div>
+      </div>
+
+      <div class="api-sec" id="export">
+        <h2>Export</h2>
+        <div class="ep"><div class="ep-head"><span class="m get">GET</span><span class="ep-path">/projects/{id}/export?fmt=json|csv|xlsx|docx</span></div>
+          <div class="ep-desc">An audit-ready package, one row per control with status, accepted/rejected targets, evidence, and note.</div></div>
+      </div>
+
+      <div class="api-sec" id="drift">
+        <h2>Drift & monitoring</h2>
+        <div class="ep"><div class="ep-head"><span class="m get">GET</span><span class="ep-path">/projects/{id}/drift</span></div>
+          <div class="ep-desc">Whether the target framework changed since the project was saved, plus any stale mappings.</div></div>
+        <div class="ep"><div class="ep-head"><span class="m post">POST</span><span class="ep-path">/projects/{id}/recheck</span></div>
+          <div class="ep-desc">Re-run the crosswalk against the current catalog now and record the result.</div></div>
+        <div class="ep"><div class="ep-head"><span class="m post">POST</span><span class="ep-path">/monitor/run</span></div>
+          <div class="ep-desc">Re-check every monitored project that is due. Call on a schedule (cron / k8s CronJob).</div></div>
+      </div>
+
+      <div class="api-sec" id="collab">
+        <h2>Collaboration</h2>
+        <div class="ep"><div class="ep-head"><span class="m get">GET</span><span class="m post">POST</span><span class="m del">DELETE</span><span class="ep-path">/projects/{id}/members</span></div>
+          <div class="ep-desc">List, invite (by email + role: editor / commenter / viewer), or remove collaborators (owner manages).</div></div>
+        <div class="ep"><div class="ep-head"><span class="m get">GET</span><span class="m post">POST</span><span class="ep-path">/projects/{id}/comments</span></div>
+          <div class="ep-desc">Read or add comments. Body: <code>{body, anchor?}</code> where anchor is a source control id.</div></div>
+        <div class="ep"><div class="ep-head"><span class="m get">GET</span><span class="ep-path">/projects/{id}/activity</span></div>
+          <div class="ep-desc">The approval / audit trail: who did what, when.</div></div>
+        <div class="ep"><div class="ep-head"><span class="m post">POST</span><span class="ep-path">/projects/{id}/approve</span></div>
+          <div class="ep-desc">Sign off on the crosswalk (owner or editor). Recorded in the trail with an optional note.</div></div>
+      </div>
+
+      <div class="api-sec" id="meta">
+        <h2>Meta</h2>
+        <div class="ep"><div class="ep-head"><span class="m get">GET</span><span class="ep-path">/health</span></div>
+          <div class="ep-desc">Liveness and engine version.</div></div>
+        <div class="ep"><div class="ep-head"><span class="m get">GET</span><span class="ep-path">/me</span></div>
+          <div class="ep-desc">The authenticated account, plan, and API keys.</div></div>
+        <div class="ep"><div class="ep-head"><span class="m get">GET</span><span class="ep-path">/pricing</span></div>
+          <div class="ep-desc">Plans and allowances.</div></div>
+      </div>
+
+      <div class="api-note">This reference lists the stable endpoints the app uses today. A formal OpenAPI
+        document and SDKs are on the roadmap; the interactive schema is also served at <code>/docs</code>
+        on this instance.</div>
+    </div>
+  </div>
+</section>
+
+<script src="assets/shell.js?v=30"></script>
+<script>
+  // smooth in-page nav
+  document.querySelectorAll(".api-nav a").forEach(a => a.addEventListener("click", e => {
+    const el = document.querySelector(a.getAttribute("href"));
+    if (el) { e.preventDefault(); el.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  }));
+</script>
 </body>
 </html>

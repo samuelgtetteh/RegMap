@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RegMap: map any control to any framework</title>
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=29">
-<link rel="stylesheet" href="assets/app.css?v=29">
+<link rel="stylesheet" href="assets/site.css?v=30">
+<link rel="stylesheet" href="assets/app.css?v=30">
 <style>
   /* page-local: the two-mode tab switch (uses the shell tokens) */
   .tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);
@@ -163,6 +163,13 @@
   .ctl-card{padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:20px}
   .ctl-card:last-child{border-bottom:0}
   #cText.dropping{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--accent-soft)}
+  /* CSV column mapping importer (#14) */
+  .csv-map{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px;padding:12px 14px;
+    background:var(--surface-2);border:1px solid var(--accent);border-radius:12px;font-size:13px}
+  .csv-map[hidden]{display:none}
+  .csv-map .csv-title{font-weight:600}
+  .csv-map label{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+  .csv-map select{width:auto;padding:6px 9px;font-size:12.5px}
   .proj-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding:10px 12px;
     background:var(--surface-2);border:1px solid var(--line);border-radius:12px}
   .proj-bar .proj-name{width:210px;padding:7px 10px;font-size:13.5px}
@@ -344,9 +351,17 @@
       <label class="btn ghost sm" style="cursor:pointer;justify-content:center">
         Load CSV or JSON<input id="cFile" type="file" accept=".csv,.json,.txt" hidden>
       </label>
-      <div class="note" style="font-size:12px">Free tier maps up to <b id="cFree">25</b> controls per run.
-        The paid version removes the cap and adds review, evidence and export.</div>
+      <div class="note" style="font-size:12px">Import a GRC or spreadsheet export (Vanta, Drata, a CSV):
+        pick which columns are the control id and description. Free tier maps up to <b id="cFree">25</b>
+        controls per run.</div>
     </div>
+  </div>
+  <div id="csvMap" class="csv-map" hidden>
+    <span class="csv-title">Imported <b id="csvRows">0</b> rows. Map your columns:</span>
+    <label>ID column <select id="csvId"></select></label>
+    <label>Description column <select id="csvText"></select></label>
+    <button class="btn primary sm" id="csvGo" type="button">Use these columns</button>
+    <button class="btn ghost sm" id="csvCancel" type="button">Cancel</button>
   </div>
   <div style="display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap">
     <button class="btn primary" id="cGo">Map my controls →</button>
@@ -524,8 +539,8 @@
   RegMap · every mapping carries its provenance, official, inverted, or derived through a hub.
 </footer>
 
-<script src="assets/api.js?v=29"></script>
-<script src="assets/shell.js?v=29"></script>
+<script src="assets/api.js?v=30"></script>
+<script src="assets/shell.js?v=30"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -1259,10 +1274,71 @@
   }
 
   cText.addEventListener("input", updCount);
+  // Minimal RFC-4180-ish CSV parser (handles quoted fields, commas and newlines inside quotes).
+  function parseCSV(text) {
+    const rows = []; let row = [], field = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+        else field += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\r") { /* skip */ }
+      else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+      else field += c;
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(r => r.some(v => (v || "").trim() !== ""));
+  }
+
+  let csvRowsData = null;                       // parsed CSV rows awaiting a column mapping
+  function offerCsvMapping(rows) {
+    const header = rows[0].map(h => (h || "").trim());
+    csvRowsData = rows.slice(1);
+    $("csvRows").textContent = csvRowsData.length;
+    // guess the description column (widest average text) and an id column (short codes)
+    const opts = extra => header.map((h, i) => `<option value="${i}">${esc(h || ("column " + (i + 1)))}</option>`).join("");
+    $("csvId").innerHTML = `<option value="-1">(auto-number)</option>` + opts();
+    $("csvText").innerHTML = opts();
+    // heuristics: id = a short-code column (id/control/ref/code); description = a real text column,
+    // preferring desc/requirement/statement/text and never re-using the id column.
+    const find = re => header.findIndex(h => re.test((h || "").toLowerCase()));
+    const idGuess = find(/\b(id|control|ref|code|number)\b/);
+    let txtGuess = find(/(descr|requirement|statement|\btext\b|body|guidance)/);
+    if (txtGuess < 0) txtGuess = header.findIndex((h, i) => i !== idGuess && /(name|title|summary|control)/.test((h || "").toLowerCase()));
+    if (txtGuess < 0) txtGuess = (idGuess === 0 ? Math.min(1, header.length - 1) : 0);
+    $("csvId").value = String(idGuess);
+    $("csvText").value = String(txtGuess);
+    $("csvMap").hidden = false;
+  }
+  $("csvGo").addEventListener("click", () => {
+    if (!csvRowsData) return;
+    const idc = Number($("csvId").value), tc = Number($("csvText").value);
+    const lines = csvRowsData.map((r, n) => {
+      const id = idc >= 0 ? (r[idc] || "").trim() : "";
+      const txt = (r[tc] || "").trim();
+      if (!txt) return null;
+      return id ? `${id.replace(/[,:|\t]/g, " ")}, ${txt}` : txt;
+    }).filter(Boolean);
+    cText.value = lines.join("\n"); updCount();
+    $("csvMap").hidden = true; csvRowsData = null; cText.focus();
+  });
+  $("csvCancel").addEventListener("click", () => { $("csvMap").hidden = true; csvRowsData = null; });
+
   async function loadFile(f) {
     if (!f) return;
-    try { cText.value = await f.text(); updCount(); cText.focus(); }
-    catch (e) { cOut.innerHTML = `<div class="note err">Could not read that file.</div>`; }
+    let text;
+    try { text = await f.text(); }
+    catch (e) { cOut.innerHTML = `<div class="note err">Could not read that file.</div>`; return; }
+    const isCsv = /\.csv$/i.test(f.name) || (text.indexOf(",") > -1 && text.trim()[0] !== "[" && text.trim()[0] !== "{");
+    if (isCsv) {
+      const rows = parseCSV(text);
+      // Only offer column mapping when there is a header + at least one data row and 2+ columns.
+      if (rows.length > 1 && rows[0].length > 1) { offerCsvMapping(rows); return; }
+    }
+    $("csvMap").hidden = true;
+    cText.value = text; updCount(); cText.focus();
   }
   cFile.addEventListener("change", () => loadFile(cFile.files[0]));
   // Drag and drop a CSV / JSON / text file straight onto the box.
