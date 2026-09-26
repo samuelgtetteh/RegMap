@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=37">
-<link rel="stylesheet" href="assets/app.css?v=37">
+<link rel="stylesheet" href="assets/site.css?v=38">
+<link rel="stylesheet" href="assets/app.css?v=38">
 <style>
   .pol-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
   .pol-search{flex:1;min-width:220px;padding:10px 13px;font-size:14px}
@@ -80,6 +80,10 @@
 
 <section class="section tight pad bleed">
   <div class="pol-tools">
+    <select id="viewSel" class="pol-search" style="flex:0 0 auto;max-width:210px">
+      <option value="all">All policies</option>
+      <option value="saved">My saved policies</option>
+    </select>
     <input class="pol-search" id="search" type="search" placeholder="Search policies (e.g. access, backup, vendor, cloud, AI)…">
     <span id="count" class="mono" style="font-size:12.5px;color:var(--muted)"></span>
   </div>
@@ -94,8 +98,8 @@
   <button class="btn primary sm" id="selGo" type="button">Customize selected →</button>
 </div>
 
-<script src="assets/shell.js?v=37"></script>
-<script src="assets/policies-data.js?v=37"></script>
+<script src="assets/shell.js?v=38"></script>
+<script src="assets/policies-data.js?v=38"></script>
 <script>
 (function () {
   const esc = window.RegMapPolicy.esc;
@@ -168,14 +172,46 @@
   render();
   updateSelBar();
 
-  // Your saved (customized) policies, shown when signed in.
-  async function loadSaved() {
-    let d; try { d = await window.RegMap.savedPolicies(); } catch (e) { return; }
-    const wrap = document.getElementById("savedWrap");
-    if (!d.policies || !d.policies.length) { wrap.innerHTML = ""; return; }
+  /* ---- view switch: All policies vs My saved policies --------------------- */
+  let authed = null;                            // null=unknown, true/false once session resolves
+  const wrap = document.getElementById("savedWrap");
+  const viewSel = document.getElementById("viewSel");
+
+  function setView(v) {
+    const saved = v === "saved";
+    viewSel.value = v;
+    document.getElementById("chips").style.display = saved ? "none" : "";
+    document.getElementById("lib").style.display = saved ? "none" : "";
+    document.getElementById("search").style.display = saved ? "none" : "";
+    document.getElementById("count").style.display = saved ? "none" : "";
+    if (saved) { wrap.hidden = false; loadSaved(true); }
+    else { wrap.hidden = false; loadSaved(false); }   // in All view, saved list still shows at top if any
+  }
+
+  async function loadSaved(fullView) {
+    // fullView: the dedicated "My saved policies" view (show sign-in / empty states).
+    if (authed === false) {
+      wrap.innerHTML = fullView
+        ? `<div class="cat-h" id="saved">Your saved policies</div>
+           <div class="note" style="max-width:70ch">Sign in to save policies and find them here.
+             <a href="/account.html" style="color:var(--accent);font-weight:600">Sign in or create an account</a>.</div>`
+        : "";
+      return;
+    }
+    if (authed === null) return;                 // wait for session
+    let d; try { d = await window.RegMap.savedPolicies(); } catch (e) { wrap.innerHTML = ""; return; }
+    const list = d.policies || [];
+    if (!list.length) {
+      wrap.innerHTML = fullView
+        ? `<div class="cat-h" id="saved">Your saved policies</div>
+           <div class="note" style="max-width:70ch">You have not saved any policies yet. Open a policy, fill in
+             your details, then choose <b>Save to my account</b>. It will appear here.</div>`
+        : "";
+      return;
+    }
     wrap.innerHTML = `<div class="cat-h" id="saved" style="scroll-margin-top:80px">Your saved policies
-        <span style="font-size:12px;font-weight:600;color:var(--muted)">(${d.policies.length})</span></div>
-      <div class="pol-grid">${d.policies.map(p => `
+        <span style="font-size:12px;font-weight:600;color:var(--muted)">(${list.length})</span></div>
+      <div class="pol-grid">${list.map(p => `
         <div class="tile pol" data-sid="${esc(p.id)}"><div class="body">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span class="num">saved</span>
@@ -191,11 +227,18 @@
       window.open("/policy.html?saved=" + encodeURIComponent(el.dataset.sid), "_blank");
     }));
     wrap.querySelectorAll(".sp-del").forEach(b => b.addEventListener("click", async () => {
-      try { await window.RegMap.savedPolicyDelete(b.dataset.sid); loadSaved(); } catch (e) {}
+      try { await window.RegMap.savedPolicyDelete(b.dataset.sid); loadSaved(fullView); } catch (e) {}
     }));
-    if (location.hash === "#saved") document.getElementById("saved").scrollIntoView({ behavior: "smooth", block: "start" });
+    if (location.hash === "#saved") { const el = document.getElementById("saved"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }
   }
-  window.RegMap.session().then(s => { if (s && s.authenticated) loadSaved(); }).catch(() => {});
+
+  viewSel.addEventListener("change", () => setView(viewSel.value));
+  // deep link / hash: /policies.html#saved or ?view=saved opens the saved view
+  const wantSaved = location.hash === "#saved" || new URLSearchParams(location.search).get("view") === "saved";
+  setView(wantSaved ? "saved" : "all");         // apply immediately
+  // once the session resolves, re-run the current view so saved items (or a sign-in prompt) populate
+  window.RegMap.session().then(s => { authed = !!(s && s.authenticated); setView(viewSel.value); })
+    .catch(() => { authed = false; setView(viewSel.value); });
 })();
 </script>
 </body>
