@@ -167,6 +167,25 @@ instance on this but fix it before any public launch.
 
 ---
 
+## Root cause note: repeated "still leaking" re-tests (2026-09-26)
+
+Multiple re-audits after Finding 6's fix (`57a3760`) kept reporting `reset_link` / `verify_link`
+still present in responses. The **code was correct all along** — the actual cause was a **stale
+background server process** (started ~6:35 AM that day, before any of the day's fixes) that had
+port 8010 bound the entire time. Every later "restart" attempt during the session silently failed
+to bind (port already in use) because stderr was being suppressed in the restart scripts, so all
+requests kept hitting the old, pre-fix process without any visible error.
+
+Confirmed and resolved: killed the stale PID holding port 8010, started a genuinely fresh process,
+and verified directly with `curl` that both `/auth/register` and `/auth/reset/request` now return
+no token in the body, with identical responses for real and nonexistent emails (no enumeration).
+Also added `out.pop("reset_link", None)` in `auth_reset_request` as a defensive guarantee.
+
+**Lesson:** when a fix "isn't landing" after a restart, always verify the port is actually held by
+the new process (check the PID's start time / `netstat`), not just that a start command was issued.
+
+---
+
 ## Finding 6 - Verification token returned in registration response body
 
 **Severity:** HIGH
