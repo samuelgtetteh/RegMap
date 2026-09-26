@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=36">
-<link rel="stylesheet" href="assets/app.css?v=36">
+<link rel="stylesheet" href="assets/site.css?v=37">
+<link rel="stylesheet" href="assets/app.css?v=37">
 <style>
   .pol-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
   .pol-search{flex:1;min-width:220px;padding:10px 13px;font-size:14px}
@@ -94,8 +94,8 @@
   <button class="btn primary sm" id="selGo" type="button">Customize selected →</button>
 </div>
 
-<script src="assets/shell.js?v=36"></script>
-<script src="assets/policies-data.js?v=36"></script>
+<script src="assets/shell.js?v=37"></script>
+<script src="assets/policies-data.js?v=37"></script>
 <script>
 (function () {
   const esc = window.RegMapPolicy.esc;
@@ -173,7 +173,8 @@
     let d; try { d = await window.RegMap.savedPolicies(); } catch (e) { return; }
     const wrap = document.getElementById("savedWrap");
     if (!d.policies || !d.policies.length) { wrap.innerHTML = ""; return; }
-    wrap.innerHTML = `<div class="cat-h">Your saved policies</div>
+    wrap.innerHTML = `<div class="cat-h" id="saved" style="scroll-margin-top:80px">Your saved policies
+        <span style="font-size:12px;font-weight:600;color:var(--muted)">(${d.policies.length})</span></div>
       <div class="pol-grid">${d.policies.map(p => `
         <div class="tile pol" data-sid="${esc(p.id)}"><div class="body">
           <div style="display:flex;justify-content:space-between;align-items:center">
@@ -192,6 +193,7 @@
     wrap.querySelectorAll(".sp-del").forEach(b => b.addEventListener("click", async () => {
       try { await window.RegMap.savedPolicyDelete(b.dataset.sid); loadSaved(); } catch (e) {}
     }));
+    if (location.hash === "#saved") document.getElementById("saved").scrollIntoView({ behavior: "smooth", block: "start" });
   }
   window.RegMap.session().then(s => { if (s && s.authenticated) loadSaved(); }).catch(() => {});
 })();

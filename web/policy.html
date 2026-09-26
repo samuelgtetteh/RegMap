@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=36">
+<link rel="stylesheet" href="assets/site.css?v=37">
 <style>
   .pw{display:grid;grid-template-columns:320px 1fr;gap:26px;align-items:start}
   @media(max-width:900px){.pw{grid-template-columns:1fr}}
@@ -87,8 +87,8 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
-<script src="assets/shell.js?v=36"></script>
-<script src="assets/policies-data.js?v=36"></script>
+<script src="assets/shell.js?v=37"></script>
+<script src="assets/policies-data.js?v=37"></script>
 <script>
 (function () {
   const RP = window.RegMapPolicy, esc = RP.esc;
@@ -244,7 +244,8 @@
       if (savedId) { await RegMap.savedPolicyUpdate(savedId, payload); }
       else { const r = await RegMap.savedPolicyCreate(payload); savedId = r.id; }
       savedName = name; saveBtn.textContent = "Update saved policy";
-      saveMsg.textContent = "Saved to your account.";
+      saveMsg.innerHTML = `Saved to your account. Find it any time under ` +
+        `<a href="/policies.html#saved" style="color:var(--accent);font-weight:600">Your saved policies</a> on the Policy page.`;
     } catch (e) { saveMsg.textContent = "Could not save, please try again."; }
   }
   saveBtn.addEventListener("click", doSave);
