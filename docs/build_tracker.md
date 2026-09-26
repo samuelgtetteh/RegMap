@@ -102,7 +102,17 @@ controls and frameworks it satisfies.
 
 ## Queued requests (raised mid-task; do after the current work)
 
-- [ ] **Multi-page site: real independent pages for every placeholder link (raised 2026-09-25).** Build
+- [x] **Multi-page site: real independent pages for every placeholder link. DONE 2026-09-25.** Built a
+      reusable "under construction" system (`web/assets/construction.{css,js}`): every footer/nav/account
+      placeholder link now has its own real page on the locked shell, each with a looped animated SVG
+      preview of what the finished page will show (Careers cycles roles, Status shows service health, API
+      shows a request/response, Benchmarks animate bars, etc.). 18 pages created (Solutions x3, Resources
+      x5, Company x5, Legal x4, plus Help). Footer/account links repointed; social links go to external
+      profiles (LinkedIn/GitHub/X) in a new tab, to be updated to real RegMap profiles later. Also added a
+      global ambient backlight to the standard page background (very subtle, slow drift). Remaining: fill
+      each page's real content over time (tracked per page as they are built out).
+
+- [ ] ~~Multi-page site (superseded by the DONE entry above).~~ Original note kept for history: build
       out the site like Google / Apple / Microsoft do: every link that currently points at `#` gets its
       own real, standalone page (its own URL, on the locked shell with nav + footer). For links with no
       content yet, ship a clean **"Page under construction"** page now, and finish the content later.

@@ -65,6 +65,32 @@ body{
 }
 img{max-width:100%} [hidden]{display:none!important}
 a{color:inherit;text-decoration:none}
+
+/* Ambient backlight: two very soft glows drift slowly around the page edges. Deliberately faint, so
+   only an observant eye catches the motion. Sits behind all content (z-index:-1, pointer-events:none),
+   is injected once by shell.js as <div class="rm-ambient">, and honours reduced-motion. */
+.rm-ambient{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;contain:strict}
+.rm-ambient::before,.rm-ambient::after{content:"";position:absolute;width:46vmax;height:46vmax;
+  border-radius:50%;filter:blur(64px);will-change:transform}
+.rm-ambient::before{background:radial-gradient(circle,color-mix(in srgb,var(--accent) 26%,transparent),transparent 62%);
+  opacity:.34;top:-16vmax;left:-16vmax;animation:rm-drift-a 64s ease-in-out infinite}
+.rm-ambient::after{background:radial-gradient(circle,color-mix(in srgb,var(--cyan) 22%,transparent),transparent 62%);
+  opacity:.24;bottom:-16vmax;right:-16vmax;animation:rm-drift-b 88s ease-in-out infinite}
+@keyframes rm-drift-a{
+  0%{transform:translate(0,0)}
+  25%{transform:translate(118vw,6vh)}
+  50%{transform:translate(112vw,80vh)}
+  75%{transform:translate(-6vw,74vh)}
+  100%{transform:translate(0,0)}}
+@keyframes rm-drift-b{
+  0%{transform:translate(0,0)}
+  25%{transform:translate(-116vw,-10vh)}
+  50%{transform:translate(-108vw,-78vh)}
+  75%{transform:translate(8vw,-70vh)}
+  100%{transform:translate(0,0)}}
+:root[data-theme="light"] .rm-ambient::before{opacity:.22}
+:root[data-theme="light"] .rm-ambient::after{opacity:.16}
+@media (prefers-reduced-motion: reduce){.rm-ambient::before,.rm-ambient::after{animation:none}}
 h1,h2,h3,h4{margin:0;text-wrap:balance;letter-spacing:-.028em;font-weight:680}
 ::selection{background:var(--accent-soft);color:var(--ink)}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:0}

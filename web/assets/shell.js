@@ -11,6 +11,14 @@
     { id: "dashboard",  label: "Console",    href: "/dashboard" },
   ];
 
+  // Ambient backlight layer (see .rm-ambient in site.css): injected once, behind everything.
+  if (!document.querySelector(".rm-ambient")) {
+    const amb = document.createElement("div");
+    amb.className = "rm-ambient";
+    amb.setAttribute("aria-hidden", "true");
+    document.body.prepend(amb);
+  }
+
   const page = document.body.dataset.page || "";
   const link = (n, cls) => `<a href="${n.href}" class="${cls}${n.id === page ? " active" : ""}">${n.label}</a>`;
   const links = NAV.map(n => link(n, "")).join("");
@@ -52,15 +60,15 @@
            <p>Compliance automation and graded skills. Map the controls you operate onto every framework
               you must satisfy, and prove your team can do the work.</p>
            <div class="footer-social">
-             <a href="#" aria-label="LinkedIn">LinkedIn</a>
-             <a href="#" aria-label="GitHub">GitHub</a>
-             <a href="#" aria-label="X">X</a>
+             <a href="https://www.linkedin.com/company/regmap" target="_blank" rel="noopener" aria-label="LinkedIn">LinkedIn</a>
+             <a href="https://github.com/regmap" target="_blank" rel="noopener" aria-label="GitHub">GitHub</a>
+             <a href="https://x.com/regmap" target="_blank" rel="noopener" aria-label="X">X</a>
            </div>
          </div>
          <div class="footer-col"><h4>Product</h4>
            <a href="/compliance.html">Compliance engine</a>
-           <a href="/compliance.html">Coverage and gaps</a>
-           <a href="/compliance.html">Bring your own framework</a>
+           <a href="/compliance.html#gaps">Coverage and gaps</a>
+           <a href="/compliance.html#custom">Bring your own framework</a>
            <a href="/labs.html">Graded labs</a>
            <a href="/dashboard">Console</a>
            <a href="/pricing.html">Pricing</a>
@@ -68,29 +76,29 @@
          <div class="footer-col"><h4>Solutions</h4>
            <a href="/compliance.html">Automate compliance</a>
            <a href="/labs.html">Prove you can do the job</a>
-           <a href="#">For GRC teams</a>
-           <a href="#">For consultancies</a>
-           <a href="#">For practitioners</a>
+           <a href="/for-grc-teams.html">For GRC teams</a>
+           <a href="/for-consultancies.html">For consultancies</a>
+           <a href="/for-practitioners.html">For practitioners</a>
          </div>
          <div class="footer-col"><h4>Resources</h4>
-           <a href="#">Documentation</a>
-           <a href="#">API reference</a>
-           <a href="#">Benchmarks</a>
-           <a href="#">Changelog</a>
-           <a href="#">Status</a>
+           <a href="/documentation.html">Documentation</a>
+           <a href="/api-reference.html">API reference</a>
+           <a href="/benchmarks.html">Benchmarks</a>
+           <a href="/changelog.html">Changelog</a>
+           <a href="/status.html">Status</a>
          </div>
          <div class="footer-col"><h4>Company</h4>
-           <a href="#">About</a>
-           <a href="#">Careers</a>
-           <a href="#">Contact</a>
-           <a href="#">Security</a>
-           <a href="#">Responsible disclosure</a>
+           <a href="/about.html">About</a>
+           <a href="/careers.html">Careers</a>
+           <a href="/contact.html">Contact</a>
+           <a href="/security.html">Security</a>
+           <a href="/responsible-disclosure.html">Responsible disclosure</a>
          </div>
        </div>
        <div class="footer-bottom">
          <span>&copy; ${new Date().getFullYear()} RegMap, Inc. &middot; Prove it once. Satisfy every framework.</span>
          <span class="legal">
-           <a href="#">Privacy</a><a href="#">Terms</a><a href="#">Cookies</a><a href="#">Licensing</a>
+           <a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/cookies.html">Cookies</a><a href="/licensing.html">Licensing</a>
          </span>
        </div>`;
     document.body.appendChild(f);

@@ -91,6 +91,15 @@ training), `pricing.html` (CU pricing), `console.html` (compliance console at `/
 
 ## Change log
 
+- **2026-09-25 ambient backlight (global).** Added a very faint, slow ambient glow that drifts around the
+  page edges on every page (`.rm-ambient`, injected once by `shell.js`; two blurred radial blobs animate
+  on 64s/88s loops, low opacity, behind all content, `pointer-events:none`, honours reduced-motion).
+  Extends the locked baseline; no token or component changes.
+- **2026-09-25 construction pages (new).** A reusable "under construction" system (`construction.css` +
+  `construction.js`) turns every placeholder footer/nav link into its own real page on the shell, each
+  with a looped animated SVG preview of the finished page (scenes: roles, network, docs, api, bars,
+  timeline, status, shield, envelope, legal, segment). Footer/account links repointed to these pages;
+  social links go to external profiles in a new tab. New pages only; no change to existing components.
 - **2026-09-25 `c702245` (LOCKED baseline, tag `design-baseline-v1`).** New design system (Linear +
   Vanta + Datadog), SVG imagery, rebuilt homepage and compliance console, mobile menu, responsive
   hardening, cache-busting. This is the final layout; entries below record changes on top of it.

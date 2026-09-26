@@ -1,0 +1,36 @@
+/* ============================================================================
+   "Under construction" pages. Every placeholder link gets its own real page on
+   the locked shell; construction.js fills #uc with a hero plus a looped animated
+   SVG preview of what the finished page will show. Uses the shell tokens only.
+   ============================================================================ */
+.uc-hero{padding-top:40px}
+.uc-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:44px;align-items:center}
+@media(max-width:860px){.uc-grid{grid-template-columns:1fr;gap:26px}}
+
+.uc-badge{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;
+  color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:999px;padding:5px 12px;margin:12px 0}
+.uc-dot{width:8px;height:8px;border-radius:50%;background:var(--warn);animation:ucpulse 1.4s ease-in-out infinite}
+@keyframes ucpulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.25)}}
+
+.uc-copy h1{font-size:clamp(30px,4.6vw,48px);line-height:1.04;letter-spacing:-.02em;margin:6px 0 14px}
+.uc-blurb{color:var(--muted);font-size:16px;line-height:1.6;max-width:54ch}
+.uc-list{margin:18px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+.uc-list li{position:relative;padding-left:26px;font-size:14.5px;color:var(--ink);line-height:1.5}
+.uc-list li::before{content:"";position:absolute;left:0;top:5px;width:15px;height:15px;border-radius:5px;
+  background:var(--grad);box-shadow:0 3px 8px rgba(99,102,241,.4)}
+.uc-cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+.uc-note{margin-top:18px;font-size:12.5px;color:var(--faint)}
+
+.uc-art{position:relative}
+.uc-svg{width:100%;height:auto;border:1px solid var(--line);border-radius:20px;
+  background:var(--surface);box-shadow:var(--shadow);display:block;overflow:hidden}
+.uc-cap{text-align:center;font-size:12px;color:var(--faint);margin-top:10px;font-family:var(--mono)}
+
+/* other pages that link here (the section grid on some construction pages) */
+.uc-more{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:14px}
+.uc-more a{display:block;border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;
+  background:var(--surface);transition:border-color .15s,transform .1s}
+.uc-more a:hover{border-color:var(--accent);transform:translateY(-1px)}
+.uc-more a b{display:block;font-size:14px;color:var(--ink)}
+.uc-more a span{font-size:12.5px;color:var(--muted)}
