@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RegMap University</title>
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=32">
-<link rel="stylesheet" href="assets/app.css?v=32">
+<link rel="stylesheet" href="assets/site.css?v=33">
+<link rel="stylesheet" href="assets/app.css?v=33">
 <style>
   /* RegMap University hub */
   .u-hero{padding-top:34px}
@@ -57,6 +57,19 @@
     border-radius:10px;padding:12px 14px;margin:12px 0}
   .vid{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface);max-width:640px}
   .vid svg{display:block;width:100%;height:auto}
+  /* badges + transcript */
+  .badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:7px 13px;
+    border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+  .badge.on{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 45%,transparent);
+    background:var(--accent-soft)}
+  .badge .dot{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;flex:none;
+    background:var(--surface-2);color:var(--faint)}
+  .badge.on .dot{background:var(--grad);color:#fff}
+  .u-share{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px;padding:16px 18px;
+    border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+  .u-share .grow{flex:1;min-width:200px}
+  .u-share .link{font-family:var(--mono);font-size:12.5px;color:var(--accent);word-break:break-all}
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
     background:var(--ink);color:var(--bg);font-weight:700;font-size:14px;padding:11px 18px;border-radius:12px;
     box-shadow:var(--shadow);transition:.3s;z-index:80;pointer-events:none}
@@ -72,8 +85,8 @@
   RegMap University · graded against official government crosswalks · aligned to NICE work roles
 </footer>
 
-<script src="assets/api.js?v=32"></script>
-<script src="assets/shell.js?v=32"></script>
+<script src="assets/api.js?v=33"></script>
+<script src="assets/shell.js?v=33"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -205,6 +218,28 @@
     }
     saveState();
   }
+  function recordLab(lesson, s, g) {
+    state.labResults = state.labResults || {};
+    const prev = state.labResults[lesson.id];
+    if (!prev || s.f1 > prev.f1) {
+      state.labResults[lesson.id] = { f1: s.f1, precision: s.precision, recall: s.recall, passed: s.passed,
+        nice_task: g.nice_task, title: lesson.title, date: new Date().toISOString().slice(0, 10) };
+      saveState();
+    }
+  }
+
+  /* ---- badges (derived from progress) ------------------------------------- */
+  const trackDone = tid => { const t = CURR.find(t => t.id === tid); return !!t && t.courses.every(c => c.lessons.every(l => state.completed[l.id])); };
+  const BADGES = [
+    { id: "first-map", label: "First mapping", desc: "Pass your first graded lab", test: () => Object.values(state.labResults || {}).some(r => r.passed) },
+    { id: "perfect", label: "Perfect score", desc: "Score F1 = 1.00 on a lab", test: () => Object.values(state.labResults || {}).some(r => r.f1 >= 0.999) },
+    { id: "streak-7", label: "7-day streak", desc: "Practise seven days running", test: () => (state.streak || 0) >= 7 },
+    { id: "soc-track", label: "SOC track", desc: "Finish the Cybersecurity track", test: () => trackDone("soc") },
+    { id: "grc-track", label: "GRC track", desc: "Finish the IT Audit / GRC track", test: () => trackDone("grc") },
+    { id: "graduate", label: "Graduate", desc: "Complete every lesson", test: () => ALL_LESSONS.every(l => state.completed[l.id]) },
+  ];
+  const earnedBadges = () => BADGES.filter(b => { try { return b.test(); } catch (e) { return false; } });
+
   const courseProgress = c => {
     const done = c.lessons.filter(l => state.completed[l.id]).length;
     return { done, total: c.lessons.length, pct: Math.round(done / c.lessons.length * 100) };
@@ -233,6 +268,44 @@
     </div>`;
   }
 
+  function badgesRow() {
+    const earned = new Set(earnedBadges().map(b => b.id));
+    return `<div class="badges">` + BADGES.map(b => `
+      <span class="badge ${earned.has(b.id) ? "on" : ""}" title="${esc(b.desc)}">
+        <span class="dot">${earned.has(b.id) ? "★" : "·"}</span>${esc(b.label)}</span>`).join("") + `</div>`;
+  }
+
+  function transcriptCard() {
+    const link = state.transcriptId ? (location.origin + "/transcript.html?id=" + state.transcriptId) : "";
+    return `<div class="u-share">
+      <div class="grow"><b>Your evidence transcript</b>
+        <div class="xp-sub">A shareable, read-only record of what you have completed and your graded-lab scores, tied to NICE tasks.</div>
+        ${link ? `<div class="link" id="trLink">${esc(link)}</div>` : ""}</div>
+      <button class="btn primary" data-action="publish-transcript">${state.transcriptId ? "Update transcript" : "Publish transcript"}</button>
+      ${link ? `<button class="btn ghost" data-action="copy-transcript">Copy link</button>` : ""}
+    </div>`;
+  }
+
+  function transcriptSnapshot() {
+    const r = rankOf(state.xp || 0);
+    const labs = Object.values(state.labResults || {}).filter(x => x.passed)
+      .map(x => ({ title: x.title, f1: x.f1, nice_task: x.nice_task, date: x.date }));
+    return {
+      rank: r.name, xp: state.xp || 0, streak: state.streak || 0,
+      completed: ALL_LESSONS.filter(l => state.completed[l.id]).length, total: ALL_LESSONS.length,
+      badges: earnedBadges().map(b => b.label), labs, published: new Date().toISOString().slice(0, 10),
+    };
+  }
+
+  async function publishTranscript() {
+    if (!authed) { toast("Sign in to publish your transcript"); setTimeout(() => location.href = "/account.html", 900); return; }
+    let r; try { r = await RegMap.transcriptPublish(transcriptSnapshot(), state.transcriptId || null); }
+    catch (e) { toast("Could not publish, try again"); return; }
+    state.transcriptId = r.id; saveState();
+    toast("Transcript published");
+    renderHub();
+  }
+
   function renderHub() {
     const resume = firstIncomplete();
     const resumeCourse = resume ? courseById(resume.courseId) : null;
@@ -251,6 +324,8 @@
           <button class="btn primary" data-goto="lesson:${esc(resume.id)}">Resume →</button></div>`
           : `<div class="u-resume"><div class="grow"><b>You have completed every lesson. Outstanding.</b>
             <div class="xp-sub">New tracks are on the way.</div></div></div>`}
+        ${badgesRow()}
+        ${transcriptCard()}
       </section>
       <section class="section tight pad bleed">
         ${CURR.map(t => `
@@ -385,6 +460,7 @@
       const pill = v === "correct" ? "ok" : v === "missed" ? "warn" : "crit";
       el.querySelector(".cid").insertAdjacentHTML("afterend", `<span class="pill ${pill}" style="margin-left:8px">${tag}</span>`);
     });
+    recordLab(lesson, s, g);
     if (s.passed) completeLesson(lesson);
     $("result").innerHTML = `
       <div class="cov">
@@ -417,6 +493,17 @@
   document.addEventListener("click", e => {
     const el = e.target.closest("[data-goto]"); if (!el) return;
     e.preventDefault(); go(el.getAttribute("data-goto"));
+  });
+  // delegate data-action buttons (transcript publish / copy)
+  document.addEventListener("click", e => {
+    const el = e.target.closest("[data-action]"); if (!el) return;
+    e.preventDefault();
+    const a = el.getAttribute("data-action");
+    if (a === "publish-transcript") publishTranscript();
+    else if (a === "copy-transcript") {
+      const link = location.origin + "/transcript.html?id=" + state.transcriptId;
+      navigator.clipboard.writeText(link).then(() => toast("Link copied")).catch(() => toast(link));
+    }
   });
   addEventListener("hashchange", render);
 

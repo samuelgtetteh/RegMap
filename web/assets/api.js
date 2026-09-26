@@ -111,6 +111,8 @@
     learningGet:   (key)         => call("/learning/" + encodeURIComponent(key)),
     learningPut:   (key, data)   => call("/learning/" + encodeURIComponent(key),
                                     { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data }) }),
+    transcriptPublish:(data, id) => post("/learning/transcript", { data, id }),
+    transcriptGet: (id)          => call("/transcript/" + encodeURIComponent(id)),
     exercise:   (payload)      => post("/exercise", payload),
     grade:      (payload)      => post("/exercise/grade", payload),
     evaluate:   (payload)      => post("/eval", payload),

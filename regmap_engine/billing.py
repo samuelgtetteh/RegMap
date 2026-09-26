@@ -146,6 +146,17 @@ projects = Table(
     Column("updated_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
 )
 
+transcripts = Table(
+    # A shareable evidence record: a public, read-only snapshot of a learner's progress and graded-lab
+    # results, addressable by an opaque id. One stable transcript per account (re-published in place).
+    "transcripts", metadata,
+    Column("id", String(40), primary_key=True),
+    Column("account_id", String(40), index=True, nullable=False),
+    Column("data", Text),                                   # JSON snapshot
+    Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+    Column("updated_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+)
+
 learning_progress = Table(
     # RegMap University (#training pillar): a per-user, per-key JSON blob holding course/lesson progress,
     # XP, streak, and completion, so a learner can pause and resume exactly where they left off.
@@ -520,6 +531,39 @@ def put_learning(account_id, key, data):
             c.execute(insert(learning_progress).values(
                 account_id=account_id, pkey=key, data=payload, updated_at=now))
     return True
+
+
+# ---- shareable transcripts (RegMap University evidence record) -----------------------------------
+def publish_transcript(account_id, data, tid=None):
+    """Create or update the account's shareable transcript. Returns its opaque id. If tid is given it must
+    belong to the account (otherwise a new one is created), so a learner can only overwrite their own."""
+    now = datetime.now(timezone.utc)
+    payload = json.dumps(data or {})
+    with engine().begin() as c:
+        if tid:
+            row = c.execute(select(transcripts.c.account_id).where(transcripts.c.id == tid)).first()
+            if row and row[0] == account_id:
+                c.execute(transcripts.update().where(transcripts.c.id == tid)
+                          .values(data=payload, updated_at=now))
+                return tid
+        new_id = "tr_" + secrets.token_urlsafe(9)
+        c.execute(insert(transcripts).values(
+            id=new_id, account_id=account_id, data=payload, created_at=now, updated_at=now))
+    return new_id
+
+
+def get_transcript(tid):
+    with engine().begin() as c:
+        row = c.execute(select(transcripts.c.data, transcripts.c.updated_at)
+                        .where(transcripts.c.id == tid)).first()
+    if not row:
+        return None
+    try:
+        d = json.loads(row[0] or "{}")
+    except Exception:
+        d = {}
+    d["updated_at"] = row[1].isoformat() if row[1] is not None and hasattr(row[1], "isoformat") else None
+    return d
 
 
 # ---- usage + quota -------------------------------------------------------------------------------

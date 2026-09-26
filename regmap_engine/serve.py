@@ -1267,6 +1267,28 @@ def learning_put(key: str, req: LearningReq, principal=Depends(auth.require_key)
     return {"saved": True}
 
 
+class TranscriptReq(BaseModel):
+    data: dict = Field(default_factory=dict, description="the public snapshot to publish")
+    id: Optional[str] = Field(None, description="an existing transcript id to re-publish in place")
+
+
+@app.post("/learning/transcript")
+def transcript_publish(req: TranscriptReq, principal=Depends(auth.require_key)):
+    """Publish (or re-publish) the learner's shareable evidence transcript. Returns its public id/URL."""
+    _require_account(principal, "publish your transcript")
+    tid = billing.publish_transcript(principal["account_id"], req.data, req.id)
+    return {"id": tid, "url": f"/transcript.html?id={tid}"}
+
+
+@app.get("/transcript/{tid}")
+def transcript_get(tid: str):
+    """Public, read-only: fetch a shared transcript by its opaque id. No authentication."""
+    d = billing.get_transcript(tid)
+    if d is None:
+        raise HTTPException(404, "transcript not found")
+    return d
+
+
 # =====================================================================================================
 # COLLABORATION (#13): members + roles, comments, and an approval / activity trail
 # =====================================================================================================

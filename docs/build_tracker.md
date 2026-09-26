@@ -38,10 +38,14 @@ gamification, and saved-progress/resume backed by a new `learning_progress` stor
 - [ ] **Real-world practice** the learner creates actual systems and interacts with them (stand up a
       cloud environment, misconfigure/harden it, scan it, map findings to controls, assemble evidence),
       graded on what they built. Reuses the lab-environment work (`cloud-target-lab`, k8s lab sessions). NOT YET.
-- [~] **Gamification** XP, streaks, ranks. DONE: XP per lesson, 5 ranks (Novice to Senior), day-streak.
-      Still to add: badges and leaderboards.
-- [ ] **Evidence record** a shareable "performed these tasks, scored X" record tied to NICE work roles.
-      Graded-lab results already cite the NICE task; a shareable transcript is NOT YET built.
+- [~] **Gamification** XP, streaks, ranks, badges. DONE 2026-09-26: XP per lesson, 5 ranks (Novice to
+      Senior), day-streak, and 6 derived badges (first mapping, perfect score, 7-day streak, each track,
+      graduate) shown on the hub. Still to add: leaderboards.
+- [x] **Evidence record. DONE 2026-09-26.** A shareable, public, read-only transcript: `transcripts` table
+      + `POST /learning/transcript` (publish/re-publish in place) and public `GET /transcript/{id}`; a
+      "Publish/Update transcript" card on the hub with a copyable link; and `web/transcript.html` renders
+      the record (rank, XP, streak, badges, graded-lab scores with NICE tasks, "verified by RegMap").
+      Verified end to end (publish returns an id, public GET works, page renders).
 - [x] **Saved progress / resume (required). DONE 2026-09-26.** New `learning_progress` table + `GET/PUT
       /learning/{key}`; the hub loads progress on boot (backend when signed in, localStorage for guests),
       saves on every change, and offers "Resume where you left off". Per-user completion, XP, and streak.
