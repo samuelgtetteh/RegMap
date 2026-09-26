@@ -5,15 +5,18 @@
    Everything here talks to the same origin, since serve.py hosts both the API and this site. */
 (function () {
   /* ---- API key ------------------------------------------------------------
-     The engine enforces keys when REGMAP_REQUIRE_AUTH is on, so the browser has to present one or
-     every billable call 401s. There is no login yet (that arrives with self-serve signup), so the key
-     is held in localStorage and attached to every request. That is appropriate for an operator or a
-     pilot customer pasting their own key; it is NOT a substitute for a session, because anything in
-     localStorage is readable by any script on the origin. */
+     Kept for pilot customers and operators who paste a key directly. When the user has an active
+     session (cookie-based auth), the key is cleared from localStorage so it does not sit there
+     unnecessarily. The session cookie (HttpOnly, same-origin) is the secure path; the localStorage
+     key is only the fallback for unauthenticated API access. */
   const KEY_STORE = "regmap.apiKey";
   const getKey = () => { try { return localStorage.getItem(KEY_STORE) || ""; } catch (e) { return ""; } };
   const setKey = k => { try { k ? localStorage.setItem(KEY_STORE, k.trim())
                                 : localStorage.removeItem(KEY_STORE); } catch (e) {} };
+  // Once a session is confirmed, remove the API key from localStorage - the cookie takes over.
+  function _clearKeyIfAuthed(s) {
+    if (s && s.authenticated && getKey()) { setKey(""); }
+  }
 
   async function call(path, opts) {
     // Attach the key if we have one. Harmless when the engine runs open.
@@ -67,7 +70,7 @@
     hasKey:     ()             => !!getKey(),
     me:         ()             => call("/me"),
     pricing:    ()             => call("/pricing"),
-    session:    ()             => call("/auth/session"),
+    session:    ()             => call("/auth/session").then(s => { _clearKeyIfAuthed(s); return s; }),
     register:   (email, password, name) => post("/auth/register", { email, password, name }),
     login:      (email, password)       => post("/auth/login", { email, password }),
     logout:     ()             => post("/auth/logout", {}),

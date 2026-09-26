@@ -112,13 +112,21 @@ def home():
 
 
 @app.get("/{page}.html", include_in_schema=False)
-def web_page(page: str):
-    """Any web/<page>.html — add a page by dropping a file, no route change needed."""
+def web_page(page: str, request: Request,
+             authorization: str = Header(None), x_api_key: str = Header(None)):
+    """Any web/<page>.html — add a page by dropping a file, no route change needed.
+    Admin-only pages are gated server-side before the HTML is served."""
     if "/" in page or "\\" in page or ".." in page:
         raise HTTPException(status_code=404, detail="page not found")
     f = WEB / f"{page}.html"
     if not f.is_file():
         raise HTTPException(status_code=404, detail="page not found")
+    # Server-side gate for admin pages: resolve the session and check admin status
+    # before serving the HTML. Client-side checks are not a security control.
+    if page in {"admin"}:
+        p = auth.resolve(authorization, x_api_key, request.cookies.get(SESSION_COOKIE))
+        if not _is_admin(p):
+            return RedirectResponse(url="/", status_code=302)
     return HTMLResponse(f.read_text(encoding="utf-8"), headers=_HTML_NOCACHE)
 
 
@@ -127,6 +135,32 @@ def _on_gpu():
         return _model is not None and "cuda" in str(_model.device)
     except Exception:
         return False
+
+
+@app.middleware("http")
+async def _security_headers(request: Request, call_next):
+    """Inject security headers on every response. Covers Finding 3 from the 2026-09-26 audit."""
+    resp = await call_next(request)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    resp.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    # HSTS: only effective over HTTPS; safe to set always (browsers ignore it over HTTP)
+    resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # CSP: self + the CDN hosts the front end already loads from; unsafe-inline needed while
+    # inline scripts remain in the HTML files (remove it when scripts move to external files)
+    resp.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src https://fonts.gstatic.com; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none';"
+    )
+    # Remove the Server header to avoid disclosing the runtime stack
+    resp.headers["Server"] = "RegMap"
+    return resp
 
 
 @app.middleware("http")
@@ -1288,6 +1322,7 @@ def saved_policies_list(principal=Depends(auth.require_key)):
 @app.post("/policies/saved")
 def saved_policies_create(req: SavedPolicyReq, principal=Depends(auth.require_key)):
     _require_account(principal, "save a policy")
+    _require_verified(principal)
     pid = billing.create_saved_policy(principal["account_id"], req.name, req.data)
     return {"id": pid, "name": req.name}
 
@@ -1447,6 +1482,7 @@ class TranscriptReq(BaseModel):
 def transcript_publish(req: TranscriptReq, principal=Depends(auth.require_key)):
     """Publish (or re-publish) the learner's shareable evidence transcript. Returns its public id/URL."""
     _require_account(principal, "publish your transcript")
+    _require_verified(principal)
     tid = billing.publish_transcript(principal["account_id"], req.data, req.id)
     return {"id": tid, "url": f"/transcript.html?id={tid}"}
 
@@ -1996,6 +2032,15 @@ def _require_admin(principal):
     if not _is_admin(principal):
         raise HTTPException(403, detail="administrator access only")
     return principal
+
+
+def _require_verified(principal):
+    """Gate sensitive write operations on email verification. Raises 403 with a clear message
+    so the UI can prompt the user to verify. No-ops when EMAIL_ENABLED is false (dev mode)."""
+    if not principal or principal.get("account_id") in (None, "anonymous"):
+        raise HTTPException(401, detail="sign in required")
+    if EMAIL_ENABLED and not billing.is_email_verified(principal["account_id"]):
+        raise HTTPException(403, detail="please verify your email address before using this feature")
 
 
 def _set_session_cookie(resp, token):

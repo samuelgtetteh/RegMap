@@ -58,7 +58,7 @@ panel. The `props` field (also submitted without auth) is unstructured and parti
 ## Finding 2 - `/admin.html` has no server-side access control
 
 **Severity:** MEDIUM
-**Status:** OPEN
+**Status:** FIXED (2026-09-26)
 **Source:** AI security audit, 2026-09-26
 **File:** `regmap_engine/serve.py` (route serving `admin.html`), `web/admin.html`
 
@@ -81,7 +81,7 @@ are correctly gated.
 ## Finding 3 - Security response headers missing on all routes
 
 **Severity:** MEDIUM
-**Status:** OPEN
+**Status:** FIXED (2026-09-26)
 **Source:** AI security audit, 2026-09-26
 **File:** `regmap_engine/serve.py` (global middleware)
 
@@ -119,7 +119,7 @@ The long-term fix is to move inline scripts to external files and remove `unsafe
 ## Finding 4 - API key stored in localStorage
 
 **Severity:** LOW
-**Status:** OPEN
+**Status:** FIXED (2026-09-26)
 **Source:** AI security audit, 2026-09-26
 **File:** `web/assets/api.js`
 
@@ -142,7 +142,7 @@ production for regular users.
 ## Finding 5 - Account operates without email verification
 
 **Severity:** LOW
-**Status:** OPEN
+**Status:** FIXED (2026-09-26) - server-side gate added; email provider still needed for production
 **Source:** AI security audit, 2026-09-26
 **File:** `regmap_engine/serve.py`, `regmap_engine/auth.py`
 
