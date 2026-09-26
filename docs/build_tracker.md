@@ -127,6 +127,31 @@ controls and frameworks it satisfies.
 - [ ] Stripe payments (Phase C): subscriptions, overage, webhooks, self-serve signup, usage dashboard.
 - [ ] Add training/skills plans (per-seat, team) to the pricing and billing model.
 
+## Improvement findings (from page reviews)
+
+A running log of findings raised when reviewing built pages, and how they were (or will be) addressed.
+
+- **Finding (2026-09-25): every clickable link should go to its own dedicated page.** From a review of the
+  built site: "make sure every clickable link goes to its own dedicated page. For now put a 'page under
+  construction' with an animated build of what the page will look like when ready, a looped potential
+  display of what the ready page will look like. For example the Careers page's looped video shows the
+  potential roles that will be available at RegMap. Make sure every possible page is covered, multi-page /
+  sub-page, embedded, creatively built."
+  - **Status: DONE (structure) 2026-09-26.** Implemented as the reusable "under construction" system
+    (`web/assets/construction.{css,js}`, commit `23fcd94`). 18 dedicated pages were created, one per
+    placeholder link (Solutions x3, Resources x5, Company x5, Legal x4, plus Help), each on the locked
+    shell with a **looped animated SVG preview** of the finished page: Careers cycles role titles under a
+    "NOW HIRING" card, Status shows services pulsing "operational", API reference shows a request/response,
+    Benchmarks animate bars, About shows a connecting network, Contact flies a paper plane, Legal ticks
+    clauses, and the Solutions pages show an audience flowing into a framework grid. Footer/nav/account
+    links were repointed to these pages; social links open external profiles. A global ambient backlight
+    was added at the same time.
+  - **Follow-ups (content, not structure):** replace each preview with the real finished page over time.
+    Priority order: Legal (Privacy, Terms, Cookies, Licensing) and Contact first (users and auth flows
+    expect them), then Company (About, Careers, Security, Responsible disclosure), then Resources
+    (Documentation done as a stub; Benchmarks, Changelog, Status), then Solutions segment pages. Replace the
+    animated SVG placeholders with real recorded walkthroughs where a video is intended (e.g. Careers).
+
 ## Queued requests (raised mid-task; do after the current work)
 
 - [x] **Multi-page site: real independent pages for every placeholder link. DONE 2026-09-25.** Built a
