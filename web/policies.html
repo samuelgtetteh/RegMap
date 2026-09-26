@@ -8,120 +8,245 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script>try{var t=localStorage.getItem('regmap.theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':(t==='dark'?'dark':(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')));}catch(e){}</script>
-<link rel="stylesheet" href="assets/site.css?v=33">
-<link rel="stylesheet" href="assets/app.css?v=33">
+<link rel="stylesheet" href="assets/site.css?v=34">
+<link rel="stylesheet" href="assets/app.css?v=34">
 <style>
-  .pol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
-  .pol{display:flex;flex-direction:column}
+  .pol-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .pol-search{flex:1;min-width:220px;padding:10px 13px;font-size:14px}
+  .cat-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .cat-chip{font:inherit;font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:999px;cursor:pointer;
+    border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+  .cat-chip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+  .pol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+  .pol{display:flex;flex-direction:column;cursor:pointer;transition:border-color .15s,transform .1s}
+  .pol:hover{border-color:var(--accent);transform:translateY(-2px)}
   .pol .body{gap:8px}
   .pol .num{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600}
   .pol h3{font-size:16.5px;margin-top:2px}
-  .pol p{margin:0;color:var(--muted);font-size:13.5px}
-  .pol .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:4px}
-  .pol ul{margin:2px 0 0;padding-left:17px;color:var(--muted);font-size:13px;line-height:1.65}
-  .pill.soon{color:var(--faint);background:color-mix(in srgb,var(--faint) 16%,transparent)}
-  .pill.soon::before{background:var(--faint)}
+  .pol p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
   .pol .maps{font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .pol .open-tag{font-size:12px;color:var(--accent);font-weight:600}
+  .cat-h{font-size:15px;font-weight:800;margin:26px 0 4px;letter-spacing:-.01em}
+  .cat-h:first-child{margin-top:0}
+  .cat-sub{font-size:13px;color:var(--muted);margin:0 0 12px}
+  /* reader */
+  .doc-overlay{position:fixed;inset:0;background:rgba(6,8,20,.55);backdrop-filter:blur(3px);z-index:60;
+    display:flex;justify-content:center;align-items:flex-start;padding:4vh 16px;overflow:auto}
+  .doc-overlay[hidden]{display:none}
+  .doc{background:var(--surface);border:1px solid var(--line);border-radius:16px;max-width:820px;width:100%;
+    box-shadow:0 24px 60px rgba(0,0,0,.35);margin-bottom:5vh;overflow:hidden}
+  .doc-head{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;z-index:1;flex-wrap:wrap}
+  .doc-head h2{font-size:18px;margin:0}
+  .doc-head .acts{display:flex;gap:8px}
+  .doc-close{font:inherit;font-size:22px;line-height:1;border:0;background:none;cursor:pointer;color:var(--muted);padding:2px 8px;border-radius:8px}
+  .doc-close:hover{color:var(--ink);background:var(--surface-2)}
+  .doc-body{padding:24px 30px;max-height:74vh;overflow:auto}
+  .doc-body h1{font-size:22px;margin:0 0 4px}
+  .doc-body .meta{font-family:var(--mono);font-size:12px;color:var(--muted);margin:0 0 18px;line-height:1.7}
+  .doc-body h3{font-size:15px;margin:22px 0 8px;padding-top:6px;border-top:1px solid var(--line)}
+  .doc-body p{font-size:14px;line-height:1.65;margin:0 0 10px}
+  .doc-body ol,.doc-body ul{font-size:14px;line-height:1.7;margin:0 0 10px;padding-left:22px}
+  .doc-body li{margin-bottom:6px}
+  .doc-body table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:6px 9px;text-align:left}
+  .doc-body .clause{font-weight:600}
+  .doc-note{background:var(--surface-2);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:10px 13px;font-size:13px;color:var(--muted);margin-bottom:16px}
 </style>
 </head>
 <body data-page="policy">
 
 <section class="section pad bleed" style="padding-top:34px">
   <div class="eyebrow">Policy library</div>
-  <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Policies every company should have on file</h1>
-  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 14px;max-width:76ch">
-    The written policies that guide how your organization uses and protects its IT. Start from these
-    ready-made templates. Industry-specific customization, one-click generation, mapping to your controls,
-    and export are on the roadmap, so this library grows over time.</p>
-  <div class="note" style="max-width:76ch"><b>Progress path.</b> Below are the first 10 essential policies
-    every company with IT infrastructure needs. Adoption and customization are coming next; for now, use
-    these as a starting point and reference.</div>
+  <h1 style="font-size:clamp(26px,3.6vw,38px);margin-top:6px">Every policy an IT environment needs, ready to use</h1>
+  <p class="lead" style="color:var(--muted);font-size:15.5px;margin:10px 0 14px;max-width:78ch">
+    A complete library of the written policies that govern how an organization uses and protects its IT.
+    Every policy opens as a full, ready-to-use document, purpose, scope, numbered policy statements, roles,
+    enforcement, exceptions, review cadence, and the frameworks it helps satisfy. Copy or download any one,
+    replace the bracketed placeholders, and adopt it.</p>
+  <div class="note" style="max-width:78ch"><b>How to use:</b> click any policy to read the full document, then
+    Copy or Download it. Replace <b>[Organization]</b>, <b>[Policy Owner]</b>, and other <b>[bracketed]</b>
+    fields with your details, review with legal, and approve. Industry tailoring and one-click generation are
+    on the roadmap.</div>
 </section>
 
 <section class="section tight pad bleed">
-  <div class="pol-grid" id="grid"></div>
-</section>
-
-<section class="section pad bleed">
-  <div class="panel reveal" style="padding:clamp(24px,4vw,40px);background:
-      radial-gradient(600px 300px at 85% 0%,var(--accent-soft),transparent),var(--surface)">
-    <div class="eyebrow">Coming soon</div>
-    <h2 style="font-size:clamp(20px,2.6vw,28px);margin:8px 0 10px;max-width:60ch">Customizable, industry-ready policies</h2>
-    <p style="color:var(--muted);font-size:14.5px;max-width:70ch;margin:0 0 16px">
-      Next on this tab: pick an industry (healthcare, finance, SaaS, defense) and generate a tailored,
-      editable policy set; map each policy to the controls and frameworks it satisfies; track versions and
-      approvals; and export an audit-ready policy pack.</p>
-    <a class="btn ghost" href="/compliance.html">Map controls to frameworks →</a>
+  <div class="pol-tools">
+    <input class="pol-search" id="search" type="search" placeholder="Search policies (e.g. access, backup, vendor, cloud, AI)…">
+    <span id="count" class="mono" style="font-size:12.5px;color:var(--muted)"></span>
   </div>
+  <div class="cat-chips" id="chips"></div>
+  <div id="lib"></div>
 </section>
 
-<script src="assets/shell.js?v=33"></script>
+<div class="doc-overlay" id="docOverlay" role="dialog" aria-modal="true" aria-label="Policy document" hidden>
+  <div class="doc">
+    <div class="doc-head">
+      <h2 id="docTitle">Policy</h2>
+      <div class="acts">
+        <button class="btn ghost sm" id="docCopy" type="button">Copy</button>
+        <button class="btn ghost sm" id="docDownload" type="button">Download .md</button>
+        <button class="doc-close" id="docClose" aria-label="Close">&times;</button>
+      </div>
+    </div>
+    <div class="doc-body" id="docBody"></div>
+  </div>
+</div>
+
+<script src="assets/shell.js?v=34"></script>
+<script src="assets/policies-data.js?v=34"></script>
 <script>
 (function () {
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const P = window.REGMAP_POLICIES || [];
+  const CATS = [...new Set(P.map(p => p.cat))];
+  let activeCat = "All", query = "";
 
-  const POLICIES = [
-    { cat: "Governance", title: "Acceptable Use Policy",
-      purpose: "Defines how employees and contractors may use company systems, networks, devices and data, and what is prohibited.",
-      covers: ["Permitted and prohibited use", "Personal use limits and monitoring", "Software, download and email rules", "Consequences of misuse"],
-      maps: "NIST PL-4, AC · ISO A.5" },
-    { cat: "Governance", title: "Information Security Policy",
-      purpose: "The umbrella policy stating the organization's commitment to protecting the confidentiality, integrity and availability of information.",
-      covers: ["Scope, roles and responsibilities", "Security objectives and risk management", "Policy hierarchy and exceptions", "Management commitment and review cadence"],
-      maps: "NIST PM, PL · ISO A.5.1" },
-    { cat: "Access", title: "Access Control Policy",
-      purpose: "Governs who can access which systems and data, enforcing least privilege and separation of duties.",
-      covers: ["Provisioning and deprovisioning", "Least privilege and role-based access", "Periodic access reviews", "Privileged account handling"],
-      maps: "NIST AC-2, AC-3, AC-6 · HIPAA 164.312(a)" },
-    { cat: "Access", title: "Password & Authentication Policy",
-      purpose: "Sets requirements for credentials and authentication, including multi-factor authentication.",
-      covers: ["Length, complexity and reuse rules", "MFA for remote and privileged access", "Secure storage and hashing", "Lockout and recovery"],
-      maps: "NIST IA-2, IA-5 · HIPAA 164.312(d) · CIS 5/6" },
-    { cat: "Data", title: "Data Classification & Handling Policy",
-      purpose: "Classifies data by sensitivity and defines how each class is stored, shared, retained and disposed of.",
-      covers: ["Classification levels and labeling", "Handling and encryption per class", "Retention schedules", "Secure disposal"],
-      maps: "NIST MP, SC · ISO A.5.12" },
-    { cat: "Operations", title: "Incident Response Policy",
-      purpose: "Defines how the organization detects, reports, responds to and recovers from security incidents.",
-      covers: ["Incident definitions and severity", "Roles, contacts and escalation", "Containment, eradication, recovery", "Post-incident review and lessons"],
-      maps: "NIST IR-4, IR-6, IR-8 · HIPAA 164.308(a)(6)" },
-    { cat: "Resilience", title: "Backup & Disaster Recovery Policy",
-      purpose: "Ensures critical data and systems can be restored after loss, corruption or disaster.",
-      covers: ["What is backed up and how often", "Offsite and immutable copies", "Restore testing", "RTO and RPO targets"],
-      maps: "NIST CP-9, CP-10 · HIPAA 164.308(a)(7) · ISO A.8.13" },
-    { cat: "Access", title: "Remote Access & Remote Work Policy",
-      purpose: "Secures access to company systems from outside the corporate network.",
-      covers: ["VPN or zero-trust requirements", "Device posture and MFA", "Approved networks", "Home-office security expectations"],
-      maps: "NIST AC-17, AC-19 · HIPAA 164.312(e) · CIS 12" },
-    { cat: "Operations", title: "Change Management Policy",
-      purpose: "Ensures changes to systems and infrastructure are requested, reviewed, tested and approved before deployment.",
-      covers: ["Change request and approval", "Risk and impact assessment", "Testing and rollback", "Emergency changes and the change log"],
-      maps: "NIST CM-3, CM-4 · ISO A.8.32" },
-    { cat: "Endpoints", title: "BYOD & Mobile Device Policy",
-      purpose: "Governs use of personal and mobile devices to access company data.",
-      covers: ["Enrollment and mobile device management", "Encryption and screen lock", "Separation of work and personal data", "Remote wipe and lost-device reporting"],
-      maps: "NIST AC-19, MP-7 · HIPAA 164.310 · CIS 4" },
+  const DEFAULT_SCOPE = "This policy applies to all employees, contractors, consultants, temporary staff, " +
+    "interns, and third parties (collectively, “users”) who access [Organization]'s information, " +
+    "systems, networks, applications, cloud services, or facilities, and to all information assets owned, " +
+    "leased, or operated by [Organization], regardless of location, ownership, or format.";
+  const DEFAULT_ROLES = [
+    "Executive management: approves this policy, provides resources, and owns the residual risk.",
+    "[Policy Owner] (e.g. CISO or Head of IT): maintains this policy, approves exceptions, and reports on compliance.",
+    "IT and Security teams: implement, operate, and monitor the controls that enforce this policy.",
+    "Managers: ensure their teams understand and follow this policy.",
+    "All users: comply with this policy and report suspected violations or security events.",
   ];
+  const enforcement = "Compliance with this policy is mandatory. [Organization] verifies compliance through " +
+    "reviews, audits, automated monitoring, and control testing. Suspected violations must be reported to " +
+    "[Policy Owner]. Violations may result in disciplinary action up to and including termination of " +
+    "employment or contract, removal of access, and, where applicable, civil or criminal liability.";
+  const exceptions = "Any exception to this policy must be requested in writing, state a business " +
+    "justification and the compensating controls that will manage the added risk, be risk-assessed, and be " +
+    "approved by [Policy Owner]. Approved exceptions are documented in the exception register, are " +
+    "time-bound, and are reviewed at least annually or on expiry.";
+  const review = "This policy is reviewed at least annually and after any significant change to the business, " +
+    "technology, threat landscape, or legal and regulatory obligations. [Policy Owner] maintains the policy " +
+    "and its revision history and communicates material changes to affected users.";
 
-  document.getElementById("grid").innerHTML = POLICIES.map((p, i) => `
-    <div class="tile pol reveal"><div class="body">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="num">${String(i + 1).padStart(2, "0")}</span>
-        <span class="pill info" style="padding:2px 9px">${esc(p.cat)}</span>
-      </div>
-      <h3>${esc(p.title)}</h3>
-      <p>${esc(p.purpose)}</p>
-      <div class="lbl">Covers</div>
-      <ul>${p.covers.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
-      <div class="foot" style="margin-top:12px;justify-content:space-between">
-        <span class="maps">${esc(p.maps)}</span>
-        <span class="pill soon">customize soon</span>
-      </div>
-    </div></div>`).join("");
+  function buildDoc(p) {
+    const scope = p.scope || DEFAULT_SCOPE;
+    const roles = DEFAULT_ROLES.concat(p.roles || []);
+    const statements = p.statements.map((s, i) =>
+      `<li><span class="clause">3.${i + 1}</span> ${esc(s)}</li>`).join("");
+    return `
+      <h1>${esc(p.title)}</h1>
+      <div class="meta">Document classification: Internal &nbsp;·&nbsp; Version: 1.0 &nbsp;·&nbsp;
+        Effective date: [effective date] &nbsp;·&nbsp; Owner: [Policy Owner] &nbsp;·&nbsp; Review cycle: Annual</div>
+      <div class="doc-note">Ready-to-use template. Replace every [bracketed] placeholder, review with legal
+        and management, then approve and publish. This is a starting point, not legal advice.</div>
+      <h3>1. Purpose</h3><p>${esc(p.purpose)}</p>
+      <h3>2. Scope</h3><p>${esc(scope)}</p>
+      <h3>3. Policy</h3><ol style="list-style:none;padding-left:0">${statements}</ol>
+      <h3>4. Roles and responsibilities</h3><ul>${roles.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
+      <h3>5. Compliance and enforcement</h3><p>${esc(enforcement)}</p>
+      <h3>6. Exceptions</h3><p>${esc(exceptions)}</p>
+      <h3>7. Review and maintenance</h3><p>${esc(review)}</p>
+      <h3>8. Related frameworks and controls</h3><p class="mono" style="font-size:13px">${esc(p.maps || "")}</p>
+      <h3>Revision history</h3>
+      <table><thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr></thead>
+        <tbody><tr><td>1.0</td><td>[effective date]</td><td>[Policy Owner]</td><td>Initial issue.</td></tr></tbody></table>`;
+  }
 
-  // scroll-reveal picks up the new tiles
-  document.querySelectorAll(".pol").forEach(el => el.classList.add("in"));
+  function buildMarkdown(p) {
+    const scope = p.scope || DEFAULT_SCOPE;
+    const roles = DEFAULT_ROLES.concat(p.roles || []);
+    const lines = [];
+    lines.push(`# ${p.title}`, "");
+    lines.push("Document classification: Internal  |  Version: 1.0  |  Effective date: [effective date]  |  Owner: [Policy Owner]  |  Review cycle: Annual", "");
+    lines.push("## 1. Purpose", p.purpose, "");
+    lines.push("## 2. Scope", scope, "");
+    lines.push("## 3. Policy");
+    p.statements.forEach((s, i) => lines.push(`3.${i + 1}  ${s}`));
+    lines.push("");
+    lines.push("## 4. Roles and responsibilities");
+    roles.forEach(r => lines.push(`- ${r}`));
+    lines.push("");
+    lines.push("## 5. Compliance and enforcement", enforcement, "");
+    lines.push("## 6. Exceptions", exceptions, "");
+    lines.push("## 7. Review and maintenance", review, "");
+    lines.push("## 8. Related frameworks and controls", p.maps || "", "");
+    lines.push("## Revision history", "", "| Version | Date | Author | Summary of change |",
+      "| --- | --- | --- | --- |", "| 1.0 | [effective date] | [Policy Owner] | Initial issue. |");
+    return lines.join("\n");
+  }
+
+  /* ---- reader ------------------------------------------------------------- */
+  const overlay = document.getElementById("docOverlay");
+  let currentPolicy = null;
+  function openDoc(p) {
+    currentPolicy = p;
+    document.getElementById("docTitle").textContent = p.title;
+    document.getElementById("docBody").innerHTML = buildDoc(p);
+    document.getElementById("docBody").scrollTop = 0;
+    overlay.hidden = false; document.body.style.overflow = "hidden";
+  }
+  const closeDoc = () => { overlay.hidden = true; document.body.style.overflow = ""; };
+  document.getElementById("docClose").addEventListener("click", closeDoc);
+  overlay.addEventListener("click", e => { if (e.target === overlay) closeDoc(); });
+  addEventListener("keydown", e => { if (e.key === "Escape" && !overlay.hidden) closeDoc(); });
+  document.getElementById("docCopy").addEventListener("click", async () => {
+    if (!currentPolicy) return;
+    try { await navigator.clipboard.writeText(buildMarkdown(currentPolicy));
+      const b = document.getElementById("docCopy"); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1400); }
+    catch (e) {}
+  });
+  document.getElementById("docDownload").addEventListener("click", () => {
+    if (!currentPolicy) return;
+    const blob = new Blob([buildMarkdown(currentPolicy)], { type: "text/markdown" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = currentPolicy.title.replace(/[^A-Za-z0-9]+/g, "_") + ".md";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
+
+  /* ---- library render ----------------------------------------------------- */
+  function chips() {
+    const box = document.getElementById("chips");
+    box.innerHTML = ["All", ...CATS].map(c =>
+      `<button class="cat-chip ${c === activeCat ? "on" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("");
+    box.querySelectorAll(".cat-chip").forEach(b => b.addEventListener("click", () => { activeCat = b.dataset.cat; render(); }));
+  }
+  function matches(p) {
+    if (activeCat !== "All" && p.cat !== activeCat) return false;
+    if (!query) return true;
+    const hay = (p.title + " " + p.purpose + " " + p.cat + " " + (p.maps || "") + " " + p.statements.join(" ")).toLowerCase();
+    return hay.includes(query);
+  }
+  function render() {
+    chips();
+    const shown = P.filter(matches);
+    document.getElementById("count").textContent = `${shown.length} of ${P.length} policies`;
+    const lib = document.getElementById("lib");
+    const cats = activeCat === "All" ? CATS : [activeCat];
+    lib.innerHTML = cats.map(cat => {
+      const items = shown.filter(p => p.cat === cat);
+      if (!items.length) return "";
+      return `<div class="cat-h">${esc(cat)}</div>
+        <div class="pol-grid">${items.map(p => {
+          const n = P.indexOf(p) + 1;
+          return `<div class="tile pol" data-i="${P.indexOf(p)}"><div class="body">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span class="num">${String(n).padStart(2, "0")}</span>
+              <span class="pill info" style="padding:2px 9px">${esc(p.cat)}</span></div>
+            <h3>${esc(p.title)}</h3>
+            <p>${esc(p.purpose)}</p>
+            <div class="foot" style="margin-top:12px;justify-content:space-between">
+              <span class="maps">${esc(p.maps || "")}</span>
+              <span class="open-tag">Read &amp; download →</span></div>
+          </div></div>`; }).join("")}</div>`;
+    }).join("") || `<div class="note">No policies match your search.</div>`;
+    lib.querySelectorAll(".pol").forEach(el => el.addEventListener("click", () => openDoc(P[+el.dataset.i])));
+  }
+  document.getElementById("search").addEventListener("input", e => { query = e.target.value.trim().toLowerCase(); render(); });
+  render();
+  // deep-link: /policies.html?p=<index> opens that policy directly (shareable)
+  const pi = parseInt(new URLSearchParams(location.search).get("p"), 10);
+  if (!isNaN(pi) && P[pi]) openDoc(P[pi]);
 })();
 </script>
 </body>

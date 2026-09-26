@@ -93,15 +93,18 @@ gamification, and saved-progress/resume backed by a new `learning_progress` stor
 The Policy tab (`web/policies.html`, nav between Compliance and Labs) is a library of customizable,
 industry-ready policies companies adopt. Shares the compliance ground truth: each policy maps to the
 controls and frameworks it satisfies.
-- [x] Page + nav + the first 10 essential IT policies (Acceptable Use, Information Security, Access
-      Control, Password/Authentication, Data Classification, Incident Response, Backup/DR, Remote Access,
-      Change Management, BYOD/Mobile), each with purpose, key contents, and mapped control families.
-- [ ] Adopt a policy: view the full template text, edit/customize it in the browser.
+- [x] **Complete library with full documents. DONE 2026-09-26.** Rebuilt `web/policies.html` into a full
+      library of **33 policies across 9 categories** (Governance, Access & Identity, Data Protection,
+      Security Operations, Network & Infrastructure, Endpoints & Assets, Resilience, People, Third Parties
+      & Development). Each policy opens as a **complete, ready-to-use document** (purpose, scope, numbered
+      policy statements, roles, enforcement, exceptions, review cadence, framework mapping, revision
+      history) generated from `web/assets/policies-data.js` (real, specific statements per policy). Search,
+      category filters, Copy, Download .md, and a `?p=<index>` deep-link. Placeholders ([Organization],
+      [Policy Owner], etc.) make each ready to adopt after find/replace.
+- [ ] Edit/customize a policy in the browser and save it (reuse a persistence store).
 - [ ] Industry tailoring: pick an industry (healthcare, finance, SaaS, defense) and generate a tailored set.
-- [ ] Map each policy to the user's controls/frameworks (reuse the compliance engine).
-- [ ] Versioning, approvals, and an export (DOCX/PDF) audit-ready policy pack.
-- [ ] Grow the library beyond the first 10 (Data Retention, Vendor/Third-Party, Encryption, Physical
-      Security, Privacy, Email/Communications, Vulnerability Management, Logging/Monitoring).
+- [ ] Map each policy to the user's controls/frameworks (reuse the compliance engine) and show live coverage.
+- [ ] Versioning, approvals, and an export as a combined DOCX/PDF audit-ready policy pack.
 
 ### Business / plan
 - [x] Business plan reframed to two co-equal pillars; training is a major selling point (§1, 3, 7, 8, 10).
