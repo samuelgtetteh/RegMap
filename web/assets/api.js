@@ -91,6 +91,7 @@
     bulk:       (payload)      => post("/map/bulk", payload),
     custom:     (payload)      => post("/map/custom", payload),
     customMulti:(payload)      => post("/map/custom/multi", payload),
+    remediate:  (payload)      => post("/remediate", payload),
     projects:      ()            => call("/projects"),
     projectGet:    (id)          => call("/projects/" + encodeURIComponent(id)),
     projectCreate: (payload)     => post("/projects", payload),

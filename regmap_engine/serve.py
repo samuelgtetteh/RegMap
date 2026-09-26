@@ -960,6 +960,74 @@ def map_custom_multi(req: CustomMultiReq, request: Request, principal=Depends(au
     }
 
 
+class RemediateReq(BaseModel):
+    target: str = Field(..., description="framework id the control belongs to")
+    control_id: Optional[str] = Field(None, description="the target control id to draft guidance for")
+    text: Optional[str] = Field(None, description="or the control text directly, if not in the catalog")
+
+
+def _first_sentence(s, limit=240):
+    s = re.sub(r"\s+", " ", (s or "").strip())
+    m = re.search(r"(.+?[.;])\s", s)
+    out = (m.group(1) if m else s)
+    return out[:limit].strip()
+
+
+@app.post("/remediate")
+def remediate(req: RemediateReq, request: Request, principal=Depends(auth.require_key)):
+    """Starter remediation guidance for a gap: a control to implement plus a draft policy statement and
+    an implementation checklist (Compliance tracker #8).
+
+    Deterministic and template-based, not an LLM: it reshapes the target control into a first-draft policy
+    an analyst adapts. Labeled a starter draft so it is never mistaken for an approved policy.
+    """
+    tgt = _require(req.target, "target")
+    cid = (req.control_id or "").strip()
+    ctl = _controls.get(tgt, {})
+    title = text = ""
+    if cid and cid in ctl:
+        title = ctl[cid].get("title", "") or ""
+        text = ctl[cid].get("text", "") or ""
+    elif req.text:
+        text = req.text.strip()
+    else:
+        raise HTTPException(404, "unknown control; pass a known control_id or the control text")
+
+    fw = _registry.get(tgt, {}).get("name", tgt)
+    subject = title or (cid or "this control")
+    # Objective from the control text, with a leading "Title:" / "Title -" echo stripped so the sentence
+    # does not repeat the subject.
+    body = re.sub(r"\s+", " ", (text or title or "").strip())
+    if title and body.lower().startswith(title.lower()):
+        body = body[len(title):].lstrip(" :-.–")
+    objective = _first_sentence(body) or "meet the stated control objective"
+    if not objective.endswith((".", ";")):
+        objective += "."
+    statement = (
+        f"It is the policy of [Organization] to implement and maintain controls that satisfy "
+        f"{fw}{(' ' + cid) if cid else ''}: {subject}. "
+        f"Specifically, [Organization] will establish, document, and enforce the control described as: "
+        f"{objective} "
+        f"This policy applies to all systems, personnel, and third parties within the defined scope. "
+        f"The [Security/Compliance Owner] is accountable for implementation, and the control is reviewed "
+        f"at least annually and after any significant change."
+    )
+    steps = [
+        f"Assign an owner accountable for {cid or 'this control'}.",
+        f"Document the procedure that implements: {subject}.",
+        "Configure or enforce the control in the systems in scope.",
+        "Collect evidence that it operates (configuration, logs, tickets, or reports).",
+        "Review at least annually and after significant changes, and record the review.",
+    ]
+    return {
+        "target": tgt, "framework": fw, "control": {"id": cid, "title": title, "text": text},
+        "policy_statement": statement, "implementation_steps": steps,
+        "disclaimer": "Starter draft generated from the control text. Review and adapt to your "
+                      "organization before adopting; this is not legal advice or an approved policy.",
+        "version": VERSION,
+    }
+
+
 # =====================================================================================================
 # SAVED PROJECTS  — persist a crosswalk and its review, reopen it later (Compliance workflow, step B)
 # =====================================================================================================

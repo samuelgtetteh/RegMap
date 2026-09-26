@@ -133,8 +133,12 @@ yet committed.
    frameworks" panel on the "Your framework" tab (checkbox picker + a coverage matrix table with a
    sticky coverage row). Backend helper `_best_per_control`. Verified end to end. This is the data spine
    for the coverage heatmap (#6). PAID (planned). Later: drill-down from a cell into the single-target review. 
-8. **Gap remediation guidance.** For each gap, suggest the control to implement and a starter policy
-   statement (reuses the advisor's drafting). PAID.
+8. **Gap remediation guidance. DONE 2026-09-25.** Each uncovered provision on the "Coverage & gaps" tab
+   has a "Draft starter policy" action that calls `POST /remediate {target, control_id}` and shows, inline,
+   a starter policy statement plus a 5-step implementation checklist, with a copy button and a clear
+   "starter draft, adapt before adopting" disclaimer. Deterministic templating from the control text
+   (`_remediation` logic in serve.py), not an LLM. PAID (planned). Later: wire the LLM advisor drafting
+   (`backend/advisor_api.py`) for richer prose, and offer remediation on custom-tab gaps too.
 9. **Confidence thresholds and triage. DONE 2026-09-25.** A threshold slider above each result set (on
    both "Map a control" and "Your framework") flags every match below the cutoff as a "needs review" pill
    and dims the row, with a live "N of M need review" count. The chosen threshold persists
@@ -193,5 +197,9 @@ yet committed.
 - 2026-09-25: built Coverage dashboard/heatmap (#6, Tier 2): coverage tiles per framework + heatmap-shaded
   matrix (`covColor`) + drill-down from a tile/column into the single-target review. No new endpoint.
 - 2026-09-25: built Confidence triage (#9, Tier 2): a threshold slider that flags low-confidence matches
-  as "needs review" on both tabs, with a live count and a persisted threshold. Tier 2 items #6, #7, #9,
-  #10 done; only #8 (gap remediation guidance) remains in Tier 2.
+  as "needs review" on both tabs, with a live count and a persisted threshold.
+- 2026-09-25: built Gap remediation guidance (#8, Tier 2): `POST /remediate` drafts a starter policy
+  statement + implementation checklist per gap (deterministic templating), shown inline on the gaps tab
+  with copy + disclaimer. **Tier 2 is now complete (#6-#10).** Next: Tier 3 (versioning #11, continuous
+  re-mapping #12, collaboration #13, API/GRC import #14, templates #15, framework library growth #16), and
+  the paid-gating pass once billing is on.
