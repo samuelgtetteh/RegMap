@@ -349,6 +349,40 @@ REGMAP_ENFORCE_QUOTA=false REGMAP_ENFORCE_RATE_LIMIT=false
 
 ---
 
+---
+
+## Finding 13 - Stored XSS in policy editor via contenteditable
+
+**Severity:** CRITICAL
+**Status:** FIXED (2026-09-26)
+**Source:** Manual code review, 2026-09-26
+**File:** `web/policy.html` (`applyEdits` function)
+
+### What was found
+
+The "Edit full document text" feature in the policy editor allowed users to type arbitrary HTML
+into a contenteditable div. The HTML was captured via `el.innerHTML` and stored server-side as part
+of the saved policy. When the saved policy was reopened, `applyEdits()` applied it back with
+`el.innerHTML = edits[...]` — no sanitization.
+
+Attack: a user types `<img src=x onerror="alert('XSS')">` into the contenteditable editor, saves it.
+The malicious HTML is stored in the database. When the policy is opened again (by the same user,
+or by any project member with access), the `onerror` handler executes. The same unsanitized HTML
+also flows into PDF/Word downloads via the document rendering code.
+
+Since saved policies can be shared with other users (the API has `members`, `memberAdd`), the XSS
+payload could target other collaborators.
+
+### Fix applied
+
+Added DOMPurify (from CDN: `https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js`)
+and sanitized all stored HTML before applying it to the page. The allowlist only permits safe
+formatting tags: `<b>`, `<i>`, `<em>`, `<strong>`, `<h1>` through `<h6>`, `<p>`, `<br>`, `<ul>`,
+`<ol>`, `<li>`, `<table>`, `<tr>`, `<th>`, `<td>`, and `<a href>`. All other tags (including
+`<img>`, `<script>`, event handlers) are stripped.
+
+---
+
 ## Pre-launch security checklist
 
 These must all be done before the site is public:
