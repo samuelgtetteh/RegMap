@@ -229,7 +229,15 @@
         saveName = document.getElementById("saveName");
   function captureEdits() {
     const edits = {};
-    docsEls().forEach(el => { edits[el.dataset.idx] = el.innerHTML; });
+    // SECURITY: sanitize on save (defense in depth) so the database never stores untrusted markup.
+    // Even though applyEdits() sanitizes on load, sanitizing here too ensures no other code path
+    // can accidentally render unsanitized edits.
+    docsEls().forEach(el => {
+      edits[el.dataset.idx] = DOMPurify.sanitize(el.innerHTML, {
+        ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'a'],
+        ALLOWED_ATTR: ['href']
+      });
+    });
     return edits;
   }
   function applyEdits(edits) {
