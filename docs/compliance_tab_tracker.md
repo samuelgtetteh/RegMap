@@ -168,7 +168,17 @@ yet committed.
     scheduler). Shared `_compute_drift`/`_recheck_project`/`_monitor_due` helpers. Verified end to end
     (recheck flags attention, monitor/run checks due projects). PAID. Later: wire a CronJob, per-user
     notifications, and surface monitored projects in the console's Continuous monitoring section.
-13. **Collaboration.** Multiple users, assignments, comments, an approval trail. PAID (team plans).
+13. **Collaboration. DONE 2026-09-25.** Projects can be shared with other RegMap accounts at a role
+    (editor / commenter / viewer; the creator is owner). New tables `project_members`, `project_comments`,
+    `project_activity` in billing.py. Access is enforced by a ranked resolver `_resolve_project(need=
+    read|comment|write|manage)`; get/update/drift/recheck/export all honour membership (editors can save a
+    shared project; unknown access is hidden as 404). Endpoints: `GET/POST/DELETE /projects/{id}/members`,
+    `GET/POST /projects/{id}/comments`, `GET /projects/{id}/activity`, `POST /projects/{id}/approve`. The
+    `/projects` list now also returns `shared`. UI: a "Share" button opens a collaboration modal with
+    Collaborators (invite by email + role, remove), Comments (threaded), and an Approval trail (with an
+    "Approve crosswalk" sign-off); the Open dropdown lists shared projects. Verified end to end (invite,
+    open-as-member, comment, approve, trail, shared list). PAID (team plans). Later: per-control comment
+    anchors in the UI, assignments, and notifications.
 14. **API and bulk import.** A team can push their control set and pull mappings programmatically, and
     import from GRC tools (Vanta, Drata, spreadsheets). PAID.
 15. **Templates and journeys. DONE 2026-09-25.** A "Quick starts" grid on the "Coverage & gaps" tab:
@@ -234,4 +244,7 @@ extend it as features land. (Founder rule respected: no em/en-dashes in the copy
   detected" banner on project open (`checkDrift`). Verified (stale-mapping detection).
 - 2026-09-25: built #12 Continuous re-mapping: per-project monitor config + "Continuous monitoring" bar,
   `POST /projects/{id}/recheck` and the `POST /monitor/run` cron entry point. Verified end to end.
-  Remaining Tier 3: #13 collaboration, #14 API/GRC import, #16 framework library growth.
+- 2026-09-25: built #13 Collaboration: shared projects with roles, comments, and an approval trail
+  (project_members/comments/activity tables, `_resolve_project` access control, members/comments/activity/
+  approve endpoints, a Share modal, shared-project list). Verified end to end. Remaining Tier 3: #14
+  API/GRC import, #16 framework library growth.

@@ -146,6 +146,41 @@ projects = Table(
     Column("updated_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
 )
 
+project_members = Table(
+    # Collaboration (#13): who, besides the owner, can work on a project, and at what role.
+    "project_members", metadata,
+    Column("project_id", String(40), primary_key=True),
+    Column("account_id", String(40), primary_key=True),
+    Column("email", String(255)),                          # cached for display
+    Column("role", String(16), nullable=False),            # editor | commenter | viewer
+    Column("invited_by", String(40)),
+    Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+)
+
+project_comments = Table(
+    # Threaded discussion on a project. anchor = a source control id, or "" for a general comment.
+    "project_comments", metadata,
+    Column("id", String(40), primary_key=True),
+    Column("project_id", String(40), index=True, nullable=False),
+    Column("account_id", String(40), nullable=False),
+    Column("email", String(255)),
+    Column("anchor", String(64), default=""),
+    Column("body", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+)
+
+project_activity = Table(
+    # The approval / audit trail: an append-only log of who did what on a project.
+    "project_activity", metadata,
+    Column("id", String(40), primary_key=True),
+    Column("project_id", String(40), index=True, nullable=False),
+    Column("account_id", String(40)),
+    Column("email", String(255)),
+    Column("action", String(32), nullable=False),          # shared | commented | approved | rechecked | ...
+    Column("detail", Text),
+    Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+)
+
 oauth_identities = Table(
     # A federated identity (Sign in with Google/Microsoft/Apple) linked to a local account. The
     # (provider, subject) pair is the provider's stable user id; one account can link several providers.
@@ -344,7 +379,107 @@ def delete_project(account_id, pid):
     with engine().begin() as c:
         r = c.execute(projects.delete().where(
             projects.c.id == pid, projects.c.account_id == account_id))
+        # a deleted project takes its collaboration rows with it
+        c.execute(project_members.delete().where(project_members.c.project_id == pid))
+        c.execute(project_comments.delete().where(project_comments.c.project_id == pid))
+        c.execute(project_activity.delete().where(project_activity.c.project_id == pid))
     return r.rowcount
+
+
+# ---- collaboration (#13): members, comments, approval trail --------------------------------------
+def get_project_any(pid):
+    """Fetch a project by id regardless of owner (access is checked by the caller via membership)."""
+    with engine().begin() as c:
+        row = c.execute(select(projects).where(projects.c.id == pid)).mappings().first()
+    if not row:
+        return None
+    d = dict(row)
+    try:
+        d["data"] = json.loads(d.get("data") or "{}")
+    except Exception:
+        d["data"] = {}
+    return d
+
+
+def member_role(pid, account_id):
+    with engine().begin() as c:
+        row = c.execute(select(project_members.c.role).where(
+            project_members.c.project_id == pid,
+            project_members.c.account_id == account_id)).first()
+    return row[0] if row else None
+
+
+def list_members(pid):
+    with engine().begin() as c:
+        rows = c.execute(select(project_members).where(
+            project_members.c.project_id == pid)
+            .order_by(project_members.c.created_at)).mappings().all()
+    return [dict(r) for r in rows]
+
+
+def add_member(pid, account_id, email, role, invited_by):
+    with engine().begin() as c:
+        exists = c.execute(select(project_members.c.role).where(
+            project_members.c.project_id == pid, project_members.c.account_id == account_id)).first()
+        if exists:
+            c.execute(project_members.update().where(
+                project_members.c.project_id == pid, project_members.c.account_id == account_id)
+                .values(role=role, email=email))
+        else:
+            c.execute(insert(project_members).values(
+                project_id=pid, account_id=account_id, email=email, role=role, invited_by=invited_by))
+
+
+def remove_member(pid, account_id):
+    with engine().begin() as c:
+        r = c.execute(project_members.delete().where(
+            project_members.c.project_id == pid, project_members.c.account_id == account_id))
+    return r.rowcount
+
+
+def list_projects_shared(account_id):
+    """Projects owned by others but shared with this account, newest first, with the account's role."""
+    with engine().begin() as c:
+        rows = c.execute(
+            select(projects.c.id, projects.c.name, projects.c.target_fid, projects.c.updated_at,
+                   projects.c.account_id.label("owner"), project_members.c.role)
+            .select_from(project_members.join(projects, project_members.c.project_id == projects.c.id))
+            .where(project_members.c.account_id == account_id)
+            .order_by(projects.c.updated_at.desc())).mappings().all()
+    return [dict(r) for r in rows]
+
+
+def add_comment(pid, account_id, email, anchor, body):
+    cid = "cmt_" + secrets.token_hex(8)
+    with engine().begin() as c:
+        c.execute(insert(project_comments).values(
+            id=cid, project_id=pid, account_id=account_id, email=email,
+            anchor=(anchor or "")[:64], body=body))
+    return cid
+
+
+def list_comments(pid):
+    with engine().begin() as c:
+        rows = c.execute(select(project_comments).where(
+            project_comments.c.project_id == pid)
+            .order_by(project_comments.c.created_at)).mappings().all()
+    return [dict(r) for r in rows]
+
+
+def add_activity(pid, account_id, email, action, detail=""):
+    aid = "act_" + secrets.token_hex(8)
+    with engine().begin() as c:
+        c.execute(insert(project_activity).values(
+            id=aid, project_id=pid, account_id=account_id, email=email, action=action, detail=detail))
+    return aid
+
+
+def list_activity(pid, limit=200):
+    with engine().begin() as c:
+        rows = c.execute(select(project_activity).where(
+            project_activity.c.project_id == pid)
+            .order_by(project_activity.c.created_at.desc()).limit(limit)).mappings().all()
+    return [dict(r) for r in rows]
 
 
 # ---- usage + quota -------------------------------------------------------------------------------

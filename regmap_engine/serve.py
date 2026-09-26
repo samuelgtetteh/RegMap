@@ -1053,10 +1053,39 @@ def _iso(d):
     return d
 
 
+# Collaboration roles, ranked. A higher rank can do everything a lower one can (#13).
+_ROLE_RANK = {"viewer": 1, "commenter": 2, "editor": 3, "owner": 4}
+_NEED_RANK = {"read": 1, "comment": 2, "write": 3, "manage": 4}
+
+
+def _resolve_project(principal, pid, need="read"):
+    """Return (project, role) if the caller may act on the project at the required level, else raise.
+    Owner always has full rights; other access comes from project_members. A project the caller cannot
+    see is reported as 404 (not 403), so membership is not leaked."""
+    _require_account(principal, "use projects")
+    aid = principal["account_id"]
+    p = billing.get_project_any(pid)
+    if not p:
+        raise HTTPException(404, "project not found")
+    role = "owner" if p["account_id"] == aid else billing.member_role(pid, aid)
+    if not role:
+        raise HTTPException(404, "project not found")
+    if _ROLE_RANK[role] < _NEED_RANK[need]:
+        raise HTTPException(403, f"your role ({role}) cannot {need} this project")
+    return p, role
+
+
+def _actor_email(principal):
+    return principal.get("email") or ""
+
+
 @app.get("/projects")
 def projects_list(principal=Depends(auth.require_key)):
-    """The caller's saved projects, newest first. Scoped to the account."""
-    return {"projects": [_iso(p) for p in billing.list_projects(principal["account_id"])]}
+    """The caller's own saved projects plus projects shared with them, newest first."""
+    return {
+        "projects": [_iso(p) for p in billing.list_projects(principal["account_id"])],
+        "shared": [_iso(p) for p in billing.list_projects_shared(principal["account_id"])],
+    }
 
 
 def _drift_baseline(tgt):
@@ -1090,21 +1119,22 @@ def projects_create(req: ProjectReq, principal=Depends(auth.require_key)):
 
 @app.get("/projects/{pid}")
 def projects_get(pid: str, principal=Depends(auth.require_key)):
-    p = billing.get_project(principal["account_id"], pid)
-    if not p:
-        raise HTTPException(404, "project not found")
-    return _iso(p)
+    p, role = _resolve_project(principal, pid, "read")   # owner or any member
+    out = _iso(p)
+    out["role"] = role
+    return out
 
 
 @app.put("/projects/{pid}")
 def projects_update(pid: str, req: ProjectUpdateReq, principal=Depends(auth.require_key)):
-    _require_account(principal, "save your work")
+    p, role = _resolve_project(principal, pid, "write")   # owner or editor
     if req.data is not None:
         _stamp_drift(req.data, req.target_fid)
-    n = billing.update_project(principal["account_id"], pid, req.name, req.target_fid, req.data)
+    # update by the owner's account, so an editor member can save a shared project too
+    n = billing.update_project(p["account_id"], pid, req.name, req.target_fid, req.data)
     if not n:
         raise HTTPException(404, "project not found")
-    return {"id": pid, "updated": True}
+    return {"id": pid, "updated": True, "role": role}
 
 
 def _compute_drift(p):
@@ -1137,9 +1167,7 @@ def _compute_drift(p):
 @app.get("/projects/{pid}/drift")
 def project_drift(pid: str, principal=Depends(auth.require_key)):
     """Has the target framework changed since this project was saved? (Compliance tracker #11.)"""
-    p = billing.get_project(principal["account_id"], pid)
-    if not p:
-        raise HTTPException(404, "project not found")
+    p, _ = _resolve_project(principal, pid, "read")
     r = _compute_drift(p)
     return r if r else {"available": False, "reason": "target framework is not rankable"}
 
@@ -1180,11 +1208,8 @@ def _recheck_project(account_id, p):
 def project_recheck(pid: str, principal=Depends(auth.require_key)):
     """Re-run a saved crosswalk against the current catalog now and record the result (#12). This is the
     unit of continuous re-mapping: call it on demand from the UI, or on a cadence from /monitor/run."""
-    _require_account(principal, "re-check a project")
-    p = billing.get_project(principal["account_id"], pid)
-    if not p:
-        raise HTTPException(404, "project not found")
-    return _recheck_project(principal["account_id"], p)
+    p, _ = _resolve_project(principal, pid, "write")     # owner or editor
+    return _recheck_project(p["account_id"], p)
 
 
 @app.post("/monitor/run")
@@ -1212,10 +1237,98 @@ def monitor_run(principal=Depends(auth.require_key)):
 @app.delete("/projects/{pid}")
 def projects_delete(pid: str, principal=Depends(auth.require_key)):
     _require_account(principal, "manage saved projects")
-    n = billing.delete_project(principal["account_id"], pid)
+    n = billing.delete_project(principal["account_id"], pid)   # owner-only (filtered by account)
     if not n:
         raise HTTPException(404, "project not found")
     return {"id": pid, "deleted": True}
+
+
+# =====================================================================================================
+# COLLABORATION (#13): members + roles, comments, and an approval / activity trail
+# =====================================================================================================
+def _iso_rows(rows):
+    for r in rows:
+        for k in ("created_at",):
+            if r.get(k) is not None and hasattr(r[k], "isoformat"):
+                r[k] = r[k].isoformat()
+    return rows
+
+
+class MemberReq(BaseModel):
+    email: str = Field(..., description="email of an existing RegMap account to add")
+    role: str = Field("editor", description="editor | commenter | viewer")
+
+
+@app.get("/projects/{pid}/members")
+def project_members_list(pid: str, principal=Depends(auth.require_key)):
+    p, role = _resolve_project(principal, pid, "read")
+    return {"role": role, "owner_account": p["account_id"],
+            "members": _iso_rows(billing.list_members(pid))}
+
+
+@app.post("/projects/{pid}/members")
+def project_members_add(pid: str, req: MemberReq, principal=Depends(auth.require_key)):
+    p, _ = _resolve_project(principal, pid, "manage")     # owner only
+    role = req.role if req.role in ("editor", "commenter", "viewer") else "editor"
+    target = billing.account_by_email(req.email)
+    if not target:
+        raise HTTPException(404, "no RegMap account with that email; ask them to sign up first")
+    if target == p["account_id"]:
+        raise HTTPException(400, "that person owns this project")
+    billing.add_member(pid, target, req.email.strip().lower(), role, principal["account_id"])
+    billing.add_activity(pid, principal["account_id"], _actor_email(principal),
+                         "shared", f"added {req.email.strip().lower()} as {role}")
+    return {"added": True, "email": req.email.strip().lower(), "role": role}
+
+
+@app.delete("/projects/{pid}/members/{account_id}")
+def project_members_remove(pid: str, account_id: str, principal=Depends(auth.require_key)):
+    p, _ = _resolve_project(principal, pid, "manage")     # owner only
+    n = billing.remove_member(pid, account_id)
+    if n:
+        billing.add_activity(pid, principal["account_id"], _actor_email(principal),
+                             "unshared", f"removed a collaborator")
+    return {"removed": bool(n)}
+
+
+class CommentReq(BaseModel):
+    body: str = Field(..., min_length=1, max_length=4000)
+    anchor: Optional[str] = Field("", description="a source control id, or empty for a general comment")
+
+
+@app.get("/projects/{pid}/comments")
+def project_comments_list(pid: str, principal=Depends(auth.require_key)):
+    _resolve_project(principal, pid, "read")
+    return {"comments": _iso_rows(billing.list_comments(pid))}
+
+
+@app.post("/projects/{pid}/comments")
+def project_comments_add(pid: str, req: CommentReq, principal=Depends(auth.require_key)):
+    _resolve_project(principal, pid, "comment")           # commenter or above
+    cid = billing.add_comment(pid, principal["account_id"], _actor_email(principal),
+                              req.anchor or "", req.body.strip())
+    billing.add_activity(pid, principal["account_id"], _actor_email(principal),
+                         "commented", (req.anchor or "general"))
+    return {"id": cid, "added": True}
+
+
+@app.get("/projects/{pid}/activity")
+def project_activity_list(pid: str, principal=Depends(auth.require_key)):
+    _resolve_project(principal, pid, "read")
+    return {"activity": _iso_rows(billing.list_activity(pid))}
+
+
+class ApproveReq(BaseModel):
+    note: Optional[str] = Field("", max_length=2000)
+
+
+@app.post("/projects/{pid}/approve")
+def project_approve(pid: str, req: ApproveReq, principal=Depends(auth.require_key)):
+    """Sign off on the crosswalk. Recorded in the approval trail with who and when (#13)."""
+    _resolve_project(principal, pid, "write")             # owner or editor may approve
+    billing.add_activity(pid, principal["account_id"], _actor_email(principal),
+                         "approved", (req.note or "").strip())
+    return {"approved": True}
 
 
 # --- audit-ready export (Compliance workflow, step C) ---------------------------------------------
@@ -1279,10 +1392,7 @@ def project_export(pid: str, fmt: str = "xlsx", principal=Depends(auth.require_k
     rejected), and the note. Built from the saved review, so it is the reviewed record, not a raw
     model dump. Downloading requires an account (guests can request email delivery instead).
     """
-    _require_account(principal, "download files")
-    p = billing.get_project(principal["account_id"], pid)
-    if not p:
-        raise HTTPException(404, "project not found")
+    p, _ = _resolve_project(principal, pid, "read")   # owner or any member can export
     data = p.get("data") or {}
     tgt = _resolve_fid(data.get("target") or p.get("target_fid") or "")
     tgt_ctl = _controls.get(tgt, {}) if tgt else {}
