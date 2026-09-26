@@ -323,23 +323,29 @@ on failure) is sufficient to prevent assessment gaming while keeping the impleme
 
 ---
 
-## Finding 12 - Anonymous account quota exceeded but requests still served
+## Finding 12 - Quota enforcement disabled by default
 
-**Severity:** LOW
-**Status:** REQUIRES INVESTIGATION
+**Severity:** HIGH
+**Status:** FIXED (2026-09-26)
 **Source:** AI security audit, third pass, 2026-09-26
-**File:** `regmap_engine/serve.py` and `regmap_engine/auth.py` (quota enforcement)
+**File:** `regmap_engine/auth.py` (`ENFORCE_QUOTA`)
 
 ### What was found
 
-The shared anonymous account had consumed 451 CU against a 300 CU/month limit and was still serving
-requests. Quota enforcement appears broken or disabled for the anonymous principal.
+The anonymous account had consumed 451 CU against a 300 CU/month limit and was still serving
+requests. Investigation revealed that `ENFORCE_QUOTA` defaulted to `false`, so quota was never checked.
+Requests at any usage level were accepted.
 
-### Next steps
+### Fix applied
 
-Once `REQUIRE_AUTH=true` is live, this becomes moot — anonymous accounts no longer exist. If you later
-add a true free tier with an allowance, ensure quota is enforced consistently and requests are
-rejected with 402 once the limit is hit.
+Flipped the default: `ENFORCE_QUOTA` now defaults to `true`. Requests are rejected with HTTP 402 once
+the account's monthly compute allowance is exhausted. Also flipped `ENFORCE_RATE_LIMIT` to `true` by
+default for consistency.
+
+To disable quota or rate limiting for local development, set explicitly:
+```
+REGMAP_ENFORCE_QUOTA=false REGMAP_ENFORCE_RATE_LIMIT=false
+```
 
 ---
 

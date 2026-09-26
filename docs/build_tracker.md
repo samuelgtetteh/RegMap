@@ -70,10 +70,9 @@ gamification, and saved-progress/resume backed by a new `learning_progress` stor
 - [ ] Tie monitor findings back to the mapped controls and the evidence/report layer.
 
 ### Pre-launch checklist (do before publishing a live site)
-- [ ] **Re-enable enforcement.** Quota (402) and rate limits (429) default OFF during development so nothing
-      is blocked while we build (`REGMAP_ENFORCE_QUOTA` / `REGMAP_ENFORCE_RATE_LIMIT` in
-      `regmap_engine/auth.py`). The k8s deployment sets both to `true`; make sure any other live deploy
-      path does too.
+- [x] **Enforcement now ON by default.** Quota (402) and rate limits (429) default to `true` (enforced).
+      To disable for local development, set `REGMAP_ENFORCE_QUOTA=false` and/or
+      `REGMAP_ENFORCE_RATE_LIMIT=false` explicitly in the startup command. No changes needed for production.
 - [ ] **Authentication is now ON by default.** `REGMAP_REQUIRE_AUTH` now defaults to `true` to block
       anonymous access to the paid endpoints (`/map`, `/remediate`, `/exercise`). To disable it for local
       dev, set `REGMAP_REQUIRE_AUTH=false` in your startup command.

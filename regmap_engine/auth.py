@@ -30,11 +30,9 @@ import billing
 REQUIRE_AUTH = os.environ.get("REGMAP_REQUIRE_AUTH", "true").lower() in ("1", "true", "yes")
 
 # Enforcement switches for quota (402) and rate limiting (429).
-# PRE-LAUNCH: these default to OFF so nothing is blocked while we build. The live deployment turns them
-# back ON explicitly (see regmap_engine/k8s/deployment.yaml). BEFORE PUBLISHING a live site, either keep
-# them set to true in the deploy env or flip these defaults back to "true".
-ENFORCE_QUOTA = os.environ.get("REGMAP_ENFORCE_QUOTA", "false").lower() in ("1", "true", "yes")
-ENFORCE_RATE_LIMIT = os.environ.get("REGMAP_ENFORCE_RATE_LIMIT", "false").lower() in ("1", "true", "yes")
+# Both default to ON (true) for security; disable explicitly in dev if needed.
+ENFORCE_QUOTA = os.environ.get("REGMAP_ENFORCE_QUOTA", "true").lower() in ("1", "true", "yes")
+ENFORCE_RATE_LIMIT = os.environ.get("REGMAP_ENFORCE_RATE_LIMIT", "true").lower() in ("1", "true", "yes")
 
 # Requests per minute per key, per endpoint class. Cheap reads are ungated.
 RATE_LIMITS = {
